@@ -10,7 +10,8 @@
          (struct-out bare-sexp-comment)
          (struct-out toplevel)
          (struct-out wrapper)
-         require-newline?)
+         require-newline?
+         pretty-node)
 
 (require racket/match
          racket/string
@@ -18,6 +19,7 @@
          syntax/readerr
          syntax-color/module-lexer
          pprint-compact
+         pprint-compact/memoize
          #;pprint-compact/debug
          #;(only-in racket/pretty [pretty-print pp]))
 
@@ -232,69 +234,63 @@
       (bare-sexp-comment? d)
       (nl? d)))
 
+(define (pretty-node n d)
+  (match-define (node comment opener closer _) n)
+  (define main-doc (h-append (text opener) d (text closer)))
+  (if comment
+      (h-append main-doc space (text comment))
+      main-doc))
+
 (define ((pretty hook) d)
-  (let loop ([d d])
-    (match d
-      [(toplevel _ xs) (v-concat (map loop xs))]
-      [(nl _ n) (v-concat (make-list n empty-doc))]
-      [(atom comment content _)
-       (if comment
-           (text (string-append content " " comment))
-           (text content))]
-      [(line-comment _ comment) (text comment)]
-      [(sexp-comment _ 1 (line-comment _ comment))
-       (text (string-append "#; " comment))]
-      [(sexp-comment _ 1 content)
-       (define content* (loop content))
-       (alt (h-append sexp-comment-tok content*)
-            (v-append sexp-comment-tok content*))]
-      [(sexp-comment _ n content)
-       (define content* (loop content))
-       (v-append (h-concat (make-list n sexp-comment-tok))
-                 content*)]
-      [(bare-sexp-comment _ tok) (text tok)]
-      [(wrapper _ pre (line-comment _ comment))
-       (text (string-append pre " " comment))]
-      [(wrapper _ pre content) (h-append (text pre) (loop content))]
-      [(node comment opener closer xs)
-       (define (finalize d)
-         (define main-doc (h-append (text opener) d (text closer)))
-         (if comment
-             (h-append main-doc space (text comment))
-             main-doc))
-       (define (default)
-         (define xs* (map loop xs))
-         (define req-last-newline? (require-newline? (last xs)))
-         (apply
-          alt
-          (append
-           (if req-last-newline?
-               (list (flush (v-concat xs*)))
-               (list (v-concat xs*)))
-           (if (ormap require-newline? xs)
-               '()
-               (list (flat (hs-concat xs*))))
-           (if (require-newline? (first xs))
-               '()
-               (if req-last-newline?
-                   (list (h-append (flat (first xs*))
-                                   space
-                                   (flush (v-concat (rest xs*)))))
-                   (list (h-append (flat (first xs*))
-                                   space
-                                   (v-concat (rest xs*)))))))))
-       (match xs
-         ['()
+  (define loop
+    (memoize
+     (λ (d)
+       (match d
+         [(toplevel _ xs) (v-concat (map loop xs))]
+         [(nl _ n) (v-concat (make-list n empty-doc))]
+         [(atom comment content _)
           (if comment
-              (text (string-append opener closer " " comment))
-              (text (string-append opener closer)))]
-         ;; TODO: checking the first token is not ideal, but will do it for now
-         [(cons (atom _ content 'symbol) _)
-          (define proc (hook content))
-          (cond
-            [proc (finalize (proc xs loop))]
-            [else (finalize (default))])]
-         [_ (finalize (default))])])))
+              (text (string-append content " " comment))
+              (text content))]
+         [(line-comment _ comment) (text comment)]
+         [(sexp-comment _ 1 (line-comment _ comment))
+          (text (string-append "#; " comment))]
+         [(sexp-comment _ 1 content)
+          (define content* (loop content))
+          (alt (h-append sexp-comment-tok content*)
+               (v-append sexp-comment-tok content*))]
+         [(sexp-comment _ n content)
+          (define content* (loop content))
+          (v-append (h-concat (make-list n sexp-comment-tok))
+                    content*)]
+         [(bare-sexp-comment _ tok) (text tok)]
+         [(wrapper _ pre (line-comment _ comment))
+          (text (string-append pre " " comment))]
+         [(wrapper _ pre content) (h-append (text pre) (loop content))]
+         [(node _ _ _ xs)
+          (define (default)
+            (define xs* (map loop xs))
+            (define req-last-newline? (require-newline? (last xs)))
+            (alt
+             (flush-if req-last-newline? (v-concat xs*))
+             (if (ormap require-newline? xs)
+                 fail
+                 (flat (hs-concat xs*)))
+             (if (require-newline? (first xs))
+                 fail
+                 (h-append (flat (first xs*))
+                           space
+                           (flush-if req-last-newline? (v-concat (rest xs*)))))))
+          (match xs
+            ['() (pretty-node d empty-doc)]
+            ;; TODO: checking the first token is not ideal, but will do it for now
+            [(cons (atom _ content 'symbol) _)
+             (define proc (hook content))
+             (cond
+               [proc (pretty-node d ((proc loop) xs))]
+               [else (pretty-node d (default))])]
+            [_ (pretty-node d (default))])]))))
+  (loop d))
 
 ;; program-format :: string? -> string?
 (define (program-format program-source
