@@ -98,11 +98,8 @@
 (define openers (list '|(| '|[| '|{|))
 (define closers (list '|)| '|]| '|}|))
 
-(define (open-paren? x)
-  (memq x openers))
-
-(define (close-paren? x)
-  (memq x closers))
+(define (open-paren? x) (memq x openers))
+(define (close-paren? x) (memq x closers))
 
 (define (process-tail obj xs)
   (define (do-it comment xs)
