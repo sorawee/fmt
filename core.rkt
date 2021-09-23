@@ -238,6 +238,39 @@
       (h-append main-doc space (text comment))
       main-doc))
 
+(define (visible? x)
+  (or (node? x)
+      (atom? x)
+      (wrapper? x)))
+
+(define ((pretty-v-concat/kw pretty) xs)
+  (let loop ([xs xs])
+    (match xs
+      ['() empty-doc]
+      [(list x) (pretty x)]
+      [(list (and kw (atom _ _ 'hash-colon-keyword))
+             (? visible? v))
+       #:when (not (require-newline? kw))
+       (alt
+        (hs-append (pretty kw) (pretty v))
+        (v-append
+         (pretty kw)
+         (pretty v)))]
+      [(list (and kw (atom _ _ 'hash-colon-keyword))
+             (? visible? v)
+             xs
+             ...)
+       #:when (not (require-newline? kw))
+       (alt
+        (v-append
+         (hs-append (pretty kw) (pretty v))
+         (loop xs))
+        (v-append
+         (pretty kw)
+         (pretty v)
+         (loop xs)))]
+      [(list x xs ...) (v-append (pretty x) (loop xs))])))
+
 (define ((pretty hook) d)
   (define loop
     (memoize
@@ -266,18 +299,18 @@
          [(wrapper _ pre content) (h-append (text pre) (loop content))]
          [(node _ _ _ xs)
           (define (default)
-            (define xs* (map loop xs))
             (define req-last-newline? (require-newline? (last xs)))
             (alt
-             (flush-if req-last-newline? (v-concat xs*))
+             (flush-if req-last-newline? ((pretty-v-concat/kw loop) xs))
              (if (ormap require-newline? xs)
                  fail
-                 (flat (hs-concat xs*)))
+                 (flat (hs-concat (map loop xs))))
              (if (require-newline? (first xs))
                  fail
-                 (h-append (flat (first xs*))
+                 (h-append (flat (loop (first xs)))
                            space
-                           (flush-if req-last-newline? (v-concat (rest xs*)))))))
+                           (flush-if req-last-newline?
+                                     ((pretty-v-concat/kw loop) (rest xs)))))))
           (match xs
             ['() (pretty-node d empty-doc)]
             ;; TODO: checking the first token is not ideal, but will do it for now
