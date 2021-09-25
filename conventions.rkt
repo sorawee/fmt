@@ -250,14 +250,51 @@
     #;(define (y)
         a
         b)
-    [("define" "λ" "lambda") hook-define-like]
+    [("define" "define-for-syntax" "define-values") hook-define-like]
+    [("define-syntax" "define-syntaxes" "define-values-for-syntax")
+     hook-define-like]
+    [("λ" "lambda") hook-define-like]
 
     [("match" "match*" "case")
      (hook-with-uniform-body 1 #:hook-for-body hook-clause)]
+
     [("module+") (hook-with-uniform-body 1)]
-    [("cond") (hook-with-uniform-body 0 #:hook-for-body hook-clause)]
-    [("for/fold") (hook-with-uniform-body 2 #:hook-for-arg hook-binding-pairs)]
-    [("for/list" "for*/list") (hook-with-uniform-body 1 #:hook-for-arg hook-binding-pairs)]
+    [("module" "module*") (hook-with-uniform-body 2)]
+
+    [("cond" "case-lambda")
+     (hook-with-uniform-body 0 #:hook-for-body hook-clause)]
+
+    [("syntax-case") (hook-with-uniform-body 2 #:hook-for-body hook-clause)]
+
+    [("syntax-rules") (hook-with-uniform-body 1 #:hook-for-body hook-clause)]
+
+    [("syntax/loc" "quasisyntax/loc") (hook-with-uniform-body 1)]
+
+    [("let*" "let-values" "let*-values" "letrec" "letrec-values")
+     (hook-with-uniform-body 1 #:hook-for-arg hook-binding-pairs)]
+    [("let-syntax" "letrec-syntax" "let-syntaxes" "letrec-syntaxes")
+     (hook-with-uniform-body 1 #:hook-for-arg hook-binding-pairs)]
+    [("with-syntax" "with-syntax*")
+     (hook-with-uniform-body 1 #:hook-for-arg hook-binding-pairs)]
+    [("parameterize" "parameterize*")
+     (hook-with-uniform-body 1 #:hook-for-arg hook-binding-pairs)]
+
+    [("when" "unless") (hook-with-uniform-body 1)]
+
+    ;; these are really hacks... they don't support kws in body like #:break well
+    [("for/fold" "for*/fold") (hook-with-uniform-body 2 #:hook-for-arg hook-binding-pairs)]
+    [("for" "for*") (hook-with-uniform-body 1 #:hook-for-arg hook-binding-pairs)]
+    [("for/list" "for*/list")
+     (hook-with-uniform-body 1 #:hook-for-arg hook-binding-pairs)]
+    [("for/hash" "for*/hash")
+     (hook-with-uniform-body 1 #:hook-for-arg hook-binding-pairs)]
+    [("for/hasheq" "for*/hasheq")
+     (hook-with-uniform-body 1 #:hook-for-arg hook-binding-pairs)]
+    [("for/hasheqv" "for*/hasheqv")
+     (hook-with-uniform-body 1 #:hook-for-arg hook-binding-pairs)]
+    [("for/vector" "for*/vector")
+     (hook-with-uniform-body 1 #:hook-for-arg hook-binding-pairs)]
+
     ;; support both named let and usual let
     [("let") hook-let-like]
     [else hook-app]))
