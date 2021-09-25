@@ -23,10 +23,10 @@
                                  ((pretty-v-concat/kw pretty) xs))))]
             [(list (list head) app-format tail)
              (list
-              #;(a
-                 #:x a
-                 b
-                 c)
+              #;(aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+                 #:xxx aaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+                 bbbbbbbbbbbbbbb
+                 cccccccccccccccc)
               (app-format
                (flush-if req-last-newline?
                          ((pretty-v-concat/kw pretty)
@@ -41,9 +41,9 @@
                   (app-format
                    (flat (hs-concat (map pretty (cons head tail))))))
 
-              #;(a #:x a
-                   b
-                   c)
+              #;(aaaaaaaaaaaaa #:x aaaaaaaaaaaaaaa
+                               bbbbbbbbbbbbbbb
+                               cccccccccccccccc)
               (if (empty? tail)
                   app-format/fail
                   (app-format
@@ -62,7 +62,7 @@
                    (app-format/no-comment
                     (flat (hs-concat (map pretty xs))))))]))]))
 
-(define ((hook-define pretty) d)
+(define ((hook-define-like pretty) d)
   (match (extract* pretty (node-content d) (list #t #f) #:at-least 3)
     ;; stuff like (define) and (define x) -- don't care
     [#f ((hook-app pretty) d)]
@@ -113,12 +113,24 @@
               [_ app-format/fail])))]
     [_ (pretty clause)]))
 
-(define ((hook-match pretty) d)
-  (match (extract* pretty (node-content d) (list #t #f))
-    ;; stuff like (match) -- don't care
+(define (((hook-with-uniform-body
+           n
+           #:hook-for-arg [hook-for-arg values]
+           #:hook-for-body [hook-for-body values])
+          pretty)
+         d)
+  (match (extract* pretty
+                   (node-content d)
+                   (append (make-list n #t) (list #f)))
+    ;; don't care
     [#f ((hook-app pretty) d)]
     ;; this is it!
-    [(list (list -match -e) app-format tail)
+    [(list (list -macro-name -e ...) app-format tail)
+     (define args (map (hook-for-arg pretty) -e))
+     (define first-line
+       (hs-append (pretty -macro-name)
+                  (alt (flat (hs-concat args))
+                       (v-concat args))))
      (pretty-node
       d
       (list
@@ -127,49 +139,24 @@
          ['()
           (app-format
            (cond
-             [(require-newline? -e)
-              (v-append (hs-append (pretty -match) (pretty -e))
+             [(require-newline? (last (cons -macro-name -e)))
+              (v-append first-line
                         space)]
-             [else (hs-append (pretty -match) (pretty -e))]))]
+             [else first-line]))]
 
          #;(match x
              [a b])
          [_
           (app-format
            (v-append
-            (hs-append (pretty -match) (pretty -e))
+            first-line
             (h-append
              space
              (flush-if
               (require-newline? (last tail))
-              (v-concat (map (hook-clause pretty) tail))))))])))]))
+              (v-concat (map (hook-for-body pretty) tail))))))])))]))
 
-(define ((hook-cond pretty) d)
-  (match (extract* pretty (node-content d) (list #f))
-    ;; this is it!
-    [(list (list -cond) app-format tail)
-     (pretty-node
-      d
-      (list
-       (app-format
-        (match tail
-          #;(cond)
-          ['() (if (require-newline? -cond)
-                   (v-append (pretty -cond)
-                             space)
-                   (pretty -cond))]
-          #;(cond
-              [a b])
-          [_ (v-append
-              (pretty -cond)
-              (h-append
-               space
-               (flush-if (require-newline? (last tail))
-                         (v-concat (map (hook-clause pretty)
-                                        tail)))))]))))]))
-
-
-(define ((hook-let-bindings pretty) bindings)
+(define ((hook-binding-pairs pretty) bindings)
   (match bindings
     [(? node?)
      (match (node-content bindings)
@@ -179,15 +166,17 @@
          bindings
          (list
           (cond
+            ;; try to fit in one line
             [(not (ormap require-newline? xs))
              (app-format/no-comment (flat (hs-concat (map pretty xs))))]
             [else app-format/fail])
+          ;; all separate lines
           (app-format/no-comment
            (flush-if (require-newline? (last xs))
                      (v-concat (map pretty xs))))))])]
     [_ (pretty bindings)]))
 
-(define ((hook-let pretty) d)
+(define ((hook-let-like pretty) d)
   (match (extract* pretty (node-content d) (list #t #f) #:at-least 3)
     ;; stuff like (let) or (let ([x y])) -- don't care
     [#f (((hook-app) pretty) d)]
@@ -203,7 +192,7 @@
            (v-append
             (hs-append (pretty -let)
                        (pretty -name)
-                       ((hook-let-bindings pretty) -bindings))
+                       ((hook-binding-pairs pretty) -bindings))
             (h-append
              space
              (flush-if (require-newline? (last tail))
@@ -219,22 +208,56 @@
           #:when (not (or (require-newline? -bindings)
                           (require-newline? -body)))
           (app-format (flat (hs-append (pretty -let)
-                                       ((hook-let-bindings pretty) -bindings)
+                                       ((hook-binding-pairs pretty) -bindings)
                                        (pretty -body))))]
          [_ app-format/fail])
 
+       #;(let ([x y])
+           x
+           y)
        (app-format
         (v-append
-         (hs-append (pretty -let) ((hook-let-bindings pretty) -bindings))
+         (hs-append (pretty -let) ((hook-binding-pairs pretty) -bindings))
          (h-append
           space
           (flush-if (require-newline? (last tail))
                     (v-concat (map pretty tail))))))))]))
 
+(define ((hook-require-like pretty) d)
+  (match (extract* pretty (node-content d) (list #t))
+    [(list (list -provide) app-format tail)
+     (match tail
+       ['() (pretty-node d (list (app-format/no-comment empty-doc)))]
+       [_
+        (pretty-node
+         d
+         (list
+          (app-format
+           (hs-append (pretty -provide)
+                      (flush-if (require-newline? (last tail))
+                                (v-concat (map pretty tail)))))))])]))
+
 (define (hook-standard name)
   (case name
-    [("define") hook-define]
-    [("match") hook-match]
-    [("cond") hook-cond]
-    [("let") hook-let]
+    ;; always in the form
+    #;(provide a
+               b
+               c)
+    [("provide" "require") hook-require-like]
+    ;; try to fit in one line is the body has exactly one form,
+    ;; else will be multiple lines
+    #;(define x 1)
+    #;(define (y)
+        a
+        b)
+    [("define" "λ" "lambda") hook-define-like]
+
+    [("match" "match*" "case")
+     (hook-with-uniform-body 1 #:hook-for-body hook-clause)]
+    [("module+") (hook-with-uniform-body 1)]
+    [("cond") (hook-with-uniform-body 0 #:hook-for-body hook-clause)]
+    [("for/fold") (hook-with-uniform-body 2 #:hook-for-arg hook-binding-pairs)]
+    [("for/list" "for*/list") (hook-with-uniform-body 1 #:hook-for-arg hook-binding-pairs)]
+    ;; support both named let and usual let
+    [("let") hook-let-like]
     [else hook-app]))
