@@ -7,15 +7,16 @@
          (struct-out nl)
          (struct-out line-comment)
          (struct-out sexp-comment)
-         (struct-out bare-sexp-comment)
-         (struct-out toplevel)
          (struct-out wrapper)
-         require-newline?
-         pretty-node)
+         (struct-out toplevel)
+         pretty-comment
+         extract
+         visible?)
 
 (require racket/match
          racket/string
          racket/list
+         racket/function
          syntax/readerr
          syntax-color/module-lexer
          pprint-compact
@@ -30,10 +31,81 @@
 (struct atom thing (content type) #:transparent)
 (struct nl thing (n) #:transparent)
 (struct line-comment thing (content) #:transparent)
-(struct sexp-comment thing (level content) #:transparent)
-(struct bare-sexp-comment thing (tok) #:transparent)
+(struct sexp-comment thing (style tok content) #:transparent)
+(struct wrapper thing (tk content) #:transparent)
 (struct toplevel thing (content) #:transparent)
-(struct wrapper thing (prefix content) #:transparent)
+
+;; these two will be removed by the realign pass
+(struct bare-prefix thing (tok) #:transparent)
+(struct bare-sexp-comment thing () #:transparent)
+
+
+(define (strip-comment obj)
+  (if (thing-extra obj)
+      (cond
+        [(node? obj)
+         (struct-copy node obj
+                      [extra #:parent thing #f])]
+        [(atom? obj)
+         (struct-copy atom obj
+                      [extra #:parent thing #f])]
+        [(wrapper? obj)
+         (struct-copy wrapper obj
+                      [extra #:parent thing #f])]
+        [(sexp-comment? obj)
+         (struct-copy sexp-comment obj
+                      [extra #:parent thing #f])]
+        [else obj])
+      obj))
+
+(define (check-left? xs at-least)
+  (cond
+    [(zero? at-least) #t]
+    [else
+     (match xs
+       ['() #f]
+       [(cons x xs)
+        (cond
+          [(visible? x) (check-left? xs (sub1 at-least))]
+          [else (check-left? xs at-least)])])]))
+
+(define (extract xs
+                 extract-configs
+                 #:at-least [at-least (length extract-configs)])
+  (let loop ([xs xs]
+             [extract-configs extract-configs]
+             [fits '()]
+             [unfits '()]
+             [at-least at-least])
+    (match extract-configs
+      ['() (and (check-left? xs at-least)
+                (list (reverse fits)
+                      (filter (λ (x) (not (nl? x))) (reverse unfits))
+                      xs))]
+      [(cons extract-config extract-configs)
+       (match xs
+         ['() #f]
+         [(cons x xs)
+          (cond
+            [(visible? x)
+             (cond
+               [(and extract-config (thing-extra x))
+                (loop xs
+                      extract-configs
+                      (cons (strip-comment x) fits)
+                      (cons (line-comment #f (thing-extra x)) unfits)
+                      (sub1 at-least))]
+               [else
+                (loop xs
+                      extract-configs
+                      (cons x fits)
+                      unfits
+                      (sub1 at-least))])]
+            [else (loop xs
+                        (cons extract-config extract-configs)
+                        fits
+                        (cons x unfits)
+                        at-least)])])])))
 
 ;; tokenize :: string? -> (listof token?)
 (define (tokenize program-source
@@ -71,7 +143,9 @@
             (cond
               [(equal? text re-read)
                (token srcloc text 'sexp-comment)]
-              [else (token srcloc re-read 'block-comment)])]
+              [else
+               ;; this is sexp comment before #lang, treat it as a block comment
+               (token srcloc re-read 'block-comment)])]
 
            ;; non-comment
            [(not (eq? type 'comment))
@@ -101,6 +175,7 @@
 (define (open-paren? x) (memq x openers))
 (define (close-paren? x) (memq x closers))
 
+;; precondition: obj is either node or atom
 (define (process-tail obj xs)
   (define (do-it comment xs)
     (values
@@ -119,7 +194,9 @@
      (do-it comment xs)]
     [_ (values obj xs)]))
 
-(define (read-one xs #:source [source #f] #:while-reading [while-reading #f])
+(define (read-one xs
+                  #:source [source #f]
+                  #:while-reading [while-reading #f])
   (match xs
     ['() (raise-read-eof-error "unexpected eof" source #f #f #f #f)]
 
@@ -176,33 +253,16 @@
      (values (nl #f (sub1 n)) xs)]
 
     [(cons (token _ (and c (or "'" "`" "#'" "#`")) 'constant) xs)
-     (define-values (this xs*)
-       (read-one xs #:source source #:while-reading #f))
-     (values (wrapper #f c this) xs*)]
+     (values (bare-prefix #f c) xs)]
 
     [(cons (token _ (and c (or "," ",@" "#," "#,@")) 'other) xs)
-     (define-values (this xs*)
-       (read-one xs #:source source #:while-reading #f))
-     (values (wrapper #f c this) xs*)]
+     (values (bare-prefix #f c) xs)]
 
     [(cons (token _ comment 'line-comment) xs)
      (values (line-comment #f comment) xs)]
 
-    [(cons (token _ tk 'sexp-comment) xs)
-     (match xs
-       [(cons (token _ _ `(white-space ,n)) xs)
-        #:when (positive? n)
-        (values (bare-sexp-comment #f tk) xs)]
-       [_
-        (define-values (this xs*)
-          (read-one xs #:source source #:while-reading #f))
-        (values (match this
-                  [(bare-sexp-comment _ tk*)
-                   (bare-sexp-comment #f (string-append tk tk*))]
-                  [(sexp-comment _ level content)
-                   (sexp-comment #f (add1 level) content)]
-                  [_ (sexp-comment #f 1 this)])
-                xs*)])]
+    [(cons (token _ _ 'sexp-comment) xs)
+     (values (bare-sexp-comment #f) xs)]
 
     [(cons (token _ content kind) xs)
      (process-tail (atom #f content kind) xs)]))
@@ -223,53 +283,68 @@
        (define-values (this xs*) (read-one xs #:source source))
        (loop xs* (cons this acc))])))
 
-(define sexp-comment-tok (text "#;"))
-
-(define (require-newline? d)
-  (or (thing-extra d)
-      (line-comment? d)
-      (bare-sexp-comment? d)
-      (nl? d)))
-
-(define (pretty-node n d)
-  (match-define (node comment opener closer _) n)
-  (define main-doc (h-append (text opener) d (text closer)))
-  (if comment
-      (h-append main-doc space (text comment))
-      main-doc))
-
 (define (visible? x)
-  (or (node? x)
-      (atom? x)
-      (wrapper? x)))
+  (or (node? x) (atom? x) (wrapper? x)))
 
-(define ((pretty-v-concat/kw pretty) xs)
+(define (realign/seq xs)
   (let loop ([xs xs])
     (match xs
-      ['() empty-doc]
-      [(list x) (pretty x)]
-      [(list (and kw (atom _ _ 'hash-colon-keyword))
-             (? visible? v))
-       #:when (not (require-newline? kw))
-       (alt
-        (hs-append (pretty kw) (pretty v))
-        (v-append
-         (pretty kw)
-         (pretty v)))]
-      [(list (and kw (atom _ _ 'hash-colon-keyword))
-             (? visible? v)
-             xs
-             ...)
-       #:when (not (require-newline? kw))
-       (alt
-        (v-append
-         (hs-append (pretty kw) (pretty v))
-         (loop xs))
-        (v-append
-         (pretty kw)
-         (pretty v)
-         (loop xs)))]
-      [(list x xs ...) (v-append (pretty x) (loop xs))])))
+      ['() '()]
+      [(cons (? nl? d) xs)
+       (cons d (loop xs))]
+      [(cons (? atom? d) xs)
+       (cons d (loop xs))]
+      [(cons (? line-comment? d) xs)
+       (cons d (loop xs))]
+      [(cons (? bare-sexp-comment?) xs)
+       (define-values (invisibles tail)
+         (splitf-at (loop xs) (negate visible?)))
+       (match tail
+         ['() (raise-read-error "sexp-comment without content" #f #f #f #f #f)]
+         [(cons visible xs)
+          ;; special treatment for #; since we like #;#;
+          (define-values (invisibles* current-style tok)
+            (match invisibles
+              [(cons (sexp-comment comment _ tok content) xs)
+               (values (cons (sexp-comment comment
+                                           'newline
+                                           (string-append "#;" tok)
+                                           content)
+                             xs)
+                       'disappeared
+                       "")]
+              ['() (values invisibles 'any "#;")]
+              [_ (values invisibles 'newline "#;")]))
+          (cons
+           (sexp-comment (thing-extra visible)
+                         current-style
+                         tok
+                         (append invisibles*
+                                 (list (strip-comment visible))))
+           xs)])]
+      [(cons (bare-prefix _ tk) xs)
+       (define-values (invisibles tail)
+         (splitf-at (loop xs) (negate visible?)))
+       (match tail
+         ['() (raise-read-error "quote without content" #f #f #f #f #f)]
+         [(cons visible xs)
+          (cons
+           (wrapper (thing-extra visible)
+                    tk
+                    (append invisibles (list (strip-comment visible))))
+           xs)])]
+      [(cons (node comment opener closer xs*) xs)
+       (cons (node comment opener closer (loop xs*)) (loop xs))])))
+
+(define (realign d)
+  (match d
+    [(toplevel comment xs)
+     (toplevel comment (realign/seq xs))]))
+
+(define (pretty-comment comment d)
+  (if comment
+      (hs-append d (text comment))
+      d))
 
 (define ((pretty hook) d)
   (define loop
@@ -278,48 +353,32 @@
        (match d
          [(toplevel _ xs) (v-concat (map loop xs))]
          [(nl _ n) (v-concat (make-list n empty-doc))]
-         [(atom comment content _)
-          (if comment
-              (text (string-append content " " comment))
-              (text content))]
+         [(atom comment content _) (pretty-comment comment (text content))]
          [(line-comment _ comment) (text comment)]
-         [(sexp-comment _ 1 (line-comment _ comment))
-          (text (string-append "#; " comment))]
-         [(sexp-comment _ 1 content)
-          (define content* (loop content))
-          (alt (h-append sexp-comment-tok content*)
-               (v-append sexp-comment-tok content*))]
-         [(sexp-comment _ n content)
-          (define content* (loop content))
-          (v-append (h-concat (make-list n sexp-comment-tok))
-                    content*)]
-         [(bare-sexp-comment _ tok) (text tok)]
-         [(wrapper _ pre (line-comment _ comment))
-          (text (string-append pre " " comment))]
-         [(wrapper _ pre content) (h-append (text pre) (loop content))]
+         [(sexp-comment comment style tok xs)
+          (pretty-comment
+           comment
+           (match style
+             ['disappeared (v-concat (map loop xs))]
+             ['newline (v-append (text tok)
+                                 (v-concat (map loop xs)))]
+             ['any
+              (define xs* (v-concat (map loop xs)))
+              (alt (h-append (text tok) xs*)
+                   (v-append (text tok) xs*))]))]
          [(node _ _ _ xs)
-          (define (default)
-            (define req-last-newline? (require-newline? (last xs)))
-            (alt
-             (flush-if req-last-newline? ((pretty-v-concat/kw loop) xs))
-             (if (ormap require-newline? xs)
-                 fail
-                 (flat (hs-concat (map loop xs))))
-             (if (require-newline? (first xs))
-                 fail
-                 (h-append (flat (loop (first xs)))
-                           space
-                           (flush-if req-last-newline?
-                                     ((pretty-v-concat/kw loop) (rest xs)))))))
-          (match xs
-            ['() (pretty-node d empty-doc)]
-            ;; TODO: checking the first token is not ideal, but will do it for now
-            [(cons (atom _ content 'symbol) _)
-             (define proc (hook content))
-             (cond
-               [proc (pretty-node d ((proc loop) xs))]
-               [else (pretty-node d (default))])]
-            [_ (pretty-node d (default))])]))))
+          (match (extract xs (list #f))
+            [#f (((hook #f) loop) d)]
+            [(list (list (atom _ content 'symbol)) _ _)
+             (((hook content) loop) d)]
+            [_ (((hook #f) loop) d)])]
+         [(wrapper comment tok xs)
+          (pretty-comment
+           comment
+           (match xs
+             [(list x) (h-append (text tok) (loop x))]
+             [_ (v-append (text tok)
+                          (v-concat (map loop xs)))]))]))))
   (loop d))
 
 ;; program-format :: string? -> string?
@@ -329,6 +388,6 @@
                         #:hook [hook (λ (name) #f)])
   (define doc
     ((pretty hook)
-     (read-top (tokenize program-source #:source source)
-               #:source source)))
+     (realign (read-top (tokenize program-source #:source source)
+                        #:source source))))
   (pretty-format doc #:width width))
