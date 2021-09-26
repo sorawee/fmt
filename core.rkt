@@ -29,11 +29,13 @@
 (struct thing (extra) #:transparent)
 (struct node thing (opener closer content) #:transparent)
 (struct atom thing (content type) #:transparent)
+;; invariant: n >= 1
 (struct nl thing (n) #:transparent)
 (struct line-comment thing (content) #:transparent)
-(struct sexp-comment thing (style tok content) #:transparent)
-(struct wrapper thing (tk content) #:transparent)
 (struct toplevel thing (content) #:transparent)
+;; these two only exist after the realign pass
+(struct sexp-comment thing (style tok content) #:transparent)
+(struct wrapper thing (tk invisibles content) #:transparent)
 
 ;; these two will be removed by the realign pass
 (struct bare-prefix thing (tok) #:transparent)
@@ -331,7 +333,8 @@
           (cons
            (wrapper (thing-extra visible)
                     tk
-                    (append invisibles (list (strip-comment visible))))
+                    invisibles
+                    (strip-comment visible))
            xs)])]
       [(cons (node comment opener closer xs*) xs)
        (cons (node comment opener closer (loop xs*)) (loop xs))])))
@@ -346,7 +349,7 @@
       (hs-append d (text comment))
       d))
 
-(define ((pretty hook) d)
+(define (pretty d hook)
   (define loop
     (memoize
      (λ (d)
@@ -372,13 +375,13 @@
             [(list (list (atom _ content 'symbol)) _ _)
              (((hook content) loop) d)]
             [_ (((hook #f) loop) d)])]
-         [(wrapper comment tok xs)
+         [(wrapper comment tok invisibles content)
           (pretty-comment
            comment
-           (match xs
-             [(list x) (h-append (text tok) (loop x))]
-             [_ (v-append (text tok)
-                          (v-concat (map loop xs)))]))]))))
+           (match invisibles
+             ['() (h-append (text tok) (loop content))]
+             [_ (v-append (v-concat (map loop invisibles))
+                          (h-append (text tok) (loop content)))]))]))))
   (loop d))
 
 ;; program-format :: string? -> string?
@@ -387,7 +390,7 @@
                         #:width [width 80]
                         #:hook [hook (λ (name) #f)])
   (define doc
-    ((pretty hook)
-     (realign (read-top (tokenize program-source #:source source)
-                        #:source source))))
+    (pretty (realign (read-top (tokenize program-source #:source source)
+                               #:source source))
+            hook))
   (pretty-format doc #:width width))

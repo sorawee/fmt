@@ -59,7 +59,7 @@
          (pretty ellipsis)
          (loop xs)))]
       [(list (and kw (atom _ _ 'hash-colon-keyword))
-             (? visible? v))
+             (and (? visible? v) (not (atom _ _ 'hash-colon-keyword))))
        #:when (not (require-newline? kw))
        (alt
         (hs-append (pretty kw) (pretty v))
@@ -67,7 +67,7 @@
          (pretty kw)
          (pretty v)))]
       [(list (and kw (atom _ _ 'hash-colon-keyword))
-             (? visible? v)
+             (and (? visible? v) (not (atom _ _ 'hash-colon-keyword)))
              xs ...)
        #:when (not (require-newline? kw))
        (alt

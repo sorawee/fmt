@@ -154,7 +154,7 @@
              space
              (flush-if
               (require-newline? (last tail))
-              (v-concat (map (hook-for-body pretty) tail))))))])))]))
+              ((pretty-v-concat/kw (hook-for-body pretty)) tail)))))])))]))
 
 (define ((hook-binding-pairs pretty) bindings)
   (match bindings
@@ -237,6 +237,7 @@
                       (flush-if (require-newline? (last tail))
                                 (v-concat (map pretty tail)))))))])]))
 
+
 (define (hook-standard name)
   (case name
     ;; always in the form
@@ -266,7 +267,7 @@
 
     [("syntax-case") (hook-with-uniform-body 2 #:hook-for-body hook-clause)]
 
-    [("syntax-rules") (hook-with-uniform-body 1 #:hook-for-body hook-clause)]
+    [("syntax-rules" "syntax-parse") (hook-with-uniform-body 1 #:hook-for-body hook-clause)]
 
     [("syntax/loc" "quasisyntax/loc") (hook-with-uniform-body 1)]
 
