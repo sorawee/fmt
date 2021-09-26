@@ -35,7 +35,7 @@
 (struct toplevel thing (content) #:transparent)
 ;; these two only exist after the realign pass
 (struct sexp-comment thing (style tok content) #:transparent)
-(struct wrapper thing (tk invisibles content) #:transparent)
+(struct wrapper thing (tk content) #:transparent)
 
 ;; these two will be removed by the realign pass
 (struct bare-prefix thing (tok) #:transparent)
@@ -289,55 +289,68 @@
   (or (node? x) (atom? x) (wrapper? x)))
 
 (define (realign/seq xs)
-  (let loop ([xs xs])
+  (let loop ([xs xs] [just-read-sexp-comment? #f])
     (match xs
       ['() '()]
       [(cons (? nl? d) xs)
-       (cons d (loop xs))]
+       (cons d (loop xs #f))]
       [(cons (? atom? d) xs)
-       (cons d (loop xs))]
+       (cons d (loop xs #f))]
       [(cons (? line-comment? d) xs)
-       (cons d (loop xs))]
+       (cons d (loop xs #f))]
       [(cons (? bare-sexp-comment?) xs)
        (define-values (invisibles tail)
-         (splitf-at (loop xs) (negate visible?)))
+         (splitf-at (loop (dropf xs nl?) #t) (negate visible?)))
        (match tail
          ['() (raise-read-error "sexp-comment without content" #f #f #f #f #f)]
          [(cons visible xs)
-          ;; special treatment for #; since we like #;#;
-          (define-values (invisibles* current-style tok)
-            (match invisibles
-              [(cons (sexp-comment comment _ tok content) xs)
-               (values (cons (sexp-comment comment
-                                           'newline
-                                           (string-append "#;" tok)
-                                           content)
-                             xs)
-                       'disappeared
-                       "")]
-              ['() (values invisibles 'any "#;")]
-              [_ (values invisibles 'newline "#;")]))
-          (cons
-           (sexp-comment (thing-extra visible)
-                         current-style
-                         tok
-                         (append invisibles*
-                                 (list (strip-comment visible))))
-           xs)])]
+          (match invisibles
+            [(cons (sexp-comment comment style? tok content) invisibles)
+             (append
+              (list (sexp-comment comment style? (string-append "#;" tok) content))
+              invisibles
+              (cons visible xs))]
+            ['()
+             #:when (not just-read-sexp-comment?)
+             (match visible
+               [(node comment opener closer content)
+                (cons (node comment (string-append "#;" opener) closer content)
+                      xs)]
+               [_
+                (cons
+                 (sexp-comment (thing-extra visible)
+                               'any
+                               "#;"
+                               (list (strip-comment visible)))
+                 xs)])]
+            [_
+             (cons
+              (sexp-comment (thing-extra visible)
+                            'newline
+                            "#;"
+                            (append invisibles (list (strip-comment visible))))
+              xs)])])]
+
       [(cons (bare-prefix _ tk) xs)
        (define-values (invisibles tail)
-         (splitf-at (loop xs) (negate visible?)))
+         (splitf-at (loop (dropf xs nl?) #f) (negate visible?)))
        (match tail
          ['() (raise-read-error "quote without content" #f #f #f #f #f)]
          [(cons visible xs)
-          (cons
-           (wrapper (thing-extra visible)
-                    tk
-                    invisibles
-                    (strip-comment visible))
-           xs)])]
+          (append
+           invisibles
+           (cons (match visible
+                   ;; don't create a new wrapper, just transfer content
+                   [(wrapper comment tk* content)
+                    (wrapper comment (string-append tk tk*) content)]
+                   [(node comment opener closer content)
+                    (node comment (string-append tk opener) closer content)]
+                   [_ (wrapper (thing-extra visible)
+                               tk
+                               (strip-comment visible))])
+                 xs))])]
       [(cons (node comment opener closer xs*) xs)
-       (cons (node comment opener closer (loop xs*)) (loop xs))])))
+       (cons (node comment opener closer (loop xs* #f)) (loop xs #f))])))
 
 (define (realign d)
   (match d
@@ -362,7 +375,6 @@
           (pretty-comment
            comment
            (match style
-             ['disappeared (v-concat (map loop xs))]
              ['newline (v-append (text tok)
                                  (v-concat (map loop xs)))]
              ['any
@@ -375,13 +387,9 @@
             [(list (list (atom _ content 'symbol)) _ _)
              (((hook content) loop) d)]
             [_ (((hook #f) loop) d)])]
-         [(wrapper comment tok invisibles content)
-          (pretty-comment
-           comment
-           (match invisibles
-             ['() (h-append (text tok) (loop content))]
-             [_ (v-append (v-concat (map loop invisibles))
-                          (h-append (text tok) (loop content)))]))]))))
+         [(wrapper comment tok content)
+          (pretty-comment comment
+                          (h-append (text tok) (loop content)))]))))
   (loop d))
 
 ;; program-format :: string? -> string?

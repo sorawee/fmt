@@ -47,3 +47,14 @@ def
 
 '#;abc
 def
+
+#;#;#;
+a
+b
+c
+
+
+
+' ; abc
+' ; def
+g

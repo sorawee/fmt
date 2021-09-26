@@ -12,6 +12,7 @@
   (cond
     [((current-app?) d)
      (alt
+      ;; general case
       (match (extract* pretty xs (list #f))
         [#f (pretty-node d (try-indent
                             #:n 0
@@ -25,25 +26,28 @@
            #:n 0
            #:because-of (cons -head tail)
            ((pretty-v-concat/kw pretty) (cons -head tail))))])
-      (match (extract* pretty xs (list #t))
+
+      ;; pretty cases
+      (match (extract* pretty xs (list #t #f))
         [#f fail]
-        [(list (list -head) unfits tail)
+        [(list (list -head -first-arg) unfits tail)
          (pretty-node
           #:unfits unfits
           d
           (hs-append (flat (pretty -head))
                      (try-indent
                       #:n 0
-                      #:because-of tail
+                      #:because-of (cons -first-arg tail)
                       (alt
                        ;; try to fit in one line
                        #;(a #:x a b c)
-                       (flat (hs-concat (map pretty tail)))
+                       (flat (hs-concat (map pretty (cons -first-arg tail))))
 
                        #;(aaaaaaaaaaaaa #:x aaaaaaaaaaaaaaa
                                         bbbbbbbbbbbbbbb
                                         cccccccccccccccc)
-                       ((pretty-v-concat/kw pretty) tail)))))]))]
+                       ((pretty-v-concat/kw pretty)
+                        (cons -first-arg tail))))))]))]
     [else
      (pretty-node
       d
