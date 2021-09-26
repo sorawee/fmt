@@ -1,6 +1,7 @@
-#lang racket
+#lang racket/base
 
 (require racket/cmdline
+         racket/file
          "core.rkt"
          "conventions.rkt")
 
