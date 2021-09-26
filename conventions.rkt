@@ -93,8 +93,7 @@
           (try-indent
            #:n 0
            #:because-of (list -something)
-           (alt (hs-append (flat (pretty -head)) (pretty -something))
-                (hs-append (pretty -head) (flat (pretty -something))))))]
+           (hs-append (flat (pretty -head)) (pretty -something))))]
         [_ fail])
 
       ;; general case
