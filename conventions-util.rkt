@@ -8,6 +8,7 @@
          app-format/no-comment
          app-format/fail
          pretty-node
+         try-indent
 
          extract*
 
@@ -91,23 +92,27 @@
 (define app-format/fail
   (app-format fail '()))
 
-(define (pretty-node n xs #:adjust [adjust #f])
+(define (pretty-node n d #:unfits [unfits '()] #:adjust [adjust #f])
   (match-define (node comment opener closer _) n)
-  (define (build-doc x)
-    (match-define (app-format d xs) x)
-    (let* ([main-doc (h-append (text (if adjust (first adjust) opener))
-                               d
-                               (text (if adjust (second adjust) closer)))]
-           [main-doc (pretty-comment comment main-doc)])
-      (match xs
-        ['() main-doc]
-        [_ (v-append (v-concat xs) main-doc)])))
-  (apply alt (map build-doc xs)))
+  (define main-doc
+    (pretty-comment
+     comment
+     (h-append (text (if adjust (first adjust) opener))
+               d
+               (text (if adjust (second adjust) closer)))))
+  (match unfits
+    ['() main-doc]
+    [_ (v-append (v-concat unfits) main-doc)]))
 
-(define (extract* pretty xs config #:at-least [at-least (length config)])
-  (match (extract xs config #:at-least at-least)
+(define (extract* pretty xs config)
+  (match (extract xs config)
     [#f #f]
     [(list fits unfits tail)
-     (list fits
-           (λ (d) (app-format d (map pretty unfits)))
-           tail)]))
+     (list fits (map pretty unfits) tail)]))
+
+(define (try-indent d #:n [n 1] #:because-of xs)
+  (match xs
+    ['() d]
+    [_ (if (require-newline? (last xs))
+           (indent-next n d)
+           d)]))
