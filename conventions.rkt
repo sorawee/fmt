@@ -1,13 +1,13 @@
 #lang racket/base
 
-(provide hook-standard)
+(provide standard-lookup)
 (require racket/match
          racket/list
          pprint-compact
          "core.rkt"
          "conventions-util.rkt")
 
-(define ((hook-app pretty) d)
+(define ((format-#%app pretty) d)
   (define xs (node-content d))
   (cond
     [((current-app?) d)
@@ -50,10 +50,10 @@
       (alt ((pretty-v-concat/kw pretty) xs)
            (flat (hs-concat (map pretty xs)))))]))
 
-(define ((hook-define-like pretty) d)
+(define ((format-define-like pretty) d)
   (match (extract* pretty (node-content d) (list #t #f))
     ;; stuff like (define) -- don't care
-    [#f ((hook-app pretty) d)]
+    [#f ((format-#%app pretty) d)]
     ;; this is it!
     [(list (list -define -head) unfits tail)
      (pretty-node
@@ -78,7 +78,7 @@
          (hs-append (pretty -define) (pretty -head))
          (h-append space (v-concat (map pretty tail)))))))]))
 
-(define ((hook-clause-2 pretty) clause)
+(define ((format-clause-2 pretty) clause)
   (match clause
     [(node _ (or "(" "[") (or ")" "]") xs)
      (alt
@@ -106,7 +106,7 @@
         ((pretty-v-concat/kw pretty) xs))))]
     [_ (pretty clause)]))
 
-(define (((hook-with-uniform-body
+(define (((format-with-uniform-body
            n
            #:hook-for-arg [hook-for-arg values]
            #:hook-for-body [hook-for-body values]
@@ -115,7 +115,7 @@
          d)
   (match (extract* pretty (node-content d) (append (make-list n #t) (list #f)))
     ;; don't care
-    [#f ((hook-app pretty) d)]
+    [#f ((format-#%app pretty) d)]
     ;; this is it!
     [(list (list -macro-name -e ...) unfits tail)
      (define first-line
@@ -140,7 +140,7 @@
               space
               ((pretty-v-concat/kw (hook-for-body pretty)) tail)))])))]))
 
-(define ((hook-binding-pairs pretty) bindings)
+(define ((format-binding-pairs pretty) bindings)
   (match bindings
     [(node _ _ _ xs)
      (pretty-node
@@ -155,9 +155,9 @@
         (v-concat (map pretty xs)))))]
     [_ (pretty bindings)]))
 
-(define ((hook-let-like pretty) d)
+(define ((format-let-like pretty) d)
   (match (extract* pretty (node-content d) (list #t #f))
-    [#f ((hook-app pretty) d)]
+    [#f ((format-#%app pretty) d)]
     ;; named let
     [(list (list _ (? atom?)) _ _)
      (=> fail-pattern)
@@ -172,15 +172,14 @@
           (v-append
            (hs-append (pretty -let)
                       (pretty -name)
-                      ((hook-binding-pairs pretty) -bindings))
+                      ((format-binding-pairs pretty) -bindings))
            (h-append space (v-concat (map pretty tail))))))])]
     ;; regular let
-    [(list (list -let -bindings) unfits tail)
-     ((hook-let*-like pretty) d)]))
+    [_ ((format-let*-like pretty) d)]))
 
-(define ((hook-let*-like pretty) d)
+(define ((format-let*-like pretty) d)
   (match (extract* pretty (node-content d) (list #t #f))
-    [#f ((hook-app pretty) d)]
+    [#f ((format-#%app pretty) d)]
     ;; regular let
     [(list (list -let -bindings) unfits tail)
      (pretty-node
@@ -194,7 +193,7 @@
           #;(let ([x y] [z x]) z)
           [(list -body)
            (flat (hs-append (pretty -let)
-                            ((hook-binding-pairs pretty) -bindings)
+                            ((format-binding-pairs pretty) -bindings)
                             (pretty -body)))]
           [_ fail])
 
@@ -203,12 +202,12 @@
             x
             y)
         (v-append
-         (hs-append (pretty -let) ((hook-binding-pairs pretty) -bindings))
+         (hs-append (pretty -let) ((format-binding-pairs pretty) -bindings))
          (h-append
           space
           (v-concat (map pretty tail)))))))]))
 
-(define ((hook-require-like pretty) d)
+(define ((format-require-like pretty) d)
   (match (extract* pretty (node-content d) (list #t))
     [(list (list -provide) unfits tail)
      (pretty-node
@@ -223,62 +222,77 @@
                      #:because-of tail
                      (v-concat (map pretty tail))))]))]))
 
-(define (hook-standard name)
+(define ((format-struct-like pretty) d)
+  (match (extract* pretty (node-content d) (list #t #t #f))
+    [#f ((format-#%app pretty) d)]
+    [(list (list _ _ (? atom?)) unfits tail)
+     (((format-with-uniform-body 3 #:require-body? #f) pretty) d)]
+    [_ (((format-with-uniform-body 2 #:require-body? #f) pretty) d)]))
+
+(define (standard-lookup name)
   (case name
     ;; always in the form
     #;(provide a
                b
                c)
-    [("provide" "require") hook-require-like]
+    [("provide" "require") format-require-like]
     ;; try to fit in one line is the body has exactly one form,
     ;; else will be multiple lines
     #;(define x 1)
     #;(define (y)
         a
         b)
-    [("define" "define-for-syntax" "define-values") hook-define-like]
+    [("define" "define-for-syntax" "define-values") format-define-like]
     [("define-syntax" "define-syntaxes" "define-values-for-syntax")
-     hook-define-like]
-    [("λ" "lambda") hook-define-like]
+     format-define-like]
+    [("λ" "lambda") format-define-like]
 
     [("let*" "let-values" "let*-values" "letrec" "letrec-values")
-     hook-let*-like]
+     format-let*-like]
     [("let-syntax" "letrec-syntax" "let-syntaxes" "letrec-syntaxes")
-     hook-let*-like]
-    [("with-syntax" "with-syntax*")
-     hook-let*-like]
-    [("parameterize" "parameterize*")
-     hook-let*-like]
+     format-let*-like]
+    [("with-syntax" "with-syntax*") format-let*-like]
+    [("parameterize" "parameterize*") format-let*-like]
+    [("letrec-syntaxes+values")
+     (format-with-uniform-body 2 #:hook-for-arg format-binding-pairs)]
 
-    [("module+") (hook-with-uniform-body 1)]
-    [("module" "module*") (hook-with-uniform-body 2)]
+    [("begin") (format-with-uniform-body 0)]
+    [("begin0") (format-with-uniform-body 1)]
+    [("module+") (format-with-uniform-body 1)]
+    [("module" "module*") (format-with-uniform-body 2)]
 
     [("cond" "case-lambda")
-     (hook-with-uniform-body 0 #:hook-for-body hook-clause-2)]
+     (format-with-uniform-body 0 #:hook-for-body format-clause-2)]
 
     [("syntax-rules" "syntax-parse" "match" "match*" "case")
-     (hook-with-uniform-body 1 #:hook-for-body hook-clause-2)]
+     (format-with-uniform-body 1 #:hook-for-body format-clause-2)]
 
-    [("syntax-case") (hook-with-uniform-body 2 #:hook-for-body hook-clause-2)]
+    [("syntax-case")
+     (format-with-uniform-body 2 #:hook-for-body format-clause-2)]
 
-    [("syntax/loc" "quasisyntax/loc") (hook-with-uniform-body 1)]
-    [("when" "unless") (hook-with-uniform-body 1)]
+    [("syntax/loc" "quasisyntax/loc") (format-with-uniform-body 1)]
+    [("when" "unless") (format-with-uniform-body 1)]
 
     ;; these are really hacks... they don't support kws in body like #:break well
     [("for/fold" "for*/fold")
-     (hook-with-uniform-body 2 #:hook-for-arg hook-binding-pairs)]
-    [("for" "for*") (hook-with-uniform-body 1 #:hook-for-arg hook-binding-pairs)]
+     (format-with-uniform-body 2 #:hook-for-arg format-binding-pairs)]
+    [("for" "for*")
+     (format-with-uniform-body 1 #:hook-for-arg format-binding-pairs)]
     [("for/list" "for*/list")
-     (hook-with-uniform-body 1 #:hook-for-arg hook-binding-pairs)]
+     (format-with-uniform-body 1 #:hook-for-arg format-binding-pairs)]
     [("for/hash" "for*/hash")
-     (hook-with-uniform-body 1 #:hook-for-arg hook-binding-pairs)]
+     (format-with-uniform-body 1 #:hook-for-arg format-binding-pairs)]
     [("for/hasheq" "for*/hasheq")
-     (hook-with-uniform-body 1 #:hook-for-arg hook-binding-pairs)]
+     (format-with-uniform-body 1 #:hook-for-arg format-binding-pairs)]
     [("for/hasheqv" "for*/hasheqv")
-     (hook-with-uniform-body 1 #:hook-for-arg hook-binding-pairs)]
+     (format-with-uniform-body 1 #:hook-for-arg format-binding-pairs)]
     [("for/vector" "for*/vector")
-     (hook-with-uniform-body 1 #:hook-for-arg hook-binding-pairs)]
+     (format-with-uniform-body 1 #:hook-for-arg format-binding-pairs)]
 
     ;; support both named let and usual let
-    [("let") hook-let-like]
-    [else hook-app]))
+    [("let") format-let-like]
+
+    [("struct") format-struct-like]
+    [("define-struct") (format-with-uniform-body 2 #:require-body? #f)]
+
+    [else format-#%app]))

@@ -5,7 +5,7 @@ A code formatter for Racket.
 
 Work in progress.
 
-To run, execute `racket run.rkt <filename.rkt>`.
+To run, install the package (`raco pkg install fmt`) and run `raco fmt <your-code.rkt>`.
 
 ### Principles 
 
