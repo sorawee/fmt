@@ -246,7 +246,7 @@
     [("let-syntax" "letrec-syntax" "let-syntaxes" "letrec-syntaxes")
      format-node-let*]
     [("with-syntax" "with-syntax*") format-node-let*]
-    [("parameterize" "parameterize*") format-node-let*]
+    [("parameterize" "parameterize*" "syntax-parameterize") format-node-let*]
     [("letrec-syntaxes+values")
      (format-node-uniform-body 2 #:hook-for-arg format-binding-pairs)]
 
