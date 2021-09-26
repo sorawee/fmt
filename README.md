@@ -9,5 +9,5 @@ To run, install the package (`raco pkg install fmt`) and run `raco fmt <your-cod
 
 ### Principles 
 
-- OK code (modulo style) looks OK. Not OK code can look bad.
-- Changes must be only cosmetic. No other addition or removal.
+- A reformat of an OK code (with potentially bad style) should look OK. A reformat of a not OK code (macro-expansion error, read error) can look bad or even error (in case of read error).
+- Changes must be only cosmetic. No content addition or removal.
