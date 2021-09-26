@@ -2131,8 +2131,8 @@
                 init-args ; list of symbols in order; #f => only by position
                 init-mode ; 'normal, 'stop (don't accept by-pos for super), or 'list
                 
-                [init ; initializer
-                 #:mutable] ; :   object
+                ; initializer
+                [init #:mutable] ; :   object
                 ;     (object class (box boolean) leftover-args new-by-pos-args new-named-args
                 ;      -> void) // always continue-make-super?
                 ;     class
@@ -3326,8 +3326,8 @@ An example
                  #:mutable]
                 public-ids ; (listof symbol) (in any order?!?)
                 contracts ; (hashof symbol? contract?)
-                [class ; (union #f class) -- means that anything implementing
-                 #:mutable] ; this interface must be derived from this class
+                ; (union #f class) -- means that anything implementing
+                [class #:mutable] ; this interface must be derived from this class
                 properties) ; (listof (vector gensym prop val))
   #:inspector insp)
 
@@ -3570,7 +3570,8 @@ An example
     [(_ cls (id arg) ...)
      (andmap identifier? (syntax->list (syntax (id ...))))
      (class-syntax-protect (quasisyntax/loc stx
-                             (instantiate cls () (id arg) ...)))]
+                             (instantiate cls ()
+                               [id arg] ...)))]
     [(_ cls (id arg) ...)
      (for-each (lambda (id)
                  (unless (identifier? id)
@@ -5048,9 +5049,15 @@ An example
                                define/augment
                                define/augride
                                define/augment-final)
-           [(inherit names ...) (extract-renamed-names (syntax (names ...)))]
-           [(rename [x names] ...) (syntax->list (syntax (names ...)))]
-           [(override names ...) (extract-renamed-names (syntax (names ...)))]
+           [(inherit names
+                     ...)
+            (extract-renamed-names (syntax (names ...)))]
+           [(rename [x names]
+                    ...)
+            (syntax->list (syntax (names ...)))]
+           [(override names
+                      ...)
+            (extract-renamed-names (syntax (names ...)))]
            [(overment names ...) (extract-renamed-names (syntax (names ...)))]
            [(override-final names ...)
             (extract-renamed-names (syntax (names ...)))]

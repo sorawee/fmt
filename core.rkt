@@ -392,13 +392,12 @@
                           (h-append (text tok) (loop content)))]))))
   (loop d))
 
-;; program-format :: string? -> string?
 (define (program-format program-source
+                        formatter
                         #:source [source #f]
-                        #:width [width 80]
-                        #:hook [hook (λ (name) #f)])
-  (define doc
-    (pretty (realign (read-top (tokenize program-source #:source source)
-                               #:source source))
-            hook))
-  (pretty-format doc #:width width))
+                        #:width [width 80])
+  (pretty-format
+   #:width width
+   (pretty (realign (read-top (tokenize program-source #:source source)
+                              #:source source))
+           formatter)))

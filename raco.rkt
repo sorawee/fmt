@@ -10,4 +10,4 @@
    filename))
 
 (display (program-format (file->string filename)
-                         #:hook standard-lookup))
+                         standard-format))

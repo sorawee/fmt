@@ -1,13 +1,28 @@
 #lang racket/base
 
-(provide standard-lookup)
+(provide standard-format
+         format-node-if-like
+
+         format-node-#%app
+
+         format-node-uniform-body
+
+         format-clause-2
+         format-binding-pairs
+
+         format-node-define
+         format-node-let
+         format-node-let*
+         format-node-require
+         format-node-if
+         format-node-struct)
 (require racket/match
          racket/list
          pprint-compact
          "core.rkt"
          "conventions-util.rkt")
 
-(define ((format-node-if pretty) d)
+(define (((format-node-if-like hook-else) pretty) d)
   (define xs (node-content d))
   (match/extract pretty xs #:as unfits tail
     [([-if #t] [-conditional #f])
@@ -28,10 +43,7 @@
                          c)
                    ((pretty-v-concat/kw pretty)
                     (cons -conditional tail))))))]
-    [#:else (pretty-node d (try-indent
-                            #:n 0
-                            #:because-of xs
-                            ((pretty-v-concat/kw pretty) xs)))]))
+    [#:else ((hook-else pretty) d)]))
 
 (define ((format-node-#%app pretty) d)
   (define xs (node-content d))
@@ -50,7 +62,7 @@
            ((pretty-v-concat/kw pretty) (cons -head tail))))
 
          ;; pretty cases
-         ((format-node-if pretty) d))]
+         (((format-node-if-like (λ (pretty) (λ (d) fail))) pretty) d))]
        [#:else
         ;; perhaps full of comments, or there's nothing at all
         (pretty-node d (try-indent
@@ -68,68 +80,6 @@
         ((pretty-v-concat/kw pretty) xs)
         ;; try to fit in one line
         (flat (hs-concat (map pretty xs))))))]))
-
-(define (((format-node-define #:hook-for-head [hook-for-head values]) pretty) d)
-  (match/extract pretty (node-content d) #:as unfits tail
-    [([-define #t] [-head #f])
-     (alt
-      ;; fit in one line case; only when there are exactly three things
-      #;(define a b)
-      (pretty-node
-       #:unfits unfits
-       d
-       (try-indent
-        #:because-of tail
-        (alt
-
-         (match tail
-           [(list -e)
-            (flat (hs-append (pretty -define)
-                             ((hook-for-head pretty) -head)
-                             (pretty -e)))]
-           [_ fail]))))
-
-      ;; general case
-      #;(define (a b)
-          c
-          d
-          e)
-      (((format-node-uniform-body
-         1
-         #:hook-for-arg hook-for-head)
-        pretty)
-       d))]
-    [#:else ((format-node-#%app pretty) d)]))
-
-(define ((format-clause-2 pretty) clause)
-  (match clause
-    [(node _ (or "(" "[") (or ")" "]") xs)
-     (alt
-      ;; try to fit in one line; only when there are exactly two things
-      #;[a b]
-      (match/extract pretty xs #:as unfits tail
-        [([-head #t] [-something #f])
-         (match tail
-           ['() (pretty-node
-                 #:adjust '("[" "]")
-                 #:unfits unfits
-                 clause
-                 (try-indent
-                  #:n 0
-                  #:because-of (list -something)
-                  (hs-append (flat (pretty -head)) (pretty -something))))]
-           [_ fail])]
-        [#:else fail])
-
-      ;; general case
-      (pretty-node
-       #:adjust '("[" "]")
-       clause
-       (try-indent
-        #:n 0
-        #:because-of xs
-        ((pretty-v-concat/kw pretty) xs))))]
-    [_ (pretty clause)]))
 
 (define (((format-node-uniform-body
            n
@@ -165,6 +115,36 @@
               space
               ((pretty-v-concat/kw (hook-for-body pretty)) tail)))])))]))
 
+(define ((format-clause-2 pretty) clause)
+  (match clause
+    [(node _ (or "(" "[") (or ")" "]") xs)
+     (alt
+      ;; try to fit in one line; only when there are exactly two things
+      #;[a b]
+      (match/extract pretty xs #:as unfits tail
+        [([-head #t] [-something #f])
+         (match tail
+           ['() (pretty-node
+                 #:adjust '("[" "]")
+                 #:unfits unfits
+                 clause
+                 (try-indent
+                  #:n 0
+                  #:because-of (list -something)
+                  (hs-append (flat (pretty -head)) (pretty -something))))]
+           [_ fail])]
+        [#:else fail])
+
+      ;; general case
+      (pretty-node
+       #:adjust '("[" "]")
+       clause
+       (try-indent
+        #:n 0
+        #:because-of xs
+        ((pretty-v-concat/kw pretty) xs))))]
+    [_ (pretty clause)]))
+
 (define ((format-binding-pairs pretty) bindings)
   (match bindings
     [(node _ _ _ xs)
@@ -180,6 +160,51 @@
         (v-concat (map (format-clause-2 pretty) xs)))))]
     [_ (pretty bindings)]))
 
+(define ((format-node-if pretty) d)
+  (((format-node-if-like format-node-#%app) pretty) d))
+
+;; try to fit in one line if the body has exactly one form,
+;; else will be multiple lines
+#;(define x 1)
+#;(define (y)
+    a
+    b)
+(define (((format-node-define #:hook-for-head [hook-for-head values]) pretty) d)
+  (match/extract pretty (node-content d) #:as unfits tail
+    [([-define #t] [-head #f])
+     (alt
+      ;; fit in one line case; only when there are exactly three things
+      #;(define a b)
+      (pretty-node
+       #:unfits unfits
+       d
+       (try-indent
+        #:because-of tail
+        (alt
+
+         (match tail
+           [(list -e)
+            (flat (hs-append (pretty -define)
+                             ((hook-for-head pretty) -head)
+                             (pretty -e)))]
+           [_ fail]))))
+
+      ;; general case
+      #;(define (a b)
+          c
+          d
+          e)
+      (((format-node-uniform-body
+         1
+         #:hook-for-arg hook-for-head)
+        pretty)
+       d))]
+    [#:else ((format-node-#%app pretty) d)]))
+
+(define format-node-let*
+  (format-node-define #:hook-for-head format-binding-pairs))
+
+;; support both named let and usual let
 (define ((format-node-let pretty) d)
   (match/extract pretty (node-content d) #:as unfits tail
     ;; named let
@@ -197,45 +222,42 @@
     ;; regular let
     [#:else ((format-node-let* pretty) d)]))
 
-(define format-node-let*
-  (format-node-define #:hook-for-head format-binding-pairs))
-
+;; always in the form
+#;(provide a
+           b
+           c)
 (define ((format-node-require pretty) d)
   (match/extract pretty (node-content d) #:as unfits tail
-    [([-provide #t])
+    [([-provide #t] [-first-arg #f])
      (pretty-node
       #:unfits unfits
       d
-      (match tail
-        ['() (pretty -provide)]
-        [_
-         (hs-append (pretty -provide)
-                    (try-indent
-                     #:n 0
-                     #:because-of tail
-                     (v-concat (map pretty tail))))]))]
-    [#:else (error 'impossible)]))
+      (hs-append (flat (pretty -provide))
+                 (try-indent
+                  #:n 0
+                  #:because-of (cons -first-arg tail)
+                  (v-concat (map pretty (cons -first-arg tail))))))]
+    [#:else ((format-node-#%app pretty) d)]))
 
+;; support optional super id: either
+#;(struct name super (fields ...)
+    #:kw)
+#;(struct name (fields ...)
+    #:kw)
 (define ((format-node-struct pretty) d)
   (match/extract pretty (node-content d) #:as unfits tail
     [([_ #t] [_ #t] [(? atom?) #f])
      (((format-node-uniform-body 3 #:require-body? #f) pretty) d)]
     [#:else (((format-node-uniform-body 2 #:require-body? #f) pretty) d)]))
 
-(define (standard-lookup name)
+(define (standard-format name)
   (case name
     [("if") format-node-if]
-    ;; always in the form
-    #;(provide a
-               b
-               c)
-    [("provide" "require") format-node-require]
-    ;; try to fit in one line is the body has exactly one form,
-    ;; else will be multiple lines
-    #;(define x 1)
-    #;(define (y)
-        a
-        b)
+    [("provide" "require" "import" "export" "link" "rename")
+     format-node-require]
+    [("public" "private" "override" "inherit" "field" "init")
+     format-node-require]
+
     [("define" "define-for-syntax" "define-values") (format-node-define)]
     [("define-syntax" "define-syntaxes" "define-values-for-syntax")
      (format-node-define)]
@@ -246,6 +268,7 @@
     [("let-syntax" "letrec-syntax" "let-syntaxes" "letrec-syntaxes")
      format-node-let*]
     [("with-syntax" "with-syntax*") format-node-let*]
+    [("shared") format-node-let*]
     [("parameterize" "parameterize*" "syntax-parameterize") format-node-let*]
     [("letrec-syntaxes+values")
      (format-node-uniform-body 2 #:hook-for-arg format-binding-pairs)]
@@ -256,13 +279,19 @@
     [("module" "module*") (format-node-uniform-body 2)]
 
     [("cond" "case-lambda")
-     (format-node-uniform-body 0 #:hook-for-body format-clause-2)]
+     (format-node-uniform-body 0
+                               #:hook-for-body format-clause-2
+                               #:require-body? #f)]
 
-    [("syntax-rules" "syntax-parse" "match" "match*" "case")
-     (format-node-uniform-body 1 #:hook-for-body format-clause-2)]
+    [("syntax-rules" "syntax-parse" "match" "match*" "case" "class")
+     (format-node-uniform-body 1
+                               #:hook-for-body format-clause-2
+                               #:require-body? #f)]
 
-    [("syntax-case")
-     (format-node-uniform-body 2 #:hook-for-body format-clause-2)]
+    [("syntax-case" "instantiate")
+     (format-node-uniform-body 2
+                               #:hook-for-body format-clause-2
+                               #:require-body? #f)]
 
     [("syntax/loc" "quasisyntax/loc") (format-node-uniform-body 1)]
     [("when" "unless") (format-node-uniform-body 1)]
@@ -283,7 +312,6 @@
     [("for/vector" "for*/vector")
      (format-node-uniform-body 1 #:hook-for-arg format-binding-pairs)]
 
-    ;; support both named let and usual let
     [("let") format-node-let]
 
     [("struct") format-node-struct]
