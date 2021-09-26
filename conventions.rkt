@@ -7,6 +7,32 @@
          "core.rkt"
          "conventions-util.rkt")
 
+(define ((format-node-if pretty) d)
+  (define xs (node-content d))
+  (match/extract pretty xs #:as unfits tail
+    [([-if #t] [-conditional #f])
+     (pretty-node
+      #:unfits unfits
+      d
+      (hs-append (flat (pretty -if))
+                 (try-indent
+                  #:n 0
+                  #:because-of (cons -conditional tail)
+                  (alt
+                   ;; try to fit in one line
+                   #;(if a b c)
+                   (flat (hs-concat (map pretty (cons -conditional tail))))
+
+                   #;(if a
+                         b
+                         c)
+                   ((pretty-v-concat/kw pretty)
+                    (cons -conditional tail))))))]
+    [#:else (pretty-node d (try-indent
+                            #:n 0
+                            #:because-of xs
+                            ((pretty-v-concat/kw pretty) xs)))]))
+
 (define ((format-node-#%app pretty) d)
   (define xs (node-content d))
   (cond
@@ -24,26 +50,7 @@
            ((pretty-v-concat/kw pretty) (cons -head tail))))
 
          ;; pretty cases
-         (match/extract pretty xs #:as unfits tail
-           [([-head #t] [-first-arg #f])
-            (pretty-node
-             #:unfits unfits
-             d
-             (hs-append (flat (pretty -head))
-                        (try-indent
-                         #:n 0
-                         #:because-of (cons -first-arg tail)
-                         (alt
-                          ;; try to fit in one line
-                          #;(a #:x a b c)
-                          (flat (hs-concat (map pretty (cons -first-arg tail))))
-
-                          #;(aaaaaaaaaaaaa #:x aaaaaaaaaaaaaaa
-                                           bbbbbbbbbbbbbbb
-                                           cccccccccccccccc)
-                          ((pretty-v-concat/kw pretty)
-                           (cons -first-arg tail))))))]
-           [#:else fail]))]
+         ((format-node-if pretty) d))]
        [#:else
         ;; perhaps full of comments, or there's nothing at all
         (pretty-node d (try-indent
@@ -217,6 +224,7 @@
 
 (define (standard-lookup name)
   (case name
+    [("if") format-node-if]
     ;; always in the form
     #;(provide a
                b

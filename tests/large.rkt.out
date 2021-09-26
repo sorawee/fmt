@@ -439,44 +439,46 @@
               (for/list ([s defn-and-exprs])
                 (internal-definition-context-add-scopes def-ctx s))])
         (let loop ([l defn-and-exprs-in-scope])
-          (if
-           (null? l)
-           null
-           (let ([e (expand (car l))])
-             (define (copy-prop stx . ps)
-               (for/fold ([stx stx]) ([p ps])
-                 (syntax-property stx p (syntax-property e p))))
-             (syntax-case e
-                          (begin
-                            define-syntaxes
-                            define-values)
-               [(begin
-                  .
-                  _)
-                (loop (append (flatten-begin e) (cdr l)))]
-               [(define-syntaxes (id ...) rhs)
-                (andmap identifier? (syntax->list #'(id ...)))
-                (begin
-                  (with-syntax ([rhs
-                                 (local-transformer-expand #'rhs 'expression null)])
-                    (with-syntax ([(id ...) (syntax-local-bind-syntaxes
-                                             (syntax->list #'(id ...))
-                                             #'rhs
-                                             def-ctx)])
-                      (cons (copy-prop (syntax/loc e
-                                         (define-syntaxes (id ...) rhs))
-                                       'disappeared-use
-                                       'origin
-                                       'disappeared-binding)
-                            (loop (cdr l))))))]
-               [(define-values (id ...) rhs)
-                (andmap identifier? (syntax->list #'(id ...)))
-                (let ([ids (map bind-local-id (syntax->list #'(id ...)))])
-                  (with-syntax ([(id ...) ids])
-                    (cons
-                     (datum->syntax e (list #'define-values #'(id ...) #'rhs) e e)
-                     (loop (cdr l)))))]
-               [_else (cons e (loop (cdr l)))]))))))
+          (if (null? l)
+              null
+              (let ([e (expand (car l))])
+                (define (copy-prop stx . ps)
+                  (for/fold ([stx stx]) ([p ps])
+                    (syntax-property stx p (syntax-property e p))))
+                (syntax-case e
+                             (begin
+                               define-syntaxes
+                               define-values)
+                  [(begin
+                     .
+                     _)
+                   (loop (append (flatten-begin e) (cdr l)))]
+                  [(define-syntaxes (id ...) rhs)
+                   (andmap identifier? (syntax->list #'(id ...)))
+                   (begin
+                     (with-syntax ([rhs (local-transformer-expand #'rhs
+                                                                  'expression
+                                                                  null)])
+                       (with-syntax ([(id ...) (syntax-local-bind-syntaxes
+                                                (syntax->list #'(id ...))
+                                                #'rhs
+                                                def-ctx)])
+                         (cons (copy-prop (syntax/loc e
+                                            (define-syntaxes (id ...) rhs))
+                                          'disappeared-use
+                                          'origin
+                                          'disappeared-binding)
+                               (loop (cdr l))))))]
+                  [(define-values (id ...) rhs)
+                   (andmap identifier? (syntax->list #'(id ...)))
+                   (let ([ids (map bind-local-id (syntax->list #'(id ...)))])
+                     (with-syntax ([(id ...) ids])
+                       (cons (datum->syntax e
+                                            (list #'define-values #'(id ...) #'rhs)
+                                            e
+                                            e)
+                             (loop (cdr l)))))]
+                  [_else (cons e (loop (cdr l)))]))))))
     
     ;; returns two lists: expressions that start with an identifier in
     ;; `kws', and expressions that don't
@@ -589,57 +591,52 @@
         (syntax-case (disarm stx)
                      (#%plain-lambda lambda λ case-lambda letrec-values let-values)
           [(lam vars body1 body ...)
-           (or
-            (and (free-identifier=? #'lam #'#%plain-lambda) (vars-ok? (syntax vars)))
-            (and (or (free-identifier=? #'lam #'lambda) (free-identifier=? #'lam #'λ))
-                 (kw-vars-ok? (syntax vars))))
-           (if
-            xform?
-            (with-syntax ([the-obj the-obj]
-                          [the-finder the-finder]
-                          [name (mk-name name)])
-              (with-syntax ([vars
-                             (if
-                              (or (free-identifier=? #'lam #'lambda)
-                                  (free-identifier=? #'lam #'λ))
-                              (let loop ([vars #'vars])
-                                (cond
-                                  [(identifier? vars) vars]
-                                  [(syntax? vars) (datum->syntax vars
-                                                                 (loop (syntax-e vars))
-                                                                 vars
-                                                                 vars)]
-                                  [(pair? vars)
-                                   (syntax-case (car vars) ()
-                                     [(id expr)
-                                      (and (identifier? #'id)
-                                           (not (immediate-default? #'expr)))
-                                      ;; optional argument; need to wrap arg expression
-                                      (cons
-                                       (with-syntax ([expr
-                                                      (syntax/loc #'expr
-                                                        (syntax-parameterize
-                                                         ([the-finder
-                                                           (quote-syntax the-obj)])
-                                                         (#%expression expr)))])
-                                         (syntax/loc (car vars)
-                                           (id expr)))
-                                       (loop (cdr vars)))]
-                                     [_ (cons (car vars) (loop (cdr vars)))])]
-                                  [else vars]))
-                              #'vars)])
-                (let ([l (syntax/loc stx
-                           (lambda (the-obj . vars)
-                             (syntax-parameterize ([the-finder (quote-syntax the-obj)])
-                                                  body1
-                                                  body ...)))])
-                  (syntax-track-origin
-                   (with-syntax ([l (rearm (add-method-property l) stx)])
-                     (syntax/loc stx
-                       (let ([name l]) name)))
-                   stx
-                   (syntax-local-introduce #'lam)))))
-            stx)]
+           (or (and (free-identifier=? #'lam #'#%plain-lambda) (vars-ok? (syntax vars)))
+               (and (or (free-identifier=? #'lam #'lambda) (free-identifier=? #'lam #'λ))
+                    (kw-vars-ok? (syntax vars))))
+           (if xform?
+               (with-syntax ([the-obj the-obj] [the-finder the-finder] [name (mk-name name)])
+                 (with-syntax ([vars
+                                (if (or (free-identifier=? #'lam #'lambda)
+                                        (free-identifier=? #'lam #'λ))
+                                    (let loop ([vars #'vars])
+                                      (cond
+                                        [(identifier? vars) vars]
+                                        [(syntax? vars) (datum->syntax vars
+                                                                       (loop (syntax-e vars))
+                                                                       vars
+                                                                       vars)]
+                                        [(pair? vars)
+                                         (syntax-case (car vars) ()
+                                           [(id expr)
+                                            (and (identifier? #'id)
+                                                 (not (immediate-default? #'expr)))
+                                            ;; optional argument; need to wrap arg expression
+                                            (cons
+                                             (with-syntax ([expr
+                                                            (syntax/loc #'expr
+                                                              (syntax-parameterize
+                                                               ([the-finder
+                                                                 (quote-syntax the-obj)])
+                                                               (#%expression expr)))])
+                                               (syntax/loc (car vars)
+                                                 (id expr)))
+                                             (loop (cdr vars)))]
+                                           [_ (cons (car vars) (loop (cdr vars)))])]
+                                        [else vars]))
+                                    #'vars)])
+                   (let ([l (syntax/loc stx
+                              (lambda (the-obj . vars)
+                                (syntax-parameterize ([the-finder (quote-syntax the-obj)])
+                                                     body1
+                                                     body ...)))])
+                     (syntax-track-origin
+                      (with-syntax ([l (rearm (add-method-property l) stx)])
+                        (syntax/loc stx
+                          (let ([name l]) name)))
+                      stx
+                      (syntax-local-introduce #'lam)))))
+               stx)]
           [(#%plain-lambda . _) (bad "ill-formed lambda expression for method" stx)]
           [(lambda . _) (bad "ill-formed lambda expression for method" stx)]
           [(λ . _) (bad "ill-formed lambda expression for method" stx)]
@@ -671,14 +668,12 @@
            (and (or (free-identifier=? (syntax let-) (quote-syntax let-values))
                     (free-identifier=? (syntax let-) (quote-syntax letrec-values)))
                 (andmap identifier? (syntax->list (syntax (id ...)))))
-           (let* ([letrec? (free-identifier=? (syntax let-)
-                                              (quote-syntax letrec-values))]
+           (let* ([letrec? (free-identifier=? (syntax let-) (quote-syntax letrec-values))]
                   [ids (syntax->list (syntax (id ...)))]
-                  [new-ids (if xform?
-                               (map (lambda (id)
-                                      (datum->syntax #f (gensym (syntax-e id))))
-                                    ids)
-                               ids)]
+                  [new-ids
+                   (if xform?
+                       (map (lambda (id) (datum->syntax #f (gensym (syntax-e id)))) ids)
+                       ids)]
                   [body-locals (append ids locals)]
                   [exprs (map (lambda (expr id)
                                 (loop expr #t id (if letrec? body-locals locals)))
@@ -697,22 +692,21 @@
                            [(new-id ...) new-ids]
                            [mappings
                             (if xform?
-                                (map
-                                 (lambda (old-id new-id)
-                                   (with-syntax ([old-id old-id]
-                                                 [old-id-localized
-                                                  (lookup-localize (localize old-id))]
-                                                 [new-id new-id]
-                                                 [the-obj the-obj]
-                                                 [the-finder the-finder])
-                                     (syntax (old-id (make-direct-method-map
-                                                      (quote-syntax the-finder)
-                                                      (quote the-obj)
-                                                      (quote-syntax old-id)
-                                                      (quote-syntax old-id-localized)
-                                                      (quote new-id))))))
-                                 ids
-                                 new-ids)
+                                (map (lambda (old-id new-id)
+                                       (with-syntax ([old-id old-id]
+                                                     [old-id-localized
+                                                      (lookup-localize (localize old-id))]
+                                                     [new-id new-id]
+                                                     [the-obj the-obj]
+                                                     [the-finder the-finder])
+                                         (syntax (old-id (make-direct-method-map
+                                                          (quote-syntax the-finder)
+                                                          (quote the-obj)
+                                                          (quote-syntax old-id)
+                                                          (quote-syntax old-id-localized)
+                                                          (quote new-id))))))
+                                     ids
+                                     new-ids)
                                 null)]
                            [body body])
                (syntax-track-origin
@@ -1067,16 +1061,15 @@
               ;; --- Check initialization on inits: ---
               (let loop ([inits inits] [normal-inits normal-inits])
                 (unless (null? normal-inits)
-                  (if
-                   (stx-null? (stx-cdr (car normal-inits)))
-                   (loop (cdr inits) (cdr normal-inits))
-                   (let loop ([inits (cdr inits)] [normal-inits (cdr normal-inits)])
-                     (unless (null? inits)
-                       (if (stx-null? (stx-cdr (car normal-inits)))
-                           (bad
-                            "initializer without default follows an initializer with default"
-                            (car inits))
-                           (loop (cdr inits) (cdr normal-inits))))))))
+                  (if (stx-null? (stx-cdr (car normal-inits)))
+                      (loop (cdr inits) (cdr normal-inits))
+                      (let loop ([inits (cdr inits)] [normal-inits (cdr normal-inits)])
+                        (unless (null? inits)
+                          (if (stx-null? (stx-cdr (car normal-inits)))
+                              (bad
+                               "initializer without default follows an initializer with default"
+                               (car inits))
+                              (loop (cdr inits) (cdr normal-inits))))))))
               
               ;; ----- Extract method definitions; check that they look like procs -----
               ;;  Optionally transform them, can expand even if not transforming.
@@ -1118,61 +1111,61 @@
                                exprs ; (listof stx)
                                stx-defines) ; (listof (cons (listof id) stx))
                               (let loop ([exprs exprs] [ms null] [pms null] [es null] [sd null])
-                                (if
-                                 (null? exprs)
-                                 (values (reverse ms) (reverse pms) (reverse es) (reverse sd))
-                                 (syntax-case (car exprs)
-                                              (define-values define-syntaxes
-                                                )
-                                   [(d-v (id ...) expr)
-                                    (free-identifier=? #'d-v #'define-values)
-                                    (let ([ids (syntax->list (syntax (id ...)))])
-                                      ;; Check form:
-                                      (for-each (lambda (id)
-                                                  (unless (identifier? id)
-                                                    (bad "not an identifier for definition" id)))
-                                                ids)
-                                      ;; method defn? (id in the list of privates/publics/overrides/augrides?)
-                                      (if
-                                       (ormap (lambda (id)
-                                                (ormap (lambda (i) (bound-identifier=? i id))
-                                                       local-method-names))
-                                              ids)
-                                       ;; Yes, it's a method:
-                                       (begin
-                                         (unless (null? (cdr ids))
-                                           (bad "each method variable needs its own definition" (car exprs)))
-                                         (let ([expr (syntax-track-origin (proc-shape #f
-                                                                                      (syntax expr)
-                                                                                      #f
-                                                                                      the-obj
-                                                                                      the-finder
-                                                                                      bad
-                                                                                      class-name
-                                                                                      expand-stop-names
-                                                                                      def-ctx
-                                                                                      lookup-localize)
-                                                                          (car exprs)
-                                                                          (syntax-local-introduce #'d-v))]
-                                               [public? (ormap (lambda (i) (bound-identifier=? i (car ids)))
-                                                               local-public-names)])
-                                           (loop (cdr exprs)
-                                                 (if public? (cons (cons (car ids) expr) ms) ms)
-                                                 (if public? pms (cons (cons (car ids) expr) pms))
-                                                 es
-                                                 sd)))
-                                       ;; Non-method defn:
-                                       (loop (cdr exprs) ms pms (cons (car exprs) es) sd)))]
-                                   [(define-values . _) (bad "ill-formed definition" (car exprs))]
-                                   [(define-syntaxes (id ...) expr)
-                                    (let ([ids (syntax->list (syntax (id ...)))])
-                                      (for-each (lambda (id)
-                                                  (unless (identifier? id)
-                                                    (bad "syntax name is not an identifier" id)))
-                                                ids)
-                                      (loop (cdr exprs) ms pms es (cons (cons ids (car exprs)) sd)))]
-                                   [(define-syntaxes . _) (bad "ill-formed syntax definition" (car exprs))]
-                                   [_else (loop (cdr exprs) ms pms (cons (car exprs) es) sd)])))])
+                                (if (null? exprs)
+                                    (values (reverse ms) (reverse pms) (reverse es) (reverse sd))
+                                    (syntax-case (car exprs)
+                                                 (define-values define-syntaxes
+                                                   )
+                                      [(d-v (id ...) expr)
+                                       (free-identifier=? #'d-v #'define-values)
+                                       (let ([ids (syntax->list (syntax (id ...)))])
+                                         ;; Check form:
+                                         (for-each (lambda (id)
+                                                     (unless (identifier? id)
+                                                       (bad "not an identifier for definition" id)))
+                                                   ids)
+                                         ;; method defn? (id in the list of privates/publics/overrides/augrides?)
+                                         (if (ormap (lambda (id)
+                                                      (ormap (lambda (i) (bound-identifier=? i id))
+                                                             local-method-names))
+                                                    ids)
+                                             ;; Yes, it's a method:
+                                             (begin
+                                               (unless (null? (cdr ids))
+                                                 (bad "each method variable needs its own definition"
+                                                      (car exprs)))
+                                               (let ([expr (syntax-track-origin (proc-shape #f
+                                                                                            (syntax expr)
+                                                                                            #f
+                                                                                            the-obj
+                                                                                            the-finder
+                                                                                            bad
+                                                                                            class-name
+                                                                                            expand-stop-names
+                                                                                            def-ctx
+                                                                                            lookup-localize)
+                                                                                (car exprs)
+                                                                                (syntax-local-introduce #'d-v))]
+                                                     [public?
+                                                      (ormap (lambda (i) (bound-identifier=? i (car ids)))
+                                                             local-public-names)])
+                                                 (loop (cdr exprs)
+                                                       (if public? (cons (cons (car ids) expr) ms) ms)
+                                                       (if public? pms (cons (cons (car ids) expr) pms))
+                                                       es
+                                                       sd)))
+                                             ;; Non-method defn:
+                                             (loop (cdr exprs) ms pms (cons (car exprs) es) sd)))]
+                                      [(define-values . _) (bad "ill-formed definition" (car exprs))]
+                                      [(define-syntaxes (id ...) expr)
+                                       (let ([ids (syntax->list (syntax (id ...)))])
+                                         (for-each (lambda (id)
+                                                     (unless (identifier? id)
+                                                       (bad "syntax name is not an identifier" id)))
+                                                   ids)
+                                         (loop (cdr exprs) ms pms es (cons (cons ids (car exprs)) sd)))]
+                                      [(define-syntaxes . _) (bad "ill-formed syntax definition" (car exprs))]
+                                      [_else (loop (cdr exprs) ms pms (cons (car exprs) es) sd)])))])
                   
                   ;; ---- Extract all defined names, including field accessors and mutators ---
                   (let ([defined-syntax-names (apply append (map car stx-defines))]
@@ -1990,26 +1983,26 @@
        (let ([dup (check-duplicate-identifier ids)])
          (when dup
            (raise-syntax-error #f "duplicate identifier" stx dup)))
-       (if
-        (eq? (syntax-local-context) 'top-level)
-        ;; Does nothing in particular at the top level:
-        (syntax/loc stx
-          (define-syntaxes (id ...) (values 'id ...)))
-        ;; Map names to private indicators, which are made private
-        ;;  simply by introduction:
-        (with-syntax ([(gen-id ...) (generate-temporaries ids)])
-          (with-syntax (;; Need to attach srcloc to this definition:
-                        [stx-defs (syntax/loc stx
-                                    (define-syntaxes (id ...)
-                                      (values (make-private-name
-                                               (quote-syntax id)
-                                               (quote-syntax gen-id)) ...)))])
-            (class-syntax-protect
-             (syntax/loc stx
-               (begin
-                 (define-values (gen-id ...)
-                   (values (generate-local-member-name 'id) ...))
-                 stx-defs)))))))]))
+       (if (eq? (syntax-local-context) 'top-level)
+           ;; Does nothing in particular at the top level:
+           (syntax/loc stx
+             (define-syntaxes (id ...) (values 'id ...)))
+           ;; Map names to private indicators, which are made private
+           ;;  simply by introduction:
+           (with-syntax ([(gen-id ...) (generate-temporaries ids)])
+             (with-syntax (;; Need to attach srcloc to this definition:
+                           [stx-defs (syntax/loc stx
+                                       (define-syntaxes (id ...)
+                                         (values (make-private-name
+                                                  (quote-syntax id)
+                                                  (quote-syntax
+                                                   gen-id)) ...)))])
+               (class-syntax-protect
+                (syntax/loc stx
+                  (begin
+                    (define-values (gen-id ...)
+                      (values (generate-local-member-name 'id) ...))
+                    stx-defs)))))))]))
 
 (define-syntax (define-member-name stx)
   (syntax-case stx ()
@@ -2602,37 +2595,40 @@ last few projections.
                                           object?
                                           object-field-ref
                                           object-field-set!)
-                           (if
-                            make-struct:prim
-                            ;; Use prim struct:
-                            (values struct:prim-object prim-object-make prim-object? #f #f)
-                            ;; Normal struct creation:
-                            (make-struct-type
-                             obj-name
-                             (add-properties (class-struct:object super) interfaces)
-                             0 ;; No init fields
-                             ;; Fields for new slots:
-                             num-fields
-                             unsafe-undefined
-                             ;; Map object property to class:
-                             (append
-                              (list (cons prop:object c))
-                              (if (class-check-undef? c)
-                                  (list (cons prop:chaperone-unsafe-undefined
-                                              (class-all-field-ids c)))
-                                  null)
-                              (if deserialize-id
-                                  (list
-                                   (cons prop:serializable
-                                         ;; Serialization:
-                                         (make-serialize-info
-                                          (lambda (obj) ((class-serializer c) obj))
-                                          deserialize-id
-                                          (not (interface-extension? i externalizable<%>))
-                                          (or (current-load-relative-directory)
-                                              (current-directory)))))
-                                  null))
-                             inspector))])
+                           (if make-struct:prim
+                               ;; Use prim struct:
+                               (values struct:prim-object
+                                       prim-object-make
+                                       prim-object?
+                                       #f
+                                       #f)
+                               ;; Normal struct creation:
+                               (make-struct-type
+                                obj-name
+                                (add-properties (class-struct:object super) interfaces)
+                                0 ;; No init fields
+                                ;; Fields for new slots:
+                                num-fields
+                                unsafe-undefined
+                                ;; Map object property to class:
+                                (append
+                                 (list (cons prop:object c))
+                                 (if (class-check-undef? c)
+                                     (list (cons prop:chaperone-unsafe-undefined
+                                                 (class-all-field-ids c)))
+                                     null)
+                                 (if deserialize-id
+                                     (list
+                                      (cons prop:serializable
+                                            ;; Serialization:
+                                            (make-serialize-info
+                                             (lambda (obj) ((class-serializer c) obj))
+                                             deserialize-id
+                                             (not (interface-extension? i externalizable<%>))
+                                             (or (current-load-relative-directory)
+                                                 (current-directory)))))
+                                     null))
+                                inspector))])
               (set-class-struct:object! c struct:object)
               (set-class-object?! c object?)
               (set-class-make-object! c object-make)
@@ -3420,23 +3416,22 @@ An example
                                    #:class-name [class-name #f]
                                    #:intf-name [intf-name #f])
   (let loop ([class #f] [supers interfaces])
-    (if
-     (null? supers)
-     class
-     (let ([c (interface-class (car supers))])
-       (loop
-        (cond
-          [(not c) class]
-          [(not class) c]
-          [(subclass? c class) class]
-          [(subclass? class c) c]
-          [else
-           (obj-error
-            where
-            "conflicting class implementation requirements in superinterfaces"
-            #:class-name class-name
-            #:intf-name intf-name)])
-        (cdr supers))))))
+    (if (null? supers)
+        class
+        (let ([c (interface-class (car supers))])
+          (loop
+           (cond
+             [(not c) class]
+             [(not class) c]
+             [(subclass? c class) class]
+             [(subclass? class c) c]
+             [else
+              (obj-error
+               where
+               "conflicting class implementation requirements in superinterfaces"
+               #:class-name class-name
+               #:intf-name intf-name)])
+           (cdr supers))))))
 
 ;;--------------------------------------------------------------------
 ;;  object%
@@ -3868,24 +3863,26 @@ An example
       ;; Primitive class with by-pos arguments?
       (when by-pos-only?
         (unless (null? named-args)
-          (if
-           explict-named-args?
-           (obj-error
-            'instantiate
-            "class has only by-position initializers, but given by-name arguments"
-            "arguments"
-            (as-lines (make-named-arg-string named-args))
-            #:class-name (class-name c))
-           ;; If args were implicit from subclass, should report as unused:
-           (unused-args-error o named-args))))
+          (if explict-named-args?
+              (obj-error
+               'instantiate
+               "class has only by-position initializers, but given by-name arguments"
+               "arguments"
+               (as-lines (make-named-arg-string named-args))
+               #:class-name (class-name c))
+              ;; If args were implicit from subclass, should report as unused:
+              (unused-args-error o named-args))))
       ;; Merge by-pos into named args:
-      (let* ([named-args
-              (if
-               (not by-pos-only?)
-               ;; Normal merge
-               (do-merge by-pos-args (class-init-args c) c named-args by-pos-args c)
-               ;; Non-merge for by-position initializers
-               by-pos-args)]
+      (let* ([named-args (if (not by-pos-only?)
+                             ;; Normal merge
+                             (do-merge by-pos-args
+                                       (class-init-args c)
+                                       c
+                                       named-args
+                                       by-pos-args
+                                       c)
+                             ;; Non-merge for by-position initializers
+                             by-pos-args)]
              [leftovers (if (not by-pos-only?)
                             (get-leftovers named-args (class-init-args c))
                             null)])
@@ -3943,12 +3940,15 @@ An example
                        (positive? (class-pos ic))
                        (vector-ref (class-supers ic) (sub1 (class-pos ic))))])
        (cond
-         [super
-          (if
-           (class-init-args super)
-           (do-merge al (class-init-args super) super named-args by-pos-args c)
-           ;; Like 'list mode:
-           (append (map (lambda (x) (cons #f x)) al) named-args))]
+         [super (if (class-init-args super)
+                    (do-merge al
+                              (class-init-args super)
+                              super
+                              named-args
+                              by-pos-args
+                              c)
+                    ;; Like 'list mode:
+                    (append (map (lambda (x) (cons #f x)) al) named-args))]
          [(eq? 'list (class-init-mode ic))
           ;; All unconsumed named-args must have #f
           ;;  "name"s, otherwise an error is raised in
@@ -4072,24 +4072,28 @@ An example
         (syntax-case stx ()
           [(form obj name . args)
            (identifier? (syntax name))
-           (if
-            (stx-list? (syntax args))
-            ;; (send obj name arg ...) or (send/apply obj name arg ...)
-            (do-method stx
-                       #'form
-                       #'obj
-                       #'name
-                       (if kws? (cddr (syntax->list #'args)) #'args)
-                       apply?
-                       (and kws?
-                            (let ([l (syntax->list #'args)])
-                              (list (car l) (cadr l)))))
-            (if
-             apply?
-             ;; (send/apply obj name arg ... . rest)
-             (raise-syntax-error #f "bad syntax (illegal use of `.')" stx)
-             ;; (send obj name arg ... . rest)
-             (do-method stx #'form #'obj #'name (flatten-args #'args) #t #f)))]
+           (if (stx-list? (syntax args))
+               ;; (send obj name arg ...) or (send/apply obj name arg ...)
+               (do-method stx
+                          #'form
+                          #'obj
+                          #'name
+                          (if kws? (cddr (syntax->list #'args)) #'args)
+                          apply?
+                          (and kws?
+                               (let ([l (syntax->list #'args)])
+                                 (list (car l) (cadr l)))))
+               (if apply?
+                   ;; (send/apply obj name arg ... . rest)
+                   (raise-syntax-error #f "bad syntax (illegal use of `.')" stx)
+                   ;; (send obj name arg ... . rest)
+                   (do-method stx
+                              #'form
+                              #'obj
+                              #'name
+                              (flatten-args #'args)
+                              #t
+                              #f)))]
           [(form obj name . args)
            (raise-syntax-error #f
                                "method name is not an identifier"
@@ -4287,57 +4291,57 @@ An example
              (raise-argument-error 'make-generic "symbol?" name))
            (make-generic
             name
-            (if
-             (interface? class)
-             (let ([intf class])
-               (unless (method-in-interface? name intf)
-                 (obj-error 'make-generic
-                            "no such method"
-                            "method name"
-                            (as-write name)
-                            #:intf-name (interface-name intf)))
-               (lambda (obj)
-                 (unless (is-a? obj intf)
-                   (obj-error
-                    (string->symbol (format "generic:~a" name))
-                    "target is not an instance of the generic's interface"
-                    "target"
-                    obj
-                    #:intf-name (interface-name intf)))
-                 (find-method/who 'make-generic obj name)))
-             (let* ([pos (hash-ref (class-method-ht class)
-                                   name
-                                   (lambda ()
-                                     (obj-error 'make-generic
-                                                "no such method"
-                                                "method name"
-                                                (as-write name)
-                                                #:class-name
-                                                (class-name class))))]
-                    [instance? (class-object? (class-orig-cls class))]
-                    [fail (λ (obj)
-                            (obj-error
-                             (string->symbol (format "generic:~a" name))
-                             "target is not an instance of the generic's class"
-                             "target"
-                             obj
-                             #:class-name (class-name class)))]
-                    [dynamic-generic
-                     (lambda (obj)
-                       (cond
-                         [(wrapped-object? obj)
-                          (vector-ref (wrapped-object-neg-extra-arg-vec obj)
-                                      pos)]
-                         [(instance? obj)
-                          (vector-ref (class-methods (object-ref obj)) pos)]
-                         [else (fail obj)]))])
-               (if (eq? 'final (vector-ref (class-meth-flags class) pos))
-                   (let ([method (vector-ref (class-methods class) pos)])
-                     (lambda (obj)
-                       (unless (instance? obj)
-                         (fail obj))
-                       method))
-                   dynamic-generic)))))])
+            (if (interface? class)
+                (let ([intf class])
+                  (unless (method-in-interface? name intf)
+                    (obj-error 'make-generic
+                               "no such method"
+                               "method name"
+                               (as-write name)
+                               #:intf-name (interface-name intf)))
+                  (lambda (obj)
+                    (unless (is-a? obj intf)
+                      (obj-error
+                       (string->symbol (format "generic:~a" name))
+                       "target is not an instance of the generic's interface"
+                       "target"
+                       obj
+                       #:intf-name (interface-name intf)))
+                    (find-method/who 'make-generic obj name)))
+                (let* ([pos (hash-ref (class-method-ht class)
+                                      name
+                                      (lambda ()
+                                        (obj-error 'make-generic
+                                                   "no such method"
+                                                   "method name"
+                                                   (as-write name)
+                                                   #:class-name
+                                                   (class-name class))))]
+                       [instance? (class-object? (class-orig-cls class))]
+                       [fail
+                        (λ (obj)
+                          (obj-error
+                           (string->symbol (format "generic:~a" name))
+                           "target is not an instance of the generic's class"
+                           "target"
+                           obj
+                           #:class-name (class-name class)))]
+                       [dynamic-generic
+                        (lambda (obj)
+                          (cond
+                            [(wrapped-object? obj)
+                             (vector-ref (wrapped-object-neg-extra-arg-vec obj)
+                                         pos)]
+                            [(instance? obj)
+                             (vector-ref (class-methods (object-ref obj)) pos)]
+                            [else (fail obj)]))])
+                  (if (eq? 'final (vector-ref (class-meth-flags class) pos))
+                      (let ([method (vector-ref (class-methods class) pos)])
+                        (lambda (obj)
+                          (unless (instance? obj)
+                            (fail obj))
+                          method))
+                      dynamic-generic)))))])
     make-generic))
 
 (define-syntax (send-generic stx)
