@@ -58,3 +58,11 @@ c
 ' ; abc
 ' ; def
 g
+
+
+(let loop)
+
+
+(foo 'abc
+
+     def)

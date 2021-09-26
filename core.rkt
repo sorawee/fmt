@@ -368,7 +368,7 @@
      (λ (d)
        (match d
          [(toplevel _ xs) (v-concat (map loop xs))]
-         [(nl _ n) (v-concat (make-list n empty-doc))]
+         [(nl _ n) (full (v-concat (make-list n empty-doc)))]
          [(atom comment content _) (pretty-comment comment (text content))]
          [(line-comment _ comment) (full (text comment))]
          [(sexp-comment comment style tok xs)

@@ -5,22 +5,19 @@
 
          require-newline?
          pretty-v-concat/kw
-         app-format/no-comment
-         app-format/fail
          pretty-node
          try-indent
 
          extract*
-
-         (struct-out app-format))
+         match/extract)
 
 (require racket/match
          racket/list
          racket/string
+         syntax/parse/define
          pprint-compact
-         "core.rkt")
-
-(struct app-format (d xs) #:transparent)
+         "core.rkt"
+         (for-syntax racket/base))
 
 (define current-ellipsis?
   (make-parameter
@@ -86,12 +83,6 @@
       (line-comment? d)
       (nl? d)))
 
-(define (app-format/no-comment d)
-  (app-format d '()))
-
-(define app-format/fail
-  (app-format fail '()))
-
 (define (pretty-node n d #:unfits [unfits '()] #:adjust [adjust #f])
   (match-define (node comment opener closer _) n)
   (define main-doc
@@ -116,3 +107,14 @@
     [_ (if (require-newline? (last xs))
            (indent-next n d)
            d)]))
+
+(define-syntax-parser match/extract
+  [(_ pretty xs #:as unfits tail
+      [([pat req-status:boolean] ...) body ...+] . rst)
+   #'(let ([-pretty pretty] [-xs xs])
+       (match (extract* -pretty -xs '(req-status ...))
+         [(list (list pat ...) unfits tail) body ...]
+         [_ (match/extract -pretty -xs #:as unfits tail . rst)]))]
+  [(_ pretty xs #:as unfits tail
+      [#:else body ...+])
+   #'(let () body ...)])
