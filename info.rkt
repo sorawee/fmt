@@ -9,8 +9,8 @@
 (define version "0.0")
 (define pkg-authors '(sorawee))
 (define license '(Apache-2.0 OR MIT))
-(define compile-omit-files '("tests"))
-(define test-omit-paths '("tests"))
+(define compile-omit-files '("tests" "scribblings/examples" "experiments"))
+(define test-omit-paths '("tests" "scribblings/examples" "experiments"))
 (define raco-commands
   '(("fmt"
      fmt/raco
