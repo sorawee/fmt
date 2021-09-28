@@ -117,7 +117,7 @@
 
 (define ((format-clause-2 pretty) clause)
   (match clause
-    [(node _ (or "(" "[") (or ")" "]") xs)
+    [(node _ (or "(" "[") (or ")" "]") #f #f xs)
      (alt
       ;; try to fit in one line; only when there are exactly two things
       #;[a b]
@@ -147,7 +147,7 @@
 
 (define ((format-binding-pairs pretty) bindings)
   (match bindings
-    [(node _ _ _ xs)
+    [(node _ _ _ #f #f xs)
      (pretty-node
       bindings
       (try-indent

@@ -3110,17 +3110,17 @@ An example
 
 (define (check-still-unique name syms what)
   (let ([ht (make-hasheq)])
-    (for-each (lambda (s)
-                (when (hash-ref ht
-                                s
-                                (lambda ()
-                                  (hash-set! ht s #t)
-                                  #f))
-                  (obj-error
-                   'class*
-                   (format "external ~a mapped to overlapping keys" what)
-                   #:class-name name)))
-              syms)))
+    (for-each
+     (lambda (s)
+       (when (hash-ref ht
+                       s
+                       (lambda ()
+                         (hash-set! ht s #t)
+                         #f))
+         (obj-error 'class*
+                    (format "external ~a mapped to overlapping keys" what)
+                    #:class-name name)))
+     syms)))
 
 (define (get-properties intfs)
   (if (ormap (lambda (i) (pair? (interface-properties i))) intfs)

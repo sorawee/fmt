@@ -27,7 +27,7 @@
 (struct token (srcloc text type) #:transparent)
 
 (struct thing (extra) #:transparent)
-(struct node thing (opener closer content) #:transparent)
+(struct node thing (opener closer prefix breakable-prefix content) #:transparent)
 (struct atom thing (content type) #:transparent)
 ;; invariant: n >= 1
 (struct nl thing (n) #:transparent)
@@ -235,6 +235,8 @@
           (process-tail (node #f
                               open-paren
                               close-paren
+                              #f
+                              #f
                               (dropf (reverse (dropf acc nl?)) nl?))
                         xs)]
 
@@ -310,21 +312,27 @@
          [(cons visible xs)
           (match invisibles
             [(cons (sexp-comment comment style? tok content) invisibles)
+             ;; style is NOT 'disappeared because if that's the case,
+             ;; the current fragment wouldn't be bare-sexp-comment
              (append
-              (list (sexp-comment comment style? (string-append "#;" tok) content))
+              (list
+               (sexp-comment comment style? (string-append "#;" tok) content))
               invisibles
               (cons visible xs))]
             ['()
              #:when (not just-read-sexp-comment?)
              (match visible
-               [(node comment opener closer content)
-                (cons (sexp-comment comment
-                                    'disappeared
-                                    ""
-                                    (list (node #f
-                                                (string-append "#;" opener)
-                                                closer
-                                                content)))
+               [(node comment opener closer prefix breakable-prefix content)
+                (cons (sexp-comment
+                       comment
+                       'disappeared
+                       ""
+                       (list
+                        (struct-copy
+                         node visible
+                         [extra #:parent thing #f]
+                         [breakable-prefix
+                          (string-append "#;" (or breakable-prefix ""))])))
                       xs)]
                [_
                 (cons
@@ -351,16 +359,19 @@
            invisibles
            (cons (match visible
                    ;; don't create a new wrapper, just transfer content
-                   [(wrapper comment tk* content)
-                    (wrapper comment (string-append tk tk*) content)]
-                   [(node comment opener closer content)
-                    (node comment (string-append tk opener) closer content)]
+                   [(wrapper _ tk* _)
+                    (struct-copy wrapper visible
+                                 [tk (string-append tk tk*)])]
+                   [(node _ _ _ prefix _ _)
+                    (struct-copy node visible
+                                 [prefix (string-append tk (or prefix ""))])]
                    [_ (wrapper (thing-extra visible)
                                tk
                                (strip-comment visible))])
                  xs))])]
-      [(cons (node comment opener closer xs*) xs)
-       (cons (node comment opener closer (loop xs* #f)) (loop xs #f))])))
+      [(cons (node comment opener closer prefix breakable-prefix xs*) xs)
+       (cons (node comment opener closer prefix breakable-prefix (loop xs* #f))
+             (loop xs #f))])))
 
 (define (realign d)
   (match d
@@ -392,7 +403,7 @@
               (alt (h-append (text tok) :x)
                    (v-append (text tok) :x))]
              ['disappeared (loop (first xs))]))]
-         [(node _ _ _ xs)
+         [(node _ _ _ _ _ xs)
           (match (extract xs (list #f))
             [#f (((hook #f) loop) d)]
             [(list (list (atom _ content 'symbol)) _ _)
