@@ -12,10 +12,10 @@
 
 (define (pretty-format* x
                         #:width [width 80]
-                        #:format [format standard-format])
-  (program-format (pretty-format x) format #:width width))
+                        #:formatter [formatter standard-formatter-map])
+  (program-format (pretty-format x) formatter #:width width))
 
 (define (pretty-print* x
                        #:width [width 80]
-                       #:format [format standard-format])
+                       #:formatter [formatter standard-formatter-map])
   (display (pretty-format* x #:width width #:format format)))

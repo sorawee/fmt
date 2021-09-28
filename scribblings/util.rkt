@@ -68,7 +68,7 @@
      (define code (port->string p))
      (define p*
        (open-input-string
-        (program-format code standard-format #:width 50)))
+        (program-format code standard-formatter-map #:width 40)))
      (port-count-lines! p*)
      p*)
    n))

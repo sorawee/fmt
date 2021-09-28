@@ -1,6 +1,6 @@
 #lang racket/base
 
-(provide standard-format
+(provide standard-formatter-map
          format-node-if-like
 
          format-node-#%app
@@ -250,7 +250,7 @@
      (((format-node-uniform-body 3 #:require-body? #f) pretty) d)]
     [#:else (((format-node-uniform-body 2 #:require-body? #f) pretty) d)]))
 
-(define (standard-format name)
+(define (standard-formatter-map name)
   (case name
     [("if") format-node-if]
     [("provide" "require" "import" "export" "link" "rename")

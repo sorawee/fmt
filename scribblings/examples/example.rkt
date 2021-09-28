@@ -14,7 +14,8 @@
           3)))
        (define
     next
-    (  low  ... ))    ; recursive call
+    ( low ...........................
+    ... ))    ; recursive call
 
 (cons  content    next)))))
 

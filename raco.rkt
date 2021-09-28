@@ -49,6 +49,6 @@
    filename))
 
 (display (program-format (file->string filename)
-                         standard-format
+                         standard-formatter-map
                          #:width (current-width)
                          #:max-blank-lines (current-max-blank-lines)))
