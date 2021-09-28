@@ -421,10 +421,15 @@
                         #:width [width (current-width)]
                         #:max-blank-lines
                         [max-blank-lines (current-max-blank-lines)])
-  (pretty-format
-   #:width width
-   (pretty (realign (read-top (tokenize program-source
-                                        #:source source
-                                        #:max-blank-lines max-blank-lines)
-                              #:source source))
-           formatter)))
+  (define s
+    (pretty-format
+     #:width width
+     (pretty (realign (read-top (tokenize program-source
+                                          #:source source
+                                          #:max-blank-lines max-blank-lines)
+                                #:source source))
+             formatter)))
+
+  (string-join (for/list ([line (in-list (string-split s "\n"))])
+                 (string-append (string-trim line #:left? #f) "\n"))
+               ""))
