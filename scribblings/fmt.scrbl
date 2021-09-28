@@ -54,7 +54,8 @@ Given the file @filepath{example.rkt} shown on the left, running @exec{raco fmt 
 
 A @deftech{formatter} is a function that accepts a code fragment that returns a @racket[doc?].
 In principle, you can create your own @tech{formatter}, but you need to understand many structures
-that are currently undocumented and unstable.
+that are currently undocumented and unstable. (If you want to implement one, perhaps take a look at
+@link["https://github.com/sorawee/fmt/blob/master/conventions.rkt"]{this file}.)
 
 @section{Unstable API}
 
