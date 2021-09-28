@@ -20,7 +20,7 @@
 
 This package provides a tool @exec{raco fmt} to reformat a Racket code.
 
-The package uses @racketmodname[pprint-compact], a very expressive pretty printer library, to compute the most optimal layout of the output code, and use @racketmodname[syntax-color/module-lexer #:indirect] to lex the input program.
+The package uses @racketmodname[pprint-compact], a very expressive pretty printer library, to compute the most optimal layout of the output code, and uses @racketmodname[syntax-color/module-lexer #:indirect] to lex the input program.
 
 The interface to allow users to extend formatting style is extremely unstable and is still a work in progress. For now, the only thing that is stable is the command @exec{raco fmt}.
 
