@@ -39,7 +39,7 @@ The @exec{raco fmt} command accepts the following flags:
 
 @section{Examples}
 
-Given the file @filepath{example.rkt} shown on the left, running @exec{raco fmt --width 40 test.rkt} would output the program on the right:
+Given the file @filepath{example.rkt} shown on the left, running @exec{raco fmt --width 40 example.rkt} would output the program on the right:
 
 @compare[
   @external-file["examples/example.rkt" #:name "example.rkt"]
