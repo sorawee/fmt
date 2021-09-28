@@ -35,6 +35,10 @@ The @exec{raco fmt} command accepts the following flags:
   @item{@DFlag{max-blank-lines} @nonterm{n} --- set the maximum consecutive blank lines limit
         to @nonterm{n}, which must be either a natural number of @racket[+inf.0].
         The default value is @racket[1].}
+  @item{@DFlag{out} @nonterm{path} --- output to @nonterm{path},
+        which must be either a path or @tt{-} (output to standard output)
+        or @tt{-self} (rewrite the input file).
+        The default value is @tt{-}.}
 ]
 
 @section{Examples}
