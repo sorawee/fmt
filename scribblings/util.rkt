@@ -1,21 +1,47 @@
 #lang racket/base
 
 (provide external-file
-         do-format)
+         external-file/format
+         compare)
+
 (require racket/include
+         racket/list
          scribble/manual
+         scribble/struct
+         (only-in scribble/core table-columns table-cells style plain
+                  color-property)
+         scribble/html-properties
          (for-label racket/base)
          (for-syntax racket/base
                      racket/port
-                     racket/system))
+                     fmt))
 
 ;; Taken from pkgs/racket-doc/scribblings/guide/contracts/utils.rkt from
 ;; the Racket repo
 
 (require (for-syntax (only-in scribble/comment-reader
                               [read-syntax comment-reader])))
-(define-for-syntax (comment-racketmod-reader path port)
-  (define-values (_base name _must-be-dir?) (split-path path))
+
+
+(define (sty columns width #:valign? [valign? #t])
+  (define space
+    (style #f `(,(attributes `((width . ,(format "~a" width))
+                               (align . "left")
+                               ,@(if valign?
+                                     (list '(valign . "top"))
+                                     (list)))))))
+  ;; -- in --
+  (style #f
+         (list
+          (attributes '((border . "1") (cellpadding . "1")))
+          (table-columns (make-list columns space)))))
+
+(define (compare stuff1 stuff2)
+  (define stuff (list (list stuff1) (list stuff2)))
+  (table (sty 2 500) (apply map (compose make-flow list) stuff)))
+
+(define-for-syntax ((comment-racketmod-reader transform name) path port*)
+  (define port (transform port*))
   (let ([pb (peek-byte port)])
     (if (eof-object? pb)
         pb
@@ -32,21 +58,33 @@
               (let ([next (comment-reader path np)])
                 (cond
                   [(eof-object? next)
-                   #`(racketmod #:file #,(path->string name)
+                   #`(racketmod #:file (tt #,name)
                                 #,@(reverse objects))]
-                  [else
-                   (loop (cons next objects))]))))))))
+                  [else (loop (cons next objects))]))))))))
+
+(define-for-syntax (comment-racketmod-reader/format n)
+  (comment-racketmod-reader
+   (λ (p)
+     (define code (port->string p))
+     (define p*
+       (open-input-string
+        (program-format code standard-format #:width 50)))
+     (port-count-lines! p*)
+     p*)
+   n))
+
+(define-for-syntax (comment-racketmod-reader/no-format n)
+  (comment-racketmod-reader values n))
 
 (define-syntax (external-file stx)
   (syntax-case stx ()
-    [(_ filename)
+    [(_ filename #:name n)
      #`(include/reader #,(format "~a" (syntax-e #'filename))
-                       comment-racketmod-reader)]))
+                       (comment-racketmod-reader/no-format n))]))
 
-(define-syntax (do-format stx)
+(define-syntax (external-file/format stx)
   (syntax-case stx ()
-    [(_ src dest)
+    [(_ filename #:name n)
      (begin
-       (system (format "raco fmt ~a > ~a" (syntax-e #'src) (syntax-e #'dest)))
-       #`(include/reader #,(format "~a" (syntax-e #'dest))
-                         comment-racketmod-reader))]))
+       #`(include/reader #,(format "~a" (syntax-e #'filename))
+                         (comment-racketmod-reader/format n)))]))

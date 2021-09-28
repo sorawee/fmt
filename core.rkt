@@ -41,6 +41,8 @@
 (struct bare-prefix thing (tok) #:transparent)
 (struct bare-sexp-comment thing () #:transparent)
 
+(define current-width (make-parameter 80))
+(define current-max-blank-lines (make-parameter 1))
 
 (define (strip-comment obj)
   (if (thing-extra obj)
@@ -111,8 +113,9 @@
 
 ;; tokenize :: string? -> (listof token?)
 (define (tokenize program-source
-                  #:max-newlines [max-newlines 2]
+                  #:max-blank-lines [max-blank-lines (current-max-blank-lines)]
                   #:source [source #f])
+  (define max-newlines (add1 max-blank-lines))
   (define p (open-input-string program-source source))
   (port-count-lines! p)
   (let loop ([mode #f])
@@ -392,12 +395,17 @@
                           (h-append (text tok) (loop content)))]))))
   (loop d))
 
+
 (define (program-format program-source
                         formatter
                         #:source [source #f]
-                        #:width [width 80])
+                        #:width [width (current-width)]
+                        #:max-blank-lines
+                        [max-blank-lines (current-max-blank-lines)])
   (pretty-format
    #:width width
-   (pretty (realign (read-top (tokenize program-source #:source source)
+   (pretty (realign (read-top (tokenize program-source
+                                        #:source source
+                                        #:max-blank-lines max-blank-lines)
                               #:source source))
            formatter)))

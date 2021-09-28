@@ -1,11 +1,8 @@
 #lang scribble/manual
-@require["util.rkt"
-         racket/runtime-path
-         racket/file
-         @for-label[fmt
-                    racket/base]]
-
-@(define-runtime-path fmt-file "examples/test-formatted.rkt")
+@require[scribble/bnf
+         "util.rkt"
+         @for-label[fmt]
+         @for-syntax[racket/base]]
 
 @title{fmt: an extensible code formatter for Racket}
 @author[@author+email["Sorawee Porncharoenwase" "sorawee.pwase@gmail.com"]]
@@ -18,12 +15,20 @@ This library part, however, is still a work in progress. Its interface is extrem
 
 @section{Running @exec{raco fmt}}
 
-By running @exec{raco fmt test.rkt > test-formatted.rkt}
+Given the file @filepath{example.rkt} shown on the left, running @exec{raco fmt --width 50 test.rkt} would output the program on the right:
 
-@external-file["examples/test.rkt"]
+@compare[
+  @external-file["examples/example.rkt" #:name "example.rkt"]
+  @external-file/format["examples/example.rkt" #:name "formatted example.rkt"]
+]
 
-would be formatted as:
+The @exec{raco fmt} command accepts the following flags:
 
-@do-format["examples/test.rkt" "examples/test-formatted.rkt"]
-
-@delete-directory/files[fmt-file #:must-exist? #f]
+@itemlist[
+  @item{@DFlag{width} @nonterm{width} --- set the page width limit to @nonterm{width},
+        which must be either a natural number or @racket[+inf.0].
+        The default value is @racket[80].}
+  @item{@DFlag{max-blank-lines} @nonterm{n} --- set the max consecutive blank lines limit
+        to @nonterm{n}, which must be either a natural number of @racket[+inf.0].
+        The default value is @racket[1].}
+]
