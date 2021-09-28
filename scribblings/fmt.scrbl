@@ -94,7 +94,7 @@ that are currently undocumented and unstable.
         Similar to DrRacket, it has an indenter. Compared to DrRacket, Racket Mode is more customizable on one axis
         (more keyword categories) but less customizable on another axis (must map each keyword one-by-one)}
   @item{@racketmodname[racket/pretty] is a library for pretty printing an S-expression value.
-        It does not support comments, less expressive, and less optimal than @racketmodname[fmt].}
+        It does not support comments, is less expressive and less optimal than @racketmodname[fmt].}
   @item{@racketmodname[pprint #:indirect] is a library for pretty printing an arbitrary document.
        It is based on Wadler's pretty printer, which is less expressive and less optimal than @racketmodname[pprint-compact]
        (but has better performance).}
