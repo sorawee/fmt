@@ -34,6 +34,7 @@
 (struct line-comment thing (content) #:transparent)
 (struct toplevel thing (content) #:transparent)
 ;; these two only exist after the realign pass
+;; when style is 'disappeared or 'any, content must have length exactly one
 (struct sexp-comment thing (style tok content) #:transparent)
 (struct wrapper thing (tk content) #:transparent)
 
@@ -317,7 +318,13 @@
              #:when (not just-read-sexp-comment?)
              (match visible
                [(node comment opener closer content)
-                (cons (node comment (string-append "#;" opener) closer content)
+                (cons (sexp-comment comment
+                                    'disappeared
+                                    ""
+                                    (list (node #f
+                                                (string-append "#;" opener)
+                                                closer
+                                                content)))
                       xs)]
                [_
                 (cons
@@ -381,9 +388,10 @@
              ['newline (v-append (text tok)
                                  (v-concat (map loop xs)))]
              ['any
-              (define xs* (v-concat (map loop xs)))
-              (alt (h-append (text tok) xs*)
-                   (v-append (text tok) xs*))]))]
+              (define :x (loop (first xs)))
+              (alt (h-append (text tok) :x)
+                   (v-append (text tok) :x))]
+             ['disappeared (loop (first xs))]))]
          [(node _ _ _ xs)
           (match (extract xs (list #f))
             [#f (((hook #f) loop) d)]

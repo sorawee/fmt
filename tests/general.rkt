@@ -66,3 +66,7 @@ g
 (foo 'abc
 
      def)
+
+(match #;(x) ; def
+  y
+  [z 1])

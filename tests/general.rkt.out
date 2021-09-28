@@ -60,3 +60,7 @@ c
 (foo 'abc
      
      def)
+
+#;(x) ; def
+(match y
+  [z 1])
