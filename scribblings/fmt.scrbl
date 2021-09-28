@@ -55,11 +55,11 @@ that are currently undocumented and unstable.
 @section{Unstable API}
 
 @defproc[(program-format [s string?]
-                         [formatter (-> string? #,(tech "formatter"))]
+                         [formatter-map (-> string? #,(tech "formatter"))]
                          [#:width width (or/c natural-number/c +inf.0) 80]
                          [#:max-blank-lines max-blank-lines (or/c natural-number/c +inf.0) 1])
          string?]{
-  Formats string @racket[s] with @racket[formatter] under the page width limit @racket[width]
+  Formats string @racket[s] with @racket[formatter-map] under the page width limit @racket[width]
   and the maximum consecutive blank lines limit @racket[max-blank-lines].
 
   @examples[#:eval evaluator
