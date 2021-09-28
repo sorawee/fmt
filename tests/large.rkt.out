@@ -4575,7 +4575,8 @@ An example
        (if (stx-null? (syntax body))
            (raise-syntax-error #f "empty body" stx)
            (raise-syntax-error #f "bad syntax (illegal use of `.')" stx)))]
-    [(_ x . rest) (raise-syntax-error #f "not a binding sequence" stx (syntax x))]))
+    [(_ x . rest)
+     (raise-syntax-error #f "not a binding sequence" stx (syntax x))]))
 
 ;;--------------------------------------------------------------------
 ;;  class, interface, and object properties
