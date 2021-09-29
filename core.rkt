@@ -2,6 +2,7 @@
 
 (provide program-format
          (struct-out thing)
+         (struct-out commentable)
          (struct-out node)
          (struct-out atom)
          (struct-out nl)
@@ -27,11 +28,13 @@
 (struct token (srcloc text type)
   #:transparent)
 
-(struct thing (extra)
+(struct thing ()
   #:transparent)
-(struct node thing (opener closer prefix breakable-prefix content)
+(struct commentable thing (inline-comment)
   #:transparent)
-(struct atom thing (content type)
+(struct node commentable (opener closer prefix breakable-prefix content)
+  #:transparent)
+(struct atom commentable (content type)
   #:transparent)
 ;; invariant: n >= 1
 (struct nl thing (n)
@@ -42,9 +45,9 @@
   #:transparent)
 ;; these two only exist after the realign pass
 ;; when style is 'disappeared or 'any, content must have length exactly one
-(struct sexp-comment thing (style tok content)
+(struct sexp-comment commentable (style tok content)
   #:transparent)
-(struct wrapper thing (tk content)
+(struct wrapper commentable (tk content)
   #:transparent)
 
 ;; these two will be removed by the realign pass
@@ -57,13 +60,14 @@
 (define current-max-blank-lines (make-parameter 1))
 
 (define (strip-comment obj)
-  (if (thing-extra obj)
+  (if (commentable-inline-comment obj)
       (cond
-        [(node? obj) (struct-copy node obj [extra #:parent thing #f])]
-        [(atom? obj) (struct-copy atom obj [extra #:parent thing #f])]
-        [(wrapper? obj) (struct-copy wrapper obj [extra #:parent thing #f])]
+        [(node? obj) (struct-copy node obj [inline-comment #:parent commentable #f])]
+        [(atom? obj) (struct-copy atom obj [inline-comment #:parent commentable #f])]
+        [(wrapper? obj)
+         (struct-copy wrapper obj [inline-comment #:parent commentable #f])]
         [(sexp-comment? obj)
-         (struct-copy sexp-comment obj [extra #:parent thing #f])]
+         (struct-copy sexp-comment obj [inline-comment #:parent commentable #f])]
         [else obj])
       obj))
 
@@ -96,11 +100,11 @@
           (cond
             [(visible? x)
              (cond
-               [(and extract-config (thing-extra x))
+               [(and extract-config (commentable-inline-comment x))
                 (loop xs
                       extract-configs
                       (cons (strip-comment x) fits)
-                      (cons (line-comment #f (thing-extra x)) unfits)
+                      (cons (line-comment (commentable-inline-comment x)) unfits)
                       (sub1 at-least))]
                [else (loop xs
                            extract-configs
@@ -184,8 +188,8 @@
   (define (do-it comment xs)
     (values
      (cond
-       [(node? obj) (struct-copy node obj [extra #:parent thing comment])]
-       [(atom? obj) (struct-copy atom obj [extra #:parent thing comment])])
+       [(node? obj) (struct-copy node obj [inline-comment #:parent commentable comment])]
+       [(atom? obj) (struct-copy atom obj [inline-comment #:parent commentable comment])])
      xs))
   (match xs
     [(list (token _ _ `(white-space 0)) (token _ comment 'line-comment) xs ...)
@@ -245,18 +249,18 @@
     [(cons (token _ _ `(white-space 1)) xs)
      (read-one xs #:source source #:while-reading while-reading)]
 
-    [(cons (token _ _ `(white-space ,n)) xs) (values (nl #f (sub1 n)) xs)]
+    [(cons (token _ _ `(white-space ,n)) xs) (values (nl (sub1 n)) xs)]
 
     [(cons (token _ (and c (or "'" "`" "#'" "#`")) 'constant) xs)
-     (values (bare-prefix #f c) xs)]
+     (values (bare-prefix c) xs)]
 
     [(cons (token _ (and c (or "," ",@" "#," "#,@")) 'other) xs)
-     (values (bare-prefix #f c) xs)]
+     (values (bare-prefix c) xs)]
 
     [(cons (token _ comment 'line-comment) xs)
-     (values (line-comment #f comment) xs)]
+     (values (line-comment comment) xs)]
 
-    [(cons (token _ _ 'sexp-comment) xs) (values (bare-sexp-comment #f) xs)]
+    [(cons (token _ _ 'sexp-comment) xs) (values (bare-sexp-comment) xs)]
 
     [(cons (token _ content kind) xs)
      (process-tail (atom #f content kind) xs)]))
@@ -264,7 +268,7 @@
 (define (read-top xs #:source [source #f])
   (let loop ([xs xs] [acc '()])
     (match xs
-      ['() (toplevel #f (reverse (dropf acc nl?)))]
+      ['() (toplevel (reverse (dropf acc nl?)))]
 
       [(cons (token _ _ `(white-space 0)) xs) (loop xs acc)]
 
@@ -309,23 +313,23 @@
                        (list (struct-copy
                               node
                               visible
-                              [extra #:parent thing #f]
+                              [inline-comment #:parent commentable #f]
                               [breakable-prefix
                                (string-append "#;" (or breakable-prefix ""))])))
                       xs)]
-               [_ (cons (sexp-comment (thing-extra visible)
+               [_ (cons (sexp-comment (commentable-inline-comment visible)
                                       'any
                                       "#;"
                                       (list (strip-comment visible)))
                         xs)])]
             [_ (cons (sexp-comment
-                      (thing-extra visible)
+                      (commentable-inline-comment visible)
                       'newline
                       "#;"
                       (append invisibles (list (strip-comment visible))))
                      xs)])])]
 
-      [(cons (bare-prefix _ tk) xs)
+      [(cons (bare-prefix tk) xs)
        (define-values (invisibles tail)
          (splitf-at (loop (dropf xs nl?) #f) (negate visible?)))
        (match tail
@@ -342,15 +346,15 @@
                (struct-copy node
                             visible
                             [prefix (string-append tk (or prefix ""))])]
-              [_ (wrapper (thing-extra visible) tk (strip-comment visible))])
+              [_ (wrapper (commentable-inline-comment visible) tk (strip-comment visible))])
             xs))])]
       [(cons (node comment opener closer prefix breakable-prefix xs*) xs)
        (cons (node comment opener closer prefix breakable-prefix (loop xs* #f))
              (loop xs #f))])))
 
 (define (realign d)
-  (match d
-    [(toplevel comment xs) (toplevel comment (realign/seq xs))]))
+  (match-define (toplevel xs) d)
+  (toplevel (realign/seq xs)))
 
 (define (pretty-comment comment d)
   (if comment (full (hs-append d (text comment))) d))
@@ -360,10 +364,10 @@
     (memoize
      (λ (d)
        (match d
-         [(toplevel _ xs) (v-concat (map loop xs))]
-         [(nl _ n) (full (v-concat (make-list n empty-doc)))]
+         [(toplevel xs) (v-concat (map loop xs))]
+         [(nl n) (full (v-concat (make-list n empty-doc)))]
          [(atom comment content _) (pretty-comment comment (text content))]
-         [(line-comment _ comment) (full (text comment))]
+         [(line-comment comment) (full (text comment))]
          [(sexp-comment comment style tok xs)
           (pretty-comment
            comment

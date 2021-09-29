@@ -79,7 +79,7 @@
       [(list x xs ...) (v-append (pretty x) (loop xs))])))
 
 (define (require-newline? d)
-  (or (thing-extra d)
+  (or (and (commentable? d) (commentable-inline-comment d))
       (line-comment? d)
       (nl? d)))
 

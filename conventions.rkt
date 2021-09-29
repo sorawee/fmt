@@ -44,8 +44,9 @@
              ((pretty-v-concat/kw pretty) (cons -conditional tail))))))]
     [#:else ((hook-else pretty) d)]))
 
-(define ((format-node-#%app pretty) d)
-  (define xs (node-content d))
+(define ((format-node-#%app pretty) d*)
+  (define xs (filter-not nl? (node-content d*)))
+  (define d (struct-copy node d* [content xs]))
   (cond
     [((current-app?) d)
      (match/extract pretty xs #:as unfits tail

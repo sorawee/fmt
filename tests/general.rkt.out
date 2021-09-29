@@ -57,9 +57,7 @@ c
 (let loop
   )
 
-(foo 'abc
-     
-     def)
+(foo 'abc def)
 
 #;(x) ; def
 (match y
