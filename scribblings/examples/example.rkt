@@ -21,5 +21,5 @@
 
 
 
-   ;; high :: number? -> listof number?
+  ;; high :: number? -> listof number?
 (  define high ...)

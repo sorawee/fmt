@@ -5,11 +5,12 @@
          compare)
 
 (require racket/include
+         racket/match
          racket/list
          scribble/manual
          scribble/struct
          (only-in scribble/core table-columns table-cells style plain
-                  color-property)
+                  color-property nested-flow)
          scribble/html-properties
          (for-label racket/base)
          (for-syntax racket/base
@@ -36,8 +37,17 @@
           (attributes '((border . "1") (cellpadding . "1")))
           (table-columns (make-list columns space)))))
 
+(define stretching-style
+  (style #f (list (attributes '([style . "margin-left: 0; margin-right: 0"])))))
+
+(define (extract d)
+  (match d
+    [(nested-flow _ (list (nested-flow _ content)))
+     (nested-flow stretching-style content)]
+    [_ d]))
+
 (define (compare stuff1 stuff2)
-  (define stuff (list (list stuff1) (list stuff2)))
+  (define stuff (list (list (extract stuff1)) (list (extract stuff2))))
   (table (sty 2 500) (apply map (compose make-flow list) stuff)))
 
 (define-for-syntax ((comment-racketmod-reader transform name) path port*)
