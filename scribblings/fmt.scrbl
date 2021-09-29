@@ -60,7 +60,7 @@ that are currently undocumented and unstable. (If you want to implement one, per
 @section{Unstable API}
 
 @defproc[(program-format [s string?]
-                         [formatter-map (-> string? #,(tech "formatter"))]
+                         [formatter-map (-> (or/c #f string?) #,(tech "formatter"))]
                          [#:width width (or/c natural-number/c +inf.0) 80]
                          [#:max-blank-lines max-blank-lines (or/c natural-number/c +inf.0) 1])
          string?]{
