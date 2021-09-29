@@ -32,9 +32,11 @@
   #:transparent)
 (struct commentable thing (inline-comment)
   #:transparent)
-(struct node commentable (opener closer prefix breakable-prefix content)
+(struct visible commentable ()
   #:transparent)
-(struct atom commentable (content type)
+(struct node visible (opener closer prefix breakable-prefix content)
+  #:transparent)
+(struct atom visible (content type)
   #:transparent)
 ;; invariant: n >= 1
 (struct nl thing (n)
@@ -47,7 +49,7 @@
 ;; when style is 'disappeared or 'any, content must have length exactly one
 (struct sexp-comment commentable (style tok content)
   #:transparent)
-(struct wrapper commentable (tk content)
+(struct wrapper visible (tk content)
   #:transparent)
 
 ;; these two will be removed by the realign pass
@@ -277,8 +279,6 @@
       [_
        (define-values (this xs*) (read-one xs #:source source))
        (loop xs* (cons this acc))])))
-
-(define (visible? x) (or (node? x) (atom? x) (wrapper? x)))
 
 (define (realign/seq xs)
   (let loop ([xs xs] [just-read-sexp-comment? #f])
