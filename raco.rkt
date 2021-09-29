@@ -5,12 +5,14 @@
 
 (require racket/cmdline
          racket/file
-         "core.rkt"
+         (rename-in "core.rkt"
+                    [current-width :current-width]
+                    [current-max-blank-lines :current-max-blank-lines])
          "conventions.rkt")
 
 (define current-width
   (make-parameter
-   80
+   (:current-width)
    (λ (n)
      (define as-num (string->number n))
      (cond
@@ -23,7 +25,7 @@
 
 (define current-max-blank-lines
   (make-parameter
-   1
+   (:current-max-blank-lines)
    (λ (n)
      (define as-num (string->number n))
      (cond
