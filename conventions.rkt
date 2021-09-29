@@ -235,6 +235,7 @@
     [("define-syntax" "define-syntaxes" "define-values-for-syntax")
      (format-node-define)]
     [("λ" "lambda") (format-node-define)]
+    [("match-define" "match-define-values") (format-node-define)]
 
     [("let*" "let-values" "let*-values" "letrec" "letrec-values")
      format-node-let*]

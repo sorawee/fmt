@@ -77,9 +77,9 @@
 (define (write-file path)
   (with-output-to-file path
     #:exists 'replace
-    (λ () (display s))))
+    (λ () (displayln s))))
 
 (case (current-output)
-  [("-") (display s)]
+  [("-") (displayln s)]
   [("-self") (write-file filename)]
   [else (write-file (current-output))])
