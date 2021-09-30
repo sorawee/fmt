@@ -93,7 +93,7 @@ that are currently undocumented and unstable. (If you want to implement one, per
 @section{Related work}
 
 @itemlist[
-  @item{@link["https://github.com/racket/drracket/"]{DrRacket} is a Racket editor. It has an indenter which can re-indent code, but cannot in general re-format code. Users can add custom keywords to the four predefined keyword categories, but cannot define a new category (without a plug-in).}
+  @item{@link["https://docs.racket-lang.org/drracket/"]{DrRacket} is a Racket editor. It has an indenter which can re-indent code, but cannot in general re-format code. Users can add custom keywords to the four predefined keyword categories, but cannot define a new category (without a plug-in).}
   @item{@link["https://github.com/mxork/raco-format/"]{@tt{raco-format}} is a command-line tool that invokes DrRacket's indenter.}
   @item{@link["https://racket-mode.com/"]{Racket Mode} is a mode in Emacs for editing Racket code.
         Similar to DrRacket, it has an indenter. Compared to DrRacket, Racket Mode is more customizable on one axis
@@ -105,4 +105,5 @@ that are currently undocumented and unstable. (If you want to implement one, per
        (but has better performance).}
   @item{@link["https://github.com/Shuumatsu/racket-pretty-printer/"]{@tt{racket-pretty-printer}} is a Racket formatter written in Haskell.
         It uses Wadler's pretty printer, so it has the limitations as described in the above item.}
+  @item{@link["https://github.com/aowens-21/racket-formatting"]{@tt{racket-formatting}} is a Racket formatter that attaches formatting information to syntax object properties. It does not attempt to pick the most optimal layout to stay within the column limit, and does not support comments.}
 ]
