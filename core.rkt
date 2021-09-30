@@ -293,8 +293,13 @@
            (cons (match visible
                    ;; don't create a new wrapper, just transfer content
                    [(wrapper _ tk* _) (struct-copy wrapper visible [tk (string-append tk tk*)])]
-                   [(node _ _ _ prefix _ _)
-                    (struct-copy node visible [prefix (string-append tk (or prefix ""))])]
+                   [(node _ _ _ prefix breakable-prefix _)
+                    (case (string-length tk)
+                      [(1) (struct-copy node visible [prefix (string-append tk (or prefix ""))])]
+                      [else (struct-copy node
+                                         visible
+                                         [breakable-prefix
+                                          (string-append tk (or breakable-prefix ""))])])]
                    [_ (wrapper (commentable-inline-comment visible) tk (strip-comment visible))])
                  xs))])]
       [(cons (node comment opener closer prefix breakable-prefix xs*) xs)

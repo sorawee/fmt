@@ -158,6 +158,23 @@
           (((format-node-uniform-body 1 #:hook-for-arg hook-for-head) pretty) d))]
     [#:else ((format-node-#%app pretty) d)]))
 
+;; this is similar to let*, but because the macro name is so long,
+;; also allow the second form to be in its own line
+(define ((format-node-parameterize pretty) d)
+  (match/extract pretty (node-content d) #:as unfits tail
+    [([-parameterize #f] [-bindings #f])
+     (alt (pretty-node
+           #:unfits unfits
+           d
+           (v-append
+            (pretty -parameterize)
+            (h-append (text "   ") ((format-binding-pairs pretty) -bindings))
+            (h-append space (try-indent #:because-of tail ((pretty-v-concat/kw pretty) tail)))))
+          ((format-node-let* pretty) d))]
+    [#:else ((format-node-#%app pretty) d)]))
+
+;; unlike format-node-parameterize, don't allow the second form to be in its
+;; own line, even though it is technically better. It just looks really ugly.
 (define format-node-let* (format-node-define #:hook-for-head format-binding-pairs))
 
 ;; support both named let and usual let
@@ -211,11 +228,11 @@
     [("λ" "lambda") (format-node-define)]
     [("match-define" "match-define-values") (format-node-define)]
 
-    [("let*" "let-values" "let*-values" "letrec" "letrec-values") format-node-let*]
-    [("let-syntax" "letrec-syntax" "let-syntaxes" "letrec-syntaxes") format-node-let*]
-    [("with-syntax" "with-syntax*") format-node-let*]
-    [("shared") format-node-let*]
-    [("parameterize" "parameterize*" "syntax-parameterize") format-node-let*]
+    [("let*") format-node-let*]
+    [("let-values" "let*-values" "letrec" "letrec-values") format-node-parameterize]
+    [("let-syntax" "letrec-syntax" "let-syntaxes" "letrec-syntaxes") format-node-parameterize]
+    [("with-syntax" "with-syntax*" "shared") format-node-parameterize]
+    [("parameterize" "parameterize*" "syntax-parameterize") format-node-parameterize]
     [("letrec-syntaxes+values") (format-node-uniform-body 2 #:hook-for-arg format-binding-pairs)]
 
     [("begin") (format-node-uniform-body 0)]
