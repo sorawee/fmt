@@ -24,9 +24,9 @@
 
 (define (((format-node-if-like hook-else) pretty) d)
   (define xs (node-content d))
-  (match/extract pretty xs #:as unfits tail
+  (match/extract xs #:as unfits tail
     [([-if #t] [-conditional #f])
-     (pretty-node #:unfits unfits
+     (pretty-node #:unfits (map pretty unfits)
                   d
                   (hs-append (flat (pretty -if))
                              (try-indent #:n 0
@@ -47,9 +47,9 @@
   (define d (struct-copy node d* [content xs]))
   (cond
     [((current-app?) d)
-     (match/extract pretty xs #:as unfits tail
+     (match/extract xs #:as unfits tail
        ;; mostly vertical
-       [([-head #f]) (alt (pretty-node #:unfits unfits
+       [([-head #f]) (alt (pretty-node #:unfits (map pretty unfits)
                                        d
                                        (try-indent #:n 0
                                                    #:because-of (cons -head tail)
@@ -72,7 +72,7 @@
                                     #:require-body? [require-body? #t])
           pretty)
          d)
-  (match (extract* pretty (node-content d) (append (make-list n #t) (list #f)))
+  (match (extract (node-content d) (append (make-list n #t) (list #f)))
     ;; don't care
     [#f ((format-node-#%app pretty) d)]
     ;; this is it!
@@ -83,7 +83,7 @@
          [_
           (define args (map (hook-for-arg pretty) -e))
           (hs-append (pretty -macro-name) (alt (flat (hs-concat args)) (v-concat args)))]))
-     (pretty-node #:unfits unfits
+     (pretty-node #:unfits (map pretty unfits)
                   d
                   (try-indent #:because-of (append (cons -macro-name -e) tail)
                               (match tail
@@ -100,11 +100,11 @@
     [(node _ (or "(" "[") (or ")" "]") #f #f xs)
      ;; try to fit in one line; only when there are exactly two things
      #;[a b]
-     (alt (match/extract pretty xs #:as unfits tail
+     (alt (match/extract xs #:as unfits tail
             [([-head #t] [-something #f])
              (match tail
                ['() (pretty-node #:adjust '("[" "]")
-                                 #:unfits unfits
+                                 #:unfits (map pretty unfits)
                                  clause
                                  (try-indent #:n 0
                                              #:because-of (list -something)
@@ -138,11 +138,11 @@
     a
     b)
 (define (((format-node-define #:hook-for-head [hook-for-head values]) pretty) d)
-  (match/extract pretty (node-content d) #:as unfits tail
+  (match/extract (node-content d) #:as unfits tail
     [([-define #t] [-head #f])
      ;; fit in one line case; only when there are exactly three things
      #;(define a b)
-     (alt (pretty-node #:unfits unfits
+     (alt (pretty-node #:unfits (map pretty unfits)
                        d
                        (try-indent #:because-of tail
                                    (alt (match tail
@@ -161,12 +161,12 @@
 ;; this is similar to let*, but because the macro name is so long,
 ;; also allow the second form to be in its own line
 (define ((format-node-parameterize pretty) d)
-  (match/extract pretty (node-content d) #:as unfits tail
+  (match/extract (node-content d) #:as unfits tail
     [([-parameterize #f] [-bindings #f])
      (alt
       (worsen
        (pretty-node
-        #:unfits unfits
+        #:unfits (map pretty unfits)
         d
         (v-append (pretty -parameterize)
                   (h-append (text "   ") ((format-binding-pairs pretty) -bindings))
@@ -181,11 +181,11 @@
 
 ;; support both named let and usual let
 (define ((format-node-let pretty) d)
-  (match/extract pretty (node-content d) #:as unfits tail
+  (match/extract (node-content d) #:as unfits tail
     ;; named let
     [([-let #t] [(? atom? -name) #t] [(? node? -bindings) #f])
      (pretty-node
-      #:unfits unfits
+      #:unfits (map pretty unfits)
       d
       (try-indent
        #:because-of tail
@@ -199,9 +199,9 @@
            b
            c)
 (define ((format-node-require pretty) d)
-  (match/extract pretty (node-content d) #:as unfits tail
+  (match/extract (node-content d) #:as unfits tail
     [([-provide #t] [-first-arg #f])
-     (pretty-node #:unfits unfits
+     (pretty-node #:unfits (map pretty unfits)
                   d
                   (hs-append (flat (pretty -provide))
                              (try-indent #:n 0
@@ -215,7 +215,7 @@
 #;(struct name (fields ...)
     #:kw)
 (define ((format-node-struct pretty) d)
-  (match/extract pretty (node-content d) #:as unfits tail
+  (match/extract (node-content d) #:as unfits tail
     [([_ #t] [_ #t] [(? atom?) #f]) (((format-node-uniform-body 3 #:require-body? #f) pretty) d)]
     [#:else (((format-node-uniform-body 2 #:require-body? #f) pretty) d)]))
 

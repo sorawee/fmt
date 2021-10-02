@@ -8,7 +8,6 @@
          pretty-node
          try-indent
 
-         extract*
          match/extract)
 
 (require racket/match
@@ -101,12 +100,6 @@
     ['() main-doc*]
     [_ (v-append (v-concat unfits) main-doc*)]))
 
-(define (extract* pretty xs config)
-  (match (extract xs config)
-    [#f #f]
-    [(list fits unfits tail)
-     (list fits (map pretty unfits) tail)]))
-
 (define (try-indent d #:n [n 1] #:because-of xs)
   (match xs
     ['() d]
@@ -115,12 +108,10 @@
            d)]))
 
 (define-syntax-parser match/extract
-  [(_ pretty xs #:as unfits tail
-      [([pat req-status:boolean] ...) body ...+] . rst)
-   #'(let ([-pretty pretty] [-xs xs])
-       (match (extract* -pretty -xs '(req-status ...))
+  [(_ xs #:as unfits tail [([pat req-status:boolean] ...) body ...+] . rst)
+   #'(let ([-xs xs])
+       (match (extract -xs '(req-status ...))
          [(list (list pat ...) unfits tail) body ...]
-         [_ (match/extract -pretty -xs #:as unfits tail . rst)]))]
-  [(_ pretty xs #:as unfits tail
-      [#:else body ...+])
+         [_ (match/extract -xs #:as unfits tail . rst)]))]
+  [(_ xs #:as unfits tail [#:else body ...+])
    #'(let () body ...)])
