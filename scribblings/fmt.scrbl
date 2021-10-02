@@ -93,17 +93,18 @@ that are currently undocumented and unstable. (If you want to implement one, per
 @section{Related work}
 
 @itemlist[
-  @item{@link["https://docs.racket-lang.org/drracket/"]{DrRacket} is a Racket editor. It has an indenter which can re-indent code, but cannot in general re-format code. Users can add custom keywords to the four predefined keyword categories, but cannot define a new category (without a plug-in).}
-  @item{@link["https://github.com/mxork/raco-format/"]{@tt{raco-format}} is a command-line tool that invokes DrRacket's indenter.}
-  @item{@link["https://racket-mode.com/"]{Racket Mode} is a mode in Emacs for editing Racket code.
+  @item{@link["https://docs.racket-lang.org/drracket/"]{DrRacket} (by the Racket team) is a Racket editor. It has an indenter which can re-indent code, but cannot in general re-format code. Users can add custom keywords to the four predefined keyword categories, but cannot define a new category (without a plug-in).}
+  @item{@link["https://github.com/mxork/raco-format/"]{@tt{raco-format}} (by @link["https://github.com/mxork"]{Dan Anderson}) is a command-line tool that invokes DrRacket's indenter.}
+  @item{@link["https://racket-mode.com/"]{Racket Mode} (by @link["https://greghendershott.com/"]{Greg Hendershott}) is a mode in Emacs for editing Racket code.
         Similar to DrRacket, it has an indenter. Compared to DrRacket, Racket Mode is more customizable on one axis
         (more keyword categories) but less customizable on another axis (must map each keyword one-by-one)}
-  @item{@racketmodname[racket/pretty] is a library for pretty printing an S-expression value.
+  @item{@racketmodname[racket/pretty] (by the Racket team) is a library for pretty printing an S-expression value.
         It does not support comments, is less expressive and less optimal than @racketmodname[fmt].}
-  @item{@racketmodname[pprint #:indirect] is a library for pretty printing an arbitrary document.
+  @item{@racketmodname[pprint #:indirect] (by @link["http://calculist.org/"]{Dave Herman} and @link["https://www.asumu.xyz/"]{Asumu Takikawa}) is a library for pretty printing an arbitrary document.
        It is based on Wadler's pretty printer, which is less expressive and less optimal than @racketmodname[pprint-compact]
        (but has better performance).}
-  @item{@link["https://github.com/Shuumatsu/racket-pretty-printer/"]{@tt{racket-pretty-printer}} is a Racket formatter written in Haskell.
+  @item{@link["https://github.com/Shuumatsu/racket-pretty-printer/"]{@tt{racket-pretty-printer}} (by @link["https://github.com/Shuumatsu"]{为世人降下祝福}) is a Racket formatter written in Haskell.
         It uses Wadler's pretty printer, so it has the limitations as described in the above item.}
-  @item{@link["https://github.com/aowens-21/racket-formatting"]{@tt{racket-formatting}} is a Racket formatter that attaches formatting information to syntax object properties. It does not attempt to pick the most optimal layout to stay within the column limit, and does not support comments.}
+  @item{@link["https://github.com/aowens-21/racket-formatting"]{@tt{racket-formatting}} (by @link["https://aowens-21.github.io/"]{Alex Owens} and @link["https://users.cs.northwestern.edu/~syt3996/"]{Shu-Hung You}) is a Racket formatter that attaches formatting information to syntax object properties. It does not attempt to pick the most optimal layout to stay within the column limit, and does not support comments.}
+  @item{@link["https://github.com/russellw/racket-format/"]{@tt{racket-format}} (by @link["https://github.com/russellw"]{Russell Wallace}) is a Racket formatter written manually. It uses a greedy algorithm to decide which layout to pick, which is not optimal. It supports line-comments and the normalization feature (such as sorting the list of @racket[provide]d elements).}
 ]
