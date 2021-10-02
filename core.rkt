@@ -262,16 +262,16 @@
              #:when (not just-read-sexp-comment?)
              (match visible
                [(node comment opener closer prefix breakable-prefix content)
-                (cons (sexp-comment
-                       comment
-                       'disappeared
-                       ""
-                       (list (struct-copy node
-                                          visible
-                                          [inline-comment #:parent commentable #f]
-                                          [breakable-prefix
-                                           (string-append "#;" (or breakable-prefix ""))])))
-                      xs)]
+                (cons
+                 (sexp-comment comment
+                               'disappeared
+                               ""
+                               (list (struct-copy node
+                                                  visible
+                                                  [inline-comment #:parent commentable #f]
+                                                  [breakable-prefix
+                                                   (string-append "#;" (or breakable-prefix ""))])))
+                 xs)]
                [_ (cons (sexp-comment (commentable-inline-comment visible)
                                       'any
                                       "#;"
@@ -290,18 +290,18 @@
          [(cons visible xs)
           (append
            invisibles
-           (cons (match visible
-                   ;; don't create a new wrapper, just transfer content
-                   [(wrapper _ tk* _) (struct-copy wrapper visible [tk (string-append tk tk*)])]
-                   [(node _ _ _ prefix breakable-prefix _)
-                    (case (string-length tk)
-                      [(1) (struct-copy node visible [prefix (string-append tk (or prefix ""))])]
-                      [else (struct-copy node
-                                         visible
-                                         [breakable-prefix
-                                          (string-append tk (or breakable-prefix ""))])])]
-                   [_ (wrapper (commentable-inline-comment visible) tk (strip-comment visible))])
-                 xs))])]
+           (cons
+            (match visible
+              ;; don't create a new wrapper, just transfer content
+              [(wrapper _ tk* _) (struct-copy wrapper visible [tk (string-append tk tk*)])]
+              [(node _ _ _ prefix breakable-prefix _)
+               (case (string-length tk)
+                 [(1) (struct-copy node visible [prefix (string-append tk (or prefix ""))])]
+                 [else (struct-copy node
+                                    visible
+                                    [breakable-prefix (string-append tk (or breakable-prefix ""))])])]
+              [_ (wrapper (commentable-inline-comment visible) tk (strip-comment visible))])
+            xs))])]
       [(cons (node comment opener closer prefix breakable-prefix xs*) xs)
        (cons (node comment opener closer prefix breakable-prefix (loop xs* #f)) (loop xs #f))])))
 
@@ -313,27 +313,27 @@
 
 (define (pretty d hook)
   (define loop
-    (memoize (λ (d)
-               (match d
-                 [(toplevel xs) (v-concat (map loop xs))]
-                 [(nl n) (full (v-concat (make-list n empty-doc)))]
-                 [(atom comment content _) (pretty-comment comment (text content))]
-                 [(line-comment comment) (full (text comment))]
-                 [(sexp-comment comment style tok xs)
-                  (pretty-comment comment
-                                  (match style
-                                    ['newline (v-append (text tok) (v-concat (map loop xs)))]
-                                    ['any
-                                     (define :x (loop (first xs)))
-                                     (alt (h-append (text tok) :x) (v-append (text tok) :x))]
-                                    ['disappeared (loop (first xs))]))]
-                 [(node _ _ _ _ _ xs) (match (extract xs (list #f))
-                                        [#f (((hook #f) loop) d)]
-                                        [(list (list (atom _ content 'symbol)) _ _)
-                                         (((hook content) loop) d)]
-                                        [_ (((hook #f) loop) d)])]
-                 [(wrapper comment tok content)
-                  (pretty-comment comment (h-append (text tok) (loop content)))]))))
+    (memoize
+     (λ (d)
+       (match d
+         [(toplevel xs) (v-concat (map loop xs))]
+         [(nl n) (full (v-concat (make-list n empty-doc)))]
+         [(atom comment content _) (pretty-comment comment (text content))]
+         [(line-comment comment) (full (text comment))]
+         [(sexp-comment comment style tok xs)
+          (pretty-comment comment
+                          (match style
+                            ['newline (v-append (text tok) (v-concat (map loop xs)))]
+                            ['any
+                             (define :x (loop (first xs)))
+                             (alt (h-append (text tok) :x) (v-append (text tok) :x))]
+                            ['disappeared (loop (first xs))]))]
+         [(node _ _ _ _ _ xs) (match (extract xs (list #f))
+                                [#f (((hook #f) loop) d)]
+                                [(list (list (atom _ content 'symbol)) _ _) (((hook content) loop) d)]
+                                [_ (((hook #f) loop) d)])]
+         [(wrapper comment tok content)
+          (pretty-comment comment (h-append (text tok) (loop content)))]))))
   (loop d))
 
 (define (program-format program-source
@@ -342,12 +342,12 @@
                         #:width [width (current-width)]
                         #:max-blank-lines [max-blank-lines (current-max-blank-lines)])
   (define s
-    (pretty-format #:width width
-                   (pretty (realign (read-top (tokenize program-source
-                                                        #:source source
-                                                        #:max-blank-lines max-blank-lines)
-                                              #:source source))
-                           formatter)))
+    (pretty-format
+     #:width width
+     (pretty
+      (realign (read-top (tokenize program-source #:source source #:max-blank-lines max-blank-lines)
+                         #:source source))
+      formatter)))
 
   (string-join (for/list ([line (in-list (string-split s "\n"))])
                  (string-trim line #:left? #f))

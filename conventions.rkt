@@ -26,20 +26,20 @@
   (define xs (node-content d))
   (match/extract pretty xs #:as unfits tail
     [([-if #t] [-conditional #f])
-     (pretty-node
-      #:unfits unfits
-      d
-      (hs-append (flat (pretty -if))
-                 (try-indent #:n 0
-                             #:because-of (cons -conditional tail)
-                             ;; try to fit in one line
-                             #;(if a b c)
-                             (alt (flat (hs-concat (map pretty (cons -conditional tail))))
-                                  ;; or multiple lines
-                                  #;(if aaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
-                                        bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb
-                                        ccccccccccccccccccccccccccccccccc)
-                                  ((pretty-v-concat/kw pretty) (cons -conditional tail))))))]
+     (pretty-node #:unfits unfits
+                  d
+                  (hs-append (flat (pretty -if))
+                             (try-indent #:n 0
+                                         #:because-of (cons -conditional tail)
+                                         ;; try to fit in one line
+                                         #;(if a b c)
+                                         (alt (flat (hs-concat (map pretty (cons -conditional tail))))
+                                              ;; or multiple lines
+                                              #;(if aaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+                                                    bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb
+                                                    ccccccccccccccccccccccccccccccccc)
+                                              ((pretty-v-concat/kw pretty)
+                                               (cons -conditional tail))))))]
     [#:else ((hook-else pretty) d)]))
 
 (define ((format-node-#%app pretty) d*)
@@ -163,14 +163,16 @@
 (define ((format-node-parameterize pretty) d)
   (match/extract pretty (node-content d) #:as unfits tail
     [([-parameterize #f] [-bindings #f])
-     (alt (pretty-node
-           #:unfits unfits
-           d
-           (v-append
-            (pretty -parameterize)
-            (h-append (text "   ") ((format-binding-pairs pretty) -bindings))
-            (h-append space (try-indent #:because-of tail ((pretty-v-concat/kw pretty) tail)))))
-          ((format-node-let* pretty) d))]
+     (alt
+      (worsen
+       (pretty-node
+        #:unfits unfits
+        d
+        (v-append (pretty -parameterize)
+                  (h-append (text "   ") ((format-binding-pairs pretty) -bindings))
+                  (h-append space (try-indent #:because-of tail ((pretty-v-concat/kw pretty) tail)))))
+       1)
+      ((format-node-let* pretty) d))]
     [#:else ((format-node-#%app pretty) d)]))
 
 ;; unlike format-node-parameterize, don't allow the second form to be in its
@@ -182,13 +184,13 @@
   (match/extract pretty (node-content d) #:as unfits tail
     ;; named let
     [([-let #t] [(? atom? -name) #t] [(? node? -bindings) #f])
-     (pretty-node #:unfits unfits
-                  d
-                  (try-indent #:because-of tail
-                              (v-append (hs-append (pretty -let)
-                                                   (pretty -name)
-                                                   ((format-binding-pairs pretty) -bindings))
-                                        (h-append space (v-concat (map pretty tail))))))]
+     (pretty-node
+      #:unfits unfits
+      d
+      (try-indent
+       #:because-of tail
+       (v-append (hs-append (pretty -let) (pretty -name) ((format-binding-pairs pretty) -bindings))
+                 (h-append space (v-concat (map pretty tail))))))]
     ;; regular let
     [#:else ((format-node-let* pretty) d)]))
 
