@@ -5,10 +5,10 @@
 
 (require racket/cmdline
          racket/file
-         (rename-in "core.rkt"
+         (rename-in "main.rkt"
                     [current-width :current-width]
-                    [current-max-blank-lines :current-max-blank-lines])
-         "conventions.rkt")
+                    [current-max-blank-lines :current-max-blank-lines]
+                    [current-indent :current-indent]))
 
 (define current-width
   (make-parameter
@@ -20,7 +20,7 @@
         as-num]
        [else (raise-user-error
               'width
-              "must be either a natural number of +inf.0, given: ~a"
+              "must be either a natural number or +inf.0, given: ~a"
               n)]))))
 
 (define current-max-blank-lines
@@ -33,13 +33,26 @@
         as-num]
        [else (raise-user-error
               'max-blank-lines
-              "must be either a natural number of +inf.0, given: ~a"
+              "must be either a natural number or +inf.0, given: ~a"
               n)]))))
 
-(define current-output (make-parameter "-"))
-(define current-config (make-parameter "-"))
+(define current-indent
+  (make-parameter
+   (:current-indent)
+   (λ (n)
+     (define as-num (string->number n))
+     (cond
+       [(and as-num (exact-nonnegative-integer? as-num))
+        as-num]
+       [else (raise-user-error
+              'indent
+              "must be either a natural number, given: ~a"
+              n)]))))
 
-(define filename
+(define current-config (make-parameter "-"))
+(define current-in-place? (make-parameter #f))
+
+(define filenames
   (command-line
    #:once-each
    [("--width")
@@ -50,38 +63,38 @@
     n
     "max consecutive blank lines -- must be a natural number or +inf.0 (default: 1)"
     (current-max-blank-lines n)]
+   [("--indent")
+    n
+    "indentation level for subsequent lines -- must be a natural number (default: 0)"
+    (current-indent n)]
    [("--config")
     conf
     "configuration file -- must be a path or - (.fmt.rkt if exists or else standard config) or -standard (standard config)"
     (current-config conf)]
-   [("--out")
-    o
-    "output path -- must be a path or - (stdout) or -self (input file) (default: -)"
-    (current-output o)]
-   #:args (filename)
-   filename))
+   [("-i")
+    "Modifies the file in-place"
+    (current-in-place? #t)]
+   #:args args
+   args))
 
 (define the-map
   (case (current-config)
     [("-") (cond
              [(file-exists? ".fmt.rkt")
-              (dynamic-require ".fmt.rkt" 'the-formatter-map)]
-             [else standard-formatter-map])]
-    [("-standard") standard-formatter-map]
-    [else (dynamic-require (current-config) 'the-formatter-map)]))
+              (dynamic-require ".fmt.rkt" 'the-formatter-map (λ () empty-formatter-map))]
+             [else empty-formatter-map])]
+    [("-standard") empty-formatter-map]
+    [else (dynamic-require (current-config) 'the-formatter-map (λ () empty-formatter-map))]))
 
-(define s
-  (program-format (file->string filename)
-                  the-map
-                  #:width (current-width)
-                  #:max-blank-lines (current-max-blank-lines)))
+(for ([filename (in-list filenames)])
+  (define s
+    (program-format (file->string filename)
+                    #:formatter-map the-map
+                    #:width (current-width)
+                    #:max-blank-lines (current-max-blank-lines)))
 
-(define (write-file path)
-  (with-output-to-file path
-    #:exists 'replace
-    (λ () (displayln s))))
-
-(case (current-output)
-  [("-") (displayln s)]
-  [("-self") (write-file filename)]
-  [else (write-file (current-output))])
+  (case (current-in-place?)
+    [(#f) (displayln s)]
+    [(#t) (with-output-to-file filename
+            #:exists 'replace
+            (λ () (displayln s)))]))

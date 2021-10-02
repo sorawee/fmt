@@ -16,6 +16,7 @@
          syntax/parse/define
          pprint-compact
          "core.rkt"
+         "common.rkt"
          (for-syntax racket/base))
 
 (define current-ellipsis?

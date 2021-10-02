@@ -20,6 +20,7 @@
          racket/list
          pprint-compact
          "core.rkt"
+         "common.rkt"
          "conventions-util.rkt")
 
 (define (((format-node-if-like hook-else) pretty) d)
@@ -226,6 +227,7 @@
     [("public" "private" "override" "inherit" "field" "init") format-node-require]
 
     [("define" "define-for-syntax" "define-values") (format-node-define)]
+    [("define-syntax-rule") (format-node-define)]
     [("define-syntax" "define-syntaxes" "define-values-for-syntax") (format-node-define)]
     [("λ" "lambda") (format-node-define)]
     [("match-define" "match-define-values") (format-node-define)]

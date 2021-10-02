@@ -77,8 +77,7 @@
    (λ (p)
      (define code (port->string p))
      (define p*
-       (open-input-string
-        (program-format code standard-formatter-map #:width 40)))
+       (open-input-string (program-format code #:width 40)))
      (port-count-lines! p*)
      p*)
    n))

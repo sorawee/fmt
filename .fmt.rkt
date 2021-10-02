@@ -6,5 +6,5 @@
 (define (the-formatter-map s)
   (case s
     [("match/extract")
-     (format-node-uniform-body 5 #:hook-for-body format-clause-2)]
+     (format-node-uniform-body 4 #:hook-for-body format-clause-2)]
     [else (standard-formatter-map s)]))
