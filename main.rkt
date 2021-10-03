@@ -48,10 +48,10 @@
 
 (define (pretty-format* x
                         #:width [width (current-width)]
-                        #:formatter-map [formatter-map standard-formatter-map])
+                        #:formatter-map [formatter-map empty-formatter-map])
   (program-format (print x) #:formatter-map formatter-map #:width width))
 
 (define (pretty-print* x
                        #:width [width (current-width)]
-                       #:formatter-map [formatter-map standard-formatter-map])
+                       #:formatter-map [formatter-map empty-formatter-map])
   (display (pretty-format* x #:formatter-map formatter-map #:width width)))

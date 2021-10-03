@@ -17,7 +17,11 @@
          format-let*
          format-require
          format-if
-         format-struct)
+         format-struct
+
+         syntax-parse-pattern-directive-kw-map
+         syntax-parse-parse-option-kw-map
+         default-kw-map)
 
 (require racket/match
          racket/list
@@ -34,7 +38,7 @@
     [("#:cut") 0]
     [else 1]))
 
-(define (syntax-parse-parse-option s _xs)
+(define (syntax-parse-parse-option-kw-map s _xs)
   (case s
     [("#:track-literals" "#:disable-colon-notation") 0]
     [else 1]))
@@ -304,8 +308,6 @@
     [("begin0") (format-uniform-body/helper 1)]
     [("module+") (format-uniform-body/helper 1)]
     [("define-syntax-class") (format-uniform-body/helper 1)]
-    [("define-syntax-parse-rule" "define-simple-macro")
-     (format-uniform-body/helper 1 #:kw-map syntax-parse-pattern-directive-kw-map)]
     [("module" "module*") (format-uniform-body/helper 2)]
 
     [("cond" "case-lambda")
@@ -314,12 +316,22 @@
     [("syntax-rules" "match" "match*" "case" "class")
      (format-uniform-body/helper 1 #:body-formatter (format-clause-2/indirect) #:require-body? #f)]
 
+    [("define-syntax-parse-rule" "define-simple-macro")
+     (format-uniform-body/helper 1 #:kw-map syntax-parse-pattern-directive-kw-map)]
+
     [("syntax-parse" "define-syntax-parser")
      (format-uniform-body/helper
       1
       #:require-body? #f
       #:body-formatter (format-clause-2/indirect #:kw-map syntax-parse-pattern-directive-kw-map)
-      #:kw-map syntax-parse-parse-option)]
+      #:kw-map syntax-parse-parse-option-kw-map)]
+
+    [("syntax-parser")
+     (format-uniform-body/helper
+      0
+      #:require-body? #f
+      #:body-formatter (format-clause-2/indirect #:kw-map syntax-parse-pattern-directive-kw-map)
+      #:kw-map syntax-parse-parse-option-kw-map)]
 
     [("syntax-case" "instantiate")
      (format-uniform-body/helper 2 #:body-formatter (format-clause-2/indirect) #:require-body? #f)]
