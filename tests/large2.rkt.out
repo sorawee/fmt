@@ -78,7 +78,9 @@
   (icons:compiled-bitmap (icons:small-save-icon #:height (icons:toolbar-icon-height))))
 (define save-bitmap (icons:compiled-bitmap (icons:save-icon #:height (icons:toolbar-icon-height))))
 
-(begin-for-syntax (define stickman-height 18) (define num-running-frames 12))
+(begin-for-syntax
+  (define stickman-height 18)
+  (define num-running-frames 12))
 
 (define running-frame-list
   (icons:compiled-bitmap-list (for/list ([t (in-range 0 1 (/ 1 num-running-frames))])

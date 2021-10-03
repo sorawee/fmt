@@ -33,8 +33,8 @@
     (pretty-format
      #:width width
      #:indent indent
-     (pretty (realign (read-all program-source source max-blank-lines))
-             (compose-formatter-map formatter-map standard-formatter-map))))
+     (pretty-doc (realign (read-all program-source source max-blank-lines))
+                 (compose-formatter-map formatter-map standard-formatter-map))))
 
   (string-join (for/list ([line (in-list (string-split s "\n"))])
                  (string-trim line #:left? #f))

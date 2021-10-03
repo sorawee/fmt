@@ -1,34 +1,91 @@
 #lang racket/base
 
 (provide standard-formatter-map
-         format-node-if-like
 
-         format-node-#%app
+         format-verticle/helper
+         format-if-like/helper
 
-         format-node-uniform-body
+         format-#%app
 
-         format-clause-2
-         format-binding-pairs
+         format-uniform-body/helper
 
-         format-node-define
-         format-node-let
-         format-node-let*
-         format-node-require
-         format-node-if
-         format-node-struct)
+         format-clause-2/indirect
+         format-binding-pairs/indirect
+
+         format-define
+         format-let
+         format-let*
+         format-require
+         format-if
+         format-struct)
+
 (require racket/match
          racket/list
          pprint-compact
          "core.rkt"
          "common.rkt"
-         "conventions-util.rkt")
+         "params.rkt")
 
-(define (((format-node-if-like hook-else) pretty) d)
-  (define xs (node-content d))
-  (match/extract xs #:as unfits tail
+(define (default-kw-map _s _xs) 1)
+
+(define (syntax-parse-pattern-directive-kw-map s _xs)
+  (case s
+    [("#:declare" "#:with" "#:attr" "#:fail-when" "#:fail-unless") 2]
+    [("#:cut") 0]
+    [else 1]))
+
+(define (syntax-parse-parse-option s _xs)
+  (case s
+    [("#:track-literals" "#:disable-colon-notation") 0]
+    [else 1]))
+
+(define-pretty (format-verticle/helper #:body-formatter [format-body #f]
+                                       #:kw-arg-formatter [format-kw-arg #f]
+                                       #:kw-map [kw-map default-kw-map])
+  #:type list?
+  #:default [format-body pretty]
+  #:default [format-kw-arg pretty]
+  (let loop ([xs doc])
+    (match xs
+      ['() empty-doc]
+      [(list x) (format-body x)]
+      [(list x (and ellipsis (atom _ (? (current-ellipsis?)) 'symbol)) xs ...)
+       (define doc
+         (alt (hs-append (format-body x) (pretty ellipsis))
+              (v-append (format-body x) (pretty ellipsis))))
+       (match xs
+         ['() doc]
+         [_ (v-append doc (loop xs))])]
+      [(list (and kw (atom _ content 'hash-colon-keyword)) xs ...)
+       (define (fallback)
+         (match xs
+           ['() (pretty kw)]
+           [_ (v-append (pretty kw) (loop xs))]))
+       (define pos (kw-map content xs))
+       (cond
+         [(zero? pos) (fallback)]
+         [else
+          (define count (for/last ([i (in-range pos)] [_x (in-list xs)]) i))
+          (cond
+            [(= (or count -1) (sub1 pos))
+             (define-values (front back) (split-at xs pos))
+             (cond
+               [(andmap visible? front)
+                (define doc
+                  (alt (hs-append (pretty kw) (hs-concat (map format-kw-arg front)))
+                       (v-append (pretty kw) (v-concat (map format-kw-arg front)))))
+                (match back
+                  ['() doc]
+                  [_ (v-append doc (loop back))])]
+               [else (fallback)])]
+            [else (fallback)])])]
+      [(list x xs ...) (v-append (format-body x) (loop xs))])))
+
+(define-pretty (format-if-like/helper format-else)
+  #:type node?
+  (match/extract (node-content doc) #:as unfits tail
     [([-if #t] [-conditional #f])
-     (pretty-node #:unfits (map pretty unfits)
-                  d
+     (pretty-node #:unfits unfits
                   (hs-append (flat (pretty -if))
                              (try-indent #:n 0
                                          #:because-of (cons -conditional tail)
@@ -39,65 +96,67 @@
                                               #;(if aaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
                                                     bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb
                                                     ccccccccccccccccccccccccccccccccc)
-                                              ((pretty-v-concat/kw pretty)
-                                               (cons -conditional tail))))))]
-    [#:else ((hook-else pretty) d)]))
+                                              ((format-verticle/helper) (cons -conditional tail))))))]
+    [#:else (format-else doc)]))
 
-(define ((format-node-#%app pretty) d*)
-  (define xs (filter-not nl? (node-content d*)))
-  (define d (struct-copy node d* [content xs]))
+(define-pretty format-#%app
+  #:type node?
+  #:let [xs (filter-not nl? (node-content doc))]
+  #:let [doc (struct-copy node doc [content xs])]
   (cond
-    [((current-app?) d)
+    [((current-app?) doc)
      (match/extract xs #:as unfits tail
        ;; mostly vertical
-       [([-head #f]) (alt (pretty-node #:unfits (map pretty unfits)
-                                       d
+       [([-head #f]) (alt (pretty-node #:unfits unfits
                                        (try-indent #:n 0
                                                    #:because-of (cons -head tail)
-                                                   ((pretty-v-concat/kw pretty) (cons -head tail))))
+                                                   ((format-verticle/helper) (cons -head tail))))
                           ;; pretty cases
-                          (((format-node-if-like (λ (pretty) (λ (d) fail))) pretty) d))]
+                          ((format-if-like/helper (λ (d) fail)) doc))]
        ;; perhaps full of comments, or there's nothing at all
-       [#:else (pretty-node d (try-indent #:n 0 #:because-of xs ((pretty-v-concat/kw pretty) xs)))])]
-    [else (pretty-node d
-                       (try-indent #:n 0
+       [#:else (pretty-node (try-indent #:n 0 #:because-of xs ((format-verticle/helper) xs)))])]
+    [else (pretty-node (try-indent #:n 0
                                    #:because-of xs
                                    ;; general case
-                                   (alt ((pretty-v-concat/kw pretty) xs)
+                                   (alt ((format-verticle/helper) xs)
                                         ;; try to fit in one line
                                         (flat (hs-concat (map pretty xs))))))]))
 
-(define (((format-node-uniform-body n
-                                    #:hook-for-arg [hook-for-arg values]
-                                    #:hook-for-body [hook-for-body values]
-                                    #:require-body? [require-body? #t])
-          pretty)
-         d)
-  (match (extract (node-content d) (append (make-list n #t) (list #f)))
+(define-pretty (format-uniform-body/helper n
+                                           #:arg-formatter [format-arg #f]
+                                           #:body-formatter [format-body #f]
+                                           #:require-body? [require-body? #t]
+                                           #:kw-map [kw-map default-kw-map])
+  #:type node?
+  #:default [format-arg pretty]
+  #:default [format-body pretty]
+  (match (extract (node-content doc) (append (make-list n #t) (list #f)))
     ;; don't care
-    [#f ((format-node-#%app pretty) d)]
+    [#f (format-#%app doc)]
     ;; this is it!
     [(list (list -macro-name -e ...) unfits tail)
      (define first-line
        (match -e
          ['() (pretty -macro-name)]
          [_
-          (define args (map (hook-for-arg pretty) -e))
+          (define args (map format-arg -e))
           (hs-append (pretty -macro-name) (alt (flat (hs-concat args)) (v-concat args)))]))
-     (pretty-node #:unfits (map pretty unfits)
-                  d
-                  (try-indent #:because-of (append (cons -macro-name -e) tail)
-                              (match tail
-                                ['()
-                                 #:when (not require-body?)
-                                 first-line]
-                                [_ (v-append first-line
-                                             (h-append space
-                                                       ((pretty-v-concat/kw (hook-for-body pretty))
-                                                        tail)))])))]))
+     (pretty-node
+      #:unfits unfits
+      (try-indent
+       #:because-of (append (cons -macro-name -e) tail)
+       (match tail
+         ['()
+          #:when (not require-body?)
+          first-line]
+         [_ (v-append first-line
+                      (h-append space
+                                ((format-verticle/helper #:body-formatter format-body #:kw-map kw-map)
+                                 tail)))])))]))
 
-(define ((format-clause-2 pretty) clause)
-  (match clause
+(define-pretty (format-clause-2/indirect #:kw-map [kw-map default-kw-map])
+  #:type values
+  (match doc
     [(node _ (or "(" "[") (or ")" "]") #f #f xs)
      ;; try to fit in one line; only when there are exactly two things
      #;[a b]
@@ -105,32 +164,31 @@
             [([-head #t] [-something #f])
              (match tail
                ['() (pretty-node #:adjust '("[" "]")
-                                 #:unfits (map pretty unfits)
-                                 clause
+                                 #:unfits unfits
                                  (try-indent #:n 0
                                              #:because-of (list -something)
                                              (hs-append (flat (pretty -head)) (pretty -something))))]
                [_ fail])]
             [#:else fail])
           ;; general case
-          (pretty-node #:adjust '("[" "]")
-                       clause
-                       (try-indent #:n 0 #:because-of xs ((pretty-v-concat/kw pretty) xs))))]
-    [_ (pretty clause)]))
+          (pretty-node
+           #:adjust '("[" "]")
+           (try-indent #:n 0 #:because-of xs ((format-verticle/helper #:kw-map kw-map) xs))))]
+    [_ (pretty doc)]))
 
-(define ((format-binding-pairs pretty) bindings)
-  (match bindings
+(define-pretty format-binding-pairs/indirect
+  #:type values
+  (match doc
     [(node _ _ _ #f #f xs)
-     (pretty-node bindings
-                  (try-indent #:n 0
+     (pretty-node (try-indent #:n 0
                               #:because-of xs
                               ;; try to fit in one line
-                              (alt (flat (hs-concat (map (format-clause-2 pretty) xs)))
+                              (alt (flat (hs-concat (map (format-clause-2/indirect) xs)))
                                    ;; general case
-                                   (v-concat (map (format-clause-2 pretty) xs)))))]
-    [_ (pretty bindings)]))
+                                   (v-concat (map (format-clause-2/indirect) xs)))))]
+    [_ (pretty doc)]))
 
-(define ((format-node-if pretty) d) (((format-node-if-like format-node-#%app) pretty) d))
+(define format-if (format-if-like/helper format-#%app))
 
 ;; try to fit in one line if the body has exactly one form,
 ;; else will be multiple lines
@@ -138,136 +196,155 @@
 #;(define (y)
     a
     b)
-(define (((format-node-define #:hook-for-head [hook-for-head values]) pretty) d)
-  (match/extract (node-content d) #:as unfits tail
+(define-pretty (format-define #:head-formatter [format-head #f])
+  #:type node?
+  #:default [format-head pretty]
+  (match/extract (node-content doc) #:as unfits tail
     [([-define #t] [-head #f])
      ;; fit in one line case; only when there are exactly three things
      #;(define a b)
-     (alt (pretty-node #:unfits (map pretty unfits)
-                       d
-                       (try-indent #:because-of tail
-                                   (alt (match tail
-                                          [(list -e) (flat (hs-append (pretty -define)
-                                                                      ((hook-for-head pretty) -head)
-                                                                      (pretty -e)))]
-                                          [_ fail]))))
+     (alt (pretty-node
+           #:unfits unfits
+           (try-indent
+            #:because-of tail
+            (alt (match tail
+                   [(list -e) (flat (hs-append (pretty -define) (format-head -head) (pretty -e)))]
+                   [_ fail]))))
           ;; general case
           #;(define (a b)
               c
               d
               e)
-          (((format-node-uniform-body 1 #:hook-for-arg hook-for-head) pretty) d))]
-    [#:else ((format-node-#%app pretty) d)]))
+          ((format-uniform-body/helper 1 #:arg-formatter format-head) doc))]
+    [#:else (format-#%app doc)]))
 
 ;; this is similar to let*, but because the macro name is so long,
 ;; also allow the second form to be in its own line
-(define ((format-node-parameterize pretty) d)
-  (match/extract (node-content d) #:as unfits tail
+(define-pretty format-parameterize
+  #:type node?
+  (match/extract (node-content doc) #:as unfits tail
     [([-parameterize #f] [-bindings #f])
-     (alt
-      (worsen
-       (pretty-node
-        #:unfits (map pretty unfits)
-        d
-        (v-append (pretty -parameterize)
-                  (h-append (text "   ") ((format-binding-pairs pretty) -bindings))
-                  (h-append space (try-indent #:because-of tail ((pretty-v-concat/kw pretty) tail)))))
-       1)
-      ((format-node-let* pretty) d))]
-    [#:else ((format-node-#%app pretty) d)]))
+     (alt (worsen (pretty-node
+                   #:unfits unfits
+                   (v-append
+                    (pretty -parameterize)
+                    (h-append (text "   ") (format-binding-pairs/indirect -bindings))
+                    (h-append space (try-indent #:because-of tail ((format-verticle/helper) tail)))))
+                  1)
+          (format-let* doc))]
+    [#:else (format-#%app doc)]))
 
 ;; unlike format-node-parameterize, don't allow the second form to be in its
 ;; own line, even though it is technically better. It just looks really ugly.
-(define format-node-let* (format-node-define #:hook-for-head format-binding-pairs))
+(define format-let* (format-define #:head-formatter format-binding-pairs/indirect))
 
 ;; support both named let and usual let
-(define ((format-node-let pretty) d)
-  (match/extract (node-content d) #:as unfits tail
+(define-pretty format-let
+  #:type node?
+  (match/extract (node-content doc) #:as unfits tail
     ;; named let
     [([-let #t] [(? atom? -name) #t] [(? node? -bindings) #f])
      (pretty-node
-      #:unfits (map pretty unfits)
-      d
+      #:unfits unfits
       (try-indent
        #:because-of tail
-       (v-append (hs-append (pretty -let) (pretty -name) ((format-binding-pairs pretty) -bindings))
+       (v-append (hs-append (pretty -let) (pretty -name) (format-binding-pairs/indirect -bindings))
                  (h-append space (v-concat (map pretty tail))))))]
     ;; regular let
-    [#:else ((format-node-let* pretty) d)]))
+    [#:else (format-let* doc)]))
 
 ;; always in the form
 #;(provide a
            b
            c)
-(define ((format-node-require pretty) d)
-  (match/extract (node-content d) #:as unfits tail
+(define-pretty format-require
+  #:type node?
+  (match/extract (node-content doc) #:as unfits tail
     [([-provide #t] [-first-arg #f])
-     (pretty-node #:unfits (map pretty unfits)
-                  d
+     (pretty-node #:unfits unfits
                   (hs-append (flat (pretty -provide))
                              (try-indent #:n 0
                                          #:because-of (cons -first-arg tail)
                                          (v-concat (map pretty (cons -first-arg tail))))))]
-    [#:else ((format-node-#%app pretty) d)]))
+    [#:else (format-#%app doc)]))
 
 ;; support optional super id: either
 #;(struct name super (fields ...)
     #:kw)
 #;(struct name (fields ...)
     #:kw)
-(define ((format-node-struct pretty) d)
-  (match/extract (node-content d) #:as unfits tail
-    [([_ #t] [_ #t] [(? atom?) #f]) (((format-node-uniform-body 3 #:require-body? #f) pretty) d)]
-    [#:else (((format-node-uniform-body 2 #:require-body? #f) pretty) d)]))
+(define-pretty format-struct
+  #:type node?
+  (match/extract (node-content doc) #:as unfits tail
+    [([_ #t] [_ #t] [(? atom?) #f]) ((format-uniform-body/helper 3 #:require-body? #f) doc)]
+    [#:else ((format-uniform-body/helper 2 #:require-body? #f) doc)]))
 
 (define (standard-formatter-map name)
   (case name
-    [("if") format-node-if]
-    [("provide" "require" "import" "export" "link" "rename") format-node-require]
-    [("public" "private" "override" "inherit" "field" "init") format-node-require]
+    [("if") format-if]
+    [("provide" "require" "import" "export" "link" "rename") format-require]
+    [("public" "private" "override" "inherit" "field" "init") format-require]
 
-    [("define" "define-for-syntax" "define-values") (format-node-define)]
-    [("define-syntax-rule") (format-node-define)]
-    [("define-syntax" "define-syntaxes" "define-values-for-syntax") (format-node-define)]
-    [("λ" "lambda") (format-node-define)]
-    [("match-define" "match-define-values") (format-node-define)]
+    [("define" "define-for-syntax" "define-values") (format-define)]
+    [("define-syntax-rule") (format-define)]
+    [("define-syntax" "define-syntaxes" "define-values-for-syntax") (format-define)]
+    [("define-syntax-parameter") (format-define)]
+    [("λ" "lambda") (format-define)]
+    [("match-define" "match-define-values") (format-define)]
 
-    [("let*") format-node-let*]
-    [("let-values" "let*-values" "letrec" "letrec-values") format-node-parameterize]
-    [("let-syntax" "letrec-syntax" "let-syntaxes" "letrec-syntaxes") format-node-parameterize]
-    [("with-syntax" "with-syntax*" "shared") format-node-parameterize]
-    [("parameterize" "parameterize*" "syntax-parameterize") format-node-parameterize]
-    [("letrec-syntaxes+values") (format-node-uniform-body 2 #:hook-for-arg format-binding-pairs)]
+    [("let*") format-let*]
+    [("let-values" "let*-values" "letrec" "letrec-values") format-parameterize]
+    [("let-syntax" "letrec-syntax" "let-syntaxes" "letrec-syntaxes") format-parameterize]
+    [("with-syntax" "with-syntax*" "shared") format-parameterize]
+    [("parameterize" "parameterize*" "syntax-parameterize") format-parameterize]
+    [("letrec-syntaxes+values")
+     (format-uniform-body/helper 2 #:arg-formatter format-binding-pairs/indirect)]
 
-    [("begin") (format-node-uniform-body 0)]
-    [("begin0") (format-node-uniform-body 1)]
-    [("module+") (format-node-uniform-body 1)]
-    [("module" "module*") (format-node-uniform-body 2)]
+    [("begin" "begin-for-syntax") (format-uniform-body/helper 0)]
+    [("begin0") (format-uniform-body/helper 1)]
+    [("module+") (format-uniform-body/helper 1)]
+    [("define-syntax-class") (format-uniform-body/helper 1)]
+    [("define-syntax-parse-rule" "define-simple-macro")
+     (format-uniform-body/helper 1 #:kw-map syntax-parse-pattern-directive-kw-map)]
+    [("module" "module*") (format-uniform-body/helper 2)]
 
     [("cond" "case-lambda")
-     (format-node-uniform-body 0 #:hook-for-body format-clause-2 #:require-body? #f)]
+     (format-uniform-body/helper 0 #:body-formatter (format-clause-2/indirect) #:require-body? #f)]
 
-    [("syntax-rules" "syntax-parse" "match" "match*" "case" "class")
-     (format-node-uniform-body 1 #:hook-for-body format-clause-2 #:require-body? #f)]
+    [("syntax-rules" "match" "match*" "case" "class")
+     (format-uniform-body/helper 1 #:body-formatter (format-clause-2/indirect) #:require-body? #f)]
+
+    [("syntax-parse" "define-syntax-parser")
+     (format-uniform-body/helper
+      1
+      #:require-body? #f
+      #:body-formatter (format-clause-2/indirect #:kw-map syntax-parse-pattern-directive-kw-map)
+      #:kw-map syntax-parse-parse-option)]
 
     [("syntax-case" "instantiate")
-     (format-node-uniform-body 2 #:hook-for-body format-clause-2 #:require-body? #f)]
+     (format-uniform-body/helper 2 #:body-formatter (format-clause-2/indirect) #:require-body? #f)]
 
-    [("syntax/loc" "quasisyntax/loc") (format-node-uniform-body 1)]
-    [("when" "unless") (format-node-uniform-body 1)]
+    [("syntax/loc" "quasisyntax/loc") (format-uniform-body/helper 1)]
+    [("when" "unless") (format-uniform-body/helper 1)]
 
     ;; these are really hacks... they don't support kws in body like #:break well
-    [("for/fold" "for*/fold") (format-node-uniform-body 2 #:hook-for-arg format-binding-pairs)]
-    [("for" "for*") (format-node-uniform-body 1 #:hook-for-arg format-binding-pairs)]
-    [("for/list" "for*/list") (format-node-uniform-body 1 #:hook-for-arg format-binding-pairs)]
-    [("for/hash" "for*/hash") (format-node-uniform-body 1 #:hook-for-arg format-binding-pairs)]
-    [("for/hasheq" "for*/hasheq") (format-node-uniform-body 1 #:hook-for-arg format-binding-pairs)]
-    [("for/hasheqv" "for*/hasheqv") (format-node-uniform-body 1 #:hook-for-arg format-binding-pairs)]
-    [("for/vector" "for*/vector") (format-node-uniform-body 1 #:hook-for-arg format-binding-pairs)]
+    [("for/fold" "for*/fold")
+     (format-uniform-body/helper 2 #:arg-formatter format-binding-pairs/indirect)]
+    [("for" "for*") (format-uniform-body/helper 1 #:arg-formatter format-binding-pairs/indirect)]
+    [("for/list" "for*/list")
+     (format-uniform-body/helper 1 #:arg-formatter format-binding-pairs/indirect)]
+    [("for/hash" "for*/hash")
+     (format-uniform-body/helper 1 #:arg-formatter format-binding-pairs/indirect)]
+    [("for/hasheq" "for*/hasheq")
+     (format-uniform-body/helper 1 #:arg-formatter format-binding-pairs/indirect)]
+    [("for/hasheqv" "for*/hasheqv")
+     (format-uniform-body/helper 1 #:arg-formatter format-binding-pairs/indirect)]
+    [("for/vector" "for*/vector")
+     (format-uniform-body/helper 1 #:arg-formatter format-binding-pairs/indirect)]
 
-    [("let") format-node-let]
+    [("let") format-let]
 
-    [("struct") format-node-struct]
-    [("define-struct") (format-node-uniform-body 2 #:require-body? #f)]
+    [("struct") format-struct]
+    [("define-struct") (format-uniform-body/helper 2 #:require-body? #f)]
 
-    [else format-node-#%app]))
+    [else format-#%app]))

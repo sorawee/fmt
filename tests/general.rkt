@@ -73,3 +73,8 @@ g
 
 #;(aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa)
 #;(aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa)
+
+(for/list ([x 10]) #:break (even? x) 1)
+
+(syntax-parse stx #:disable-colon-notation #:context 1 #:literals #;123 2 #:track-literals
+              [hello #:with a 3 #:when bbb #:fail-when blah "def" world])

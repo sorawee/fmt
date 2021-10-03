@@ -3787,7 +3787,9 @@ An example
 
 ;; functional chained send
 (define-syntax (send+ stx)
-  (define-syntax-class send-clause #:description "method clause" (pattern [name:id . args]))
+  (define-syntax-class send-clause
+    #:description "method clause"
+    (pattern [name:id . args]))
   (syntax-parse stx
     [(_ obj:expr clause-0:send-clause clause:send-clause ...)
      (class-syntax-protect (quasisyntax/loc stx
