@@ -127,7 +127,7 @@ which means the @tech{formatter map} wants to let other fallback
     'if 'cond 'when 'unless 'case
     'match 'match*
     'begin 'begin0 'begin-for-syntax
-    'syntax-parse
+    'syntax-parse 'syntax-parser
     'syntax-rules 'syntax-case
     'define-syntax-rule
     'match 'match*
