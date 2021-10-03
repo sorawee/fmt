@@ -114,6 +114,9 @@ which means the @tech{formatter map} wants to let other fallback
     'define 'define-values
     'define-for-syntax 'define-values-for-syntax
     'define-syntax 'define-syntaxes
+    'define-syntax-parameter
+    'define-syntax-parse-rule 'define-simple-macro
+    'define-syntax-parser
     'match-define 'match-define-values
     'let 'let-values 'let*-values 'letrec 'letrec-values
     'let-syntax 'letrec-syntax 'let-syntaxes 'letrec-syntaxes
@@ -123,8 +126,9 @@ which means the @tech{formatter map} wants to let other fallback
     'parameterize 'parameterize* 'syntax-parameterize
     'if 'cond 'when 'unless 'case
     'match 'match*
-    'begin 'begin0
-    'syntax-parse 'syntax-rules 'syntax-case
+    'begin 'begin0 'begin-for-syntax
+    'syntax-parse
+    'syntax-rules 'syntax-case
     'define-syntax-rule
     'match 'match*
     'syntax/loc 'quasisyntax/loc
