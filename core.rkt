@@ -91,11 +91,11 @@
     (pattern name:id)
     (pattern h:function-header #:with name #'h.name)))
 
-(define-syntax-parse-rule (define-pretty head:header
-                            #:type p?
-                            {~seq #:default [from:id to]} ...
-                            {~seq #:let [a:id b]} ...
-                            body ...+)
+(define-simple-macro (define-pretty head:header
+                       #:type p?
+                       {~seq #:default [from:id to]} ...
+                       {~seq #:let [a:id b]} ...
+                       body ...+)
   #:with ooo (quote-syntax ...)
   (define (head d)
     (let ([pretty-proc (unbox current-pretty)])
@@ -106,7 +106,7 @@
                     body ...))]
         [else (raise-argument-error 'head.name (symbol->string 'p?) d)]))))
 
-(define-syntax-parse-rule (pretty-node args ...)
+(define-simple-macro (pretty-node args ...)
   (pretty-node* doc args ...))
 
 (define (require-newline? d)
