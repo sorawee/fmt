@@ -5,6 +5,8 @@
 
 (require racket/cmdline
          racket/file
+         racket/match
+         racket/string
          (rename-in "main.rkt"
                     [current-width :current-width]
                     [current-max-blank-lines :current-max-blank-lines]
@@ -86,15 +88,19 @@
     [("-standard") empty-formatter-map]
     [else (dynamic-require (current-config) 'the-formatter-map (λ () empty-formatter-map))]))
 
-(for ([filename (in-list filenames)])
-  (define s
-    (program-format (file->string filename)
-                    #:formatter-map the-map
-                    #:width (current-width)
-                    #:max-blank-lines (current-max-blank-lines)))
+(define (do-format s)
+  (program-format s
+                  #:formatter-map the-map
+                  #:width (current-width)
+                  #:max-blank-lines (current-max-blank-lines)))
 
-  (case (current-in-place?)
-    [(#f) (displayln s)]
-    [(#t) (with-output-to-file filename
-            #:exists 'replace
-            (λ () (displayln s)))]))
+(match filenames
+  ['() (displayln (do-format (string-join (for/list ([line (in-lines)]) line) "\n")))]
+  [_
+   (for ([filename (in-list filenames)])
+     (define out (do-format (file->string filename)))
+     (case (current-in-place?)
+       [(#f) (displayln out)]
+       [(#t) (with-output-to-file filename
+               #:exists 'replace
+               (λ () (displayln out)))]))])

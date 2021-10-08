@@ -26,6 +26,9 @@ The interface to allow users to extend formatting style is extremely unstable an
 
 @section{Running @exec{raco fmt}}
 
+@exec{raco fmt @nonterm{file.rkt} ...} reads @nonterm{file.rkt}s and displays the formatted programs to the standard output.
+If @nonterm{file.rkt}s are not given, it accepts an input program from the standard input.
+
 The @exec{raco fmt} command accepts the following flags:
 
 @itemlist[
@@ -38,7 +41,7 @@ The @exec{raco fmt} command accepts the following flags:
   @item{@DFlag{indent} @nonterm{n} --- set the indentation level for subsequent lines to @nonterm{n},
         which must be a natural number.
         The default value is @racket[0].}
-  @item{@Flag{i} --- modify the input files in-place instead of outputting to stdout.}
+  @item{@Flag{i} --- modify the input files in-place instead of outputting to standard output.}
 ]
 
 @section{Examples}
