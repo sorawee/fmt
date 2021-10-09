@@ -41,7 +41,8 @@ The @exec{raco fmt} command accepts the following flags:
   @item{@DFlag{indent} @nonterm{n} --- set the indentation level for subsequent lines to @nonterm{n},
         which must be a natural number.
         The default value is @racket[0].}
-  @item{@Flag{i} --- modify the input files in-place instead of outputting to standard output.}
+  @item{@Flag{i} --- modify the input files in-place instead of outputting to standard output.
+        This flag has no effect if @exec{raco fmt} accepts the input from the standard input.}
 ]
 
 @section{Examples}
