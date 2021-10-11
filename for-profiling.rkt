@@ -1,5 +1,10 @@
 #lang racket
 
 (module+ main
-  (require fmt)
-  (void (program-format (file->string "tests/large.rkt"))))
+  (require racket/cmdline
+           fmt)
+  (define path
+    (command-line
+     #:args (path)
+     path))
+  (void (program-format (file->string path))))
