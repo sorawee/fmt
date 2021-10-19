@@ -124,7 +124,6 @@
          [(list (list pat ...) unfits tail)
           body ...]
          [_ (match/extract -xs #:as unfits tail
-              .
-              rst)]))]
+              . rst)]))]
   [(_ xs #:as unfits tail [#:else body ...+]) #'(let ()
                                                   body ...)])

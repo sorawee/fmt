@@ -1,0 +1,6 @@
+#lang racket
+
+(define-syntax-rule (class x . body)
+  1)
+
+(integer? integer? integer? integer? integer? integer? integer? integer? integer? integer? . -> . integer?)

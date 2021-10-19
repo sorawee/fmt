@@ -417,8 +417,7 @@
                                define-syntaxes
                                define-values)
                   [(begin
-                     .
-                     _)
+                     . _)
                    (loop (append (flatten-begin e) (cdr l)))]
                   [(define-syntaxes (id ...) rhs)
                    (andmap identifier? (syntax->list #'(id ...)))
@@ -597,8 +596,7 @@
                                         (syntax-local-introduce #'case-lam))))
                stx)]
           [(case-lambda
-             .
-             _)
+             . _)
            (bad "ill-formed case-lambda expression for method" stx)]
           [(let- ([(id) expr] ...) let-body)
            (and (or (free-identifier=? (syntax let-) (quote-syntax let-values))
@@ -1575,8 +1573,7 @@
                                                      (syntax-case stx (rename-inner-extra-orig ...)
                                                        [(_ default-expr
                                                            rename-inner-extra-orig
-                                                           .
-                                                           args)
+                                                           . args)
                                                         (generate-inner-call
                                                          stx
                                                          (quote-syntax the-finder)
@@ -1615,8 +1612,7 @@
                                                   (list pubment-temp ...
                                                         public-final-temp ...
                                                         abstract-method ...
-                                                        .
-                                                        public-methods)
+                                                        . public-methods)
                                                   (list . override-methods)
                                                   (list . augride-methods)
                                                   ;; Initialization
@@ -1699,8 +1695,7 @@
                                                             (void) ; in case the body is empty
                                                             (begin
                                                               '(declare-field-use-start) ; see "class-undef.rkt"
-                                                              .
-                                                              exprs))))))))))))))
+                                                              . exprs))))))))))))))
                                    ;; Extra argument added here by `detect-field-unsafe-undefined`
                                    #;check-undef?
                                    ;; Not primitive:
@@ -4463,8 +4458,7 @@ An example
                    #:class-name [class-name #f]
                    #:intf-name [intf-name #f]
                    #:which-class [which-class ""]
-                   .
-                   fields)
+                   . fields)
   (define all-fields
     (append fields
             (if class-name (list (string-append which-class "class name") (as-write class-name)) null)
@@ -4595,12 +4589,10 @@ An example
            [(augment-final names ...) (extract-renamed-names (syntax (names ...)))]
 
            [(define/augment (name . names)
-              .
-              rest)
+              . rest)
             (extract-renamed-names (syntax (name)))]
            [(define/augment name
-              .
-              rest)
+              . rest)
             (identifier? (syntax name))
             (extract-renamed-names (syntax (name)))]
            [(define/augride (name . names) . rest) (extract-renamed-names (syntax (name)))]
@@ -4612,12 +4604,10 @@ An example
             (identifier? (syntax name))
             (extract-renamed-names (syntax (name)))]
            [(define/override (name . names)
-              .
-              rest)
+              . rest)
             (extract-renamed-names (syntax (name)))]
            [(define/override name
-              .
-              rest)
+              . rest)
             (identifier? (syntax name))
             (extract-renamed-names (syntax (name)))]
            [(define/overment (name . names) . rest) (extract-renamed-names (syntax (name)))]

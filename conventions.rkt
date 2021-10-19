@@ -49,25 +49,31 @@
   #:type list?
   #:default [format-body pretty]
   #:default [format-kw-arg pretty]
+
   (let loop ([xs doc])
+    (define (v-append-if x xs)
+      (match xs
+        ['() x]
+        [_ (v-append x (loop xs))]))
+
     (match xs
       ['() empty-doc]
-      [(list x) (format-body x)]
+      [(list (and dot (atom _ "." 'other)) x (and another-dot (atom _ "." 'other)) xs ...)
+       (v-append-if (alt (hs-append (pretty dot) (format-body x) (pretty another-dot))
+                         (v-append (pretty dot) (format-body x) (pretty another-dot)))
+                    xs)]
+      [(list (and dot (atom _ "." 'other)) x xs ...)
+       (v-append-if
+        (alt (hs-append (pretty dot) (format-body x)) (v-append (pretty dot) (format-body x)))
+        xs)]
       [(list x (and ellipsis (atom _ (? (current-ellipsis?)) 'symbol)) xs ...)
-       (define doc
-         (alt (hs-append (format-body x) (pretty ellipsis))
-              (v-append (format-body x) (pretty ellipsis))))
-       (match xs
-         ['() doc]
-         [_ (v-append doc (loop xs))])]
+       (v-append-if (alt (hs-append (format-body x) (pretty ellipsis))
+                         (v-append (format-body x) (pretty ellipsis)))
+                    xs)]
       [(list (and kw (atom _ content 'hash-colon-keyword)) xs ...)
-       (define (fallback)
-         (match xs
-           ['() (pretty kw)]
-           [_ (v-append (pretty kw) (loop xs))]))
        (define pos (kw-map content xs))
        (cond
-         [(zero? pos) (fallback)]
+         [(zero? pos) (v-append-if (pretty kw) xs)]
          [else
           (define count (for/last ([i (in-range pos)] [_x (in-list xs)]) i))
           (cond
@@ -75,15 +81,12 @@
              (define-values (front back) (split-at xs pos))
              (cond
                [(andmap visible? front)
-                (define doc
-                  (alt (hs-append (pretty kw) (hs-concat (map format-kw-arg front)))
-                       (v-append (pretty kw) (v-concat (map format-kw-arg front)))))
-                (match back
-                  ['() doc]
-                  [_ (v-append doc (loop back))])]
-               [else (fallback)])]
-            [else (fallback)])])]
-      [(list x xs ...) (v-append (format-body x) (loop xs))])))
+                (v-append-if (alt (hs-append (pretty kw) (hs-concat (map format-kw-arg front)))
+                                  (v-append (pretty kw) (v-concat (map format-kw-arg front))))
+                             back)]
+               [else (v-append-if (pretty kw) xs)])]
+            [else (v-append-if (pretty kw) xs)])])]
+      [(list x xs ...) (v-append-if (format-body x) xs)])))
 
 (define-pretty (format-if-like/helper format-else)
   #:type node?
