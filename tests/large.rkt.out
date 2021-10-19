@@ -1829,14 +1829,14 @@
             (mk 'augment-final* (syntax augment)))))
 
 (define-syntaxes (define/private define/public
-                                 define/pubment
-                                 define/override
-                                 define/overment
-                                 define/augride
-                                 define/augment
-                                 define/public-final
-                                 define/override-final
-                                 define/augment-final)
+                   define/pubment
+                   define/override
+                   define/overment
+                   define/augride
+                   define/augment
+                   define/public-final
+                   define/override-final
+                   define/augment-final)
   (let ([mk (lambda (decl-form)
               (lambda (stx)
                 (unless (class-top-level-context? (syntax-local-context))

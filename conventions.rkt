@@ -293,6 +293,7 @@
     [("define-syntax-rule") (format-define)]
     [("define-syntax" "define-syntaxes" "define-values-for-syntax") (format-define)]
     [("define-syntax-parameter") (format-define)]
+    [("define/public" "define/private") (format-define)]
     [("λ" "lambda") (format-define)]
     [("match-define" "match-define-values") (format-define)]
 
@@ -308,12 +309,13 @@
     [("begin0") (format-uniform-body/helper 1)]
     [("module+") (format-uniform-body/helper 1)]
     [("define-syntax-class") (format-uniform-body/helper 1)]
+    [("class") (format-uniform-body/helper 1 #:require-body? #f)]
     [("module" "module*") (format-uniform-body/helper 2)]
 
     [("cond" "case-lambda")
      (format-uniform-body/helper 0 #:body-formatter (format-clause-2/indirect) #:require-body? #f)]
 
-    [("syntax-rules" "match" "match*" "case" "class")
+    [("syntax-rules" "match" "match*" "case")
      (format-uniform-body/helper 1 #:body-formatter (format-clause-2/indirect) #:require-body? #f)]
 
     [("define-syntax-parse-rule" "define-simple-macro")
