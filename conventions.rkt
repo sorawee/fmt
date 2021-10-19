@@ -21,14 +21,17 @@
 
          syntax-parse-pattern-directive-kw-map
          syntax-parse-parse-option-kw-map
-         default-kw-map)
+         default-kw-map
+
+         all-kws)
 
 (require racket/match
          racket/list
          pprint-compact
          "core.rkt"
          "common.rkt"
-         "params.rkt")
+         "params.rkt"
+         "record.rkt")
 
 (define (default-kw-map _s _xs) 1)
 
@@ -286,7 +289,7 @@
     [([_ #t] [_ #t] [(? atom?) #f]) ((format-uniform-body/helper 3 #:require-body? #f) doc)]
     [#:else ((format-uniform-body/helper 2 #:require-body? #f) doc)]))
 
-(define (standard-formatter-map name)
+(define/record (standard-formatter-map name) #:record all-kws
   (case name
     [("if") format-if]
     [("provide" "require" "import" "export" "link" "rename") format-require]

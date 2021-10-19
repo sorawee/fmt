@@ -2,6 +2,7 @@
 @require[scribble/bnf
          scribble/example
          "util.rkt"
+         "kws.rkt"
          @for-label[racket/base
                     racket/string
                     racket/contract
@@ -110,40 +111,11 @@ which means the @tech{formatter map} wants to let other fallback
   A @tech{formatter map} that does not handle any form.
 }
 
-
 @defthing[standard-formatter-map formatter-map/c]{
   The fallback @tech{formatter map}. It defines format styles for the following forms:
-  @racketblock[
-    'lambda 'λ 'case-lambda
-    'define 'define-values
-    'define-for-syntax 'define-values-for-syntax
-    'define-syntax 'define-syntaxes
-    'define-syntax-parameter
-    'define-syntax-parse-rule 'define-simple-macro
-    'define-syntax-parser
-    'match-define 'match-define-values
-    'let 'let-values 'let*-values 'letrec 'letrec-values
-    'let-syntax 'letrec-syntax 'let-syntaxes 'letrec-syntaxes
-    'letrec-syntaxes+values
-    'with-syntax 'with-syntax*
-    'shared
-    'parameterize 'parameterize* 'syntax-parameterize
-    'if 'cond 'when 'unless 'case
-    'match 'match*
-    'begin 'begin0 'begin-for-syntax
-    'syntax-parse 'syntax-parser
-    'syntax-rules 'syntax-case
-    'define-syntax-rule
-    'match 'match*
-    'syntax/loc 'quasisyntax/loc
-    'module 'module* 'module+
-    'provide 'require
-    'for 'for/fold 'for/list 'for/vector 'for/hash 'for/hasheq 'for/hasheqv
-    'for* 'for*/fold 'for*/list 'for*/vector 'for*/hash 'for*/hasheq 'for*/hasheqv
-    'struct 'define-struct
-    'import 'export 'link 'rename
-    'class 'instantiate 'public 'private 'override 'inherit 'field 'init
-  ]
+
+  @(verbatim (get-kws))
+
   For other forms, it uses the function application style.
 }
 
