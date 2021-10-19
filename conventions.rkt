@@ -2,7 +2,8 @@
 
 (provide standard-formatter-map
 
-         format-verticle/helper
+         format-vertical/helper
+         format-horizontal/helper
          format-if-like/helper
 
          format-#%app
@@ -46,7 +47,7 @@
     [("#:track-literals" "#:disable-colon-notation") 0]
     [else 1]))
 
-(define-pretty (format-verticle/helper #:body-formatter [format-body #f]
+(define-pretty (format-vertical/helper #:body-formatter [format-body #f]
                                        #:kw-arg-formatter [format-kw-arg #f]
                                        #:kw-map [kw-map default-kw-map])
   #:type list?
@@ -91,6 +92,35 @@
             [else (v-append-if (pretty kw) xs)])])]
       [(list x xs ...) (v-append-if (format-body x) xs)])))
 
+;; failable
+(define-pretty (format-horizontal/helper #:body-formatter [format-body #f]
+                                         #:kw-arg-formatter [format-kw-arg #f]
+                                         #:kw-map [kw-map default-kw-map])
+  #:type list?
+  #:default [format-body pretty]
+  #:default [format-kw-arg pretty]
+
+  (flat (let loop ([xs doc])
+          (define (h-append-if x xs)
+            (match xs
+              ['() x]
+              [_ (hs-append x (loop xs))]))
+
+          (match xs
+            ['() empty-doc]
+            [(list (and kw (atom _ content 'hash-colon-keyword)) xs ...)
+             (define pos (kw-map content xs))
+             (cond
+               [(zero? pos) (h-append-if (pretty kw) xs)]
+               [else
+                (define count (for/last ([i (in-range pos)] [_x (in-list xs)]) i))
+                (cond
+                  [(= (or count -1) (sub1 pos))
+                   (define-values (front back) (split-at xs pos))
+                   (h-append-if (hs-append (pretty kw) (hs-concat (map format-kw-arg front))) back)]
+                  [else (h-append-if (pretty kw) xs)])])]
+            [(list x xs ...) (h-append-if (format-body x) xs)]))))
+
 (define-pretty (format-if-like/helper format-else)
   #:type node?
   (match/extract (node-content doc) #:as unfits tail
@@ -106,7 +136,7 @@
                                               #;(if aaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
                                                     bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb
                                                     ccccccccccccccccccccccccccccccccc)
-                                              ((format-verticle/helper) (cons -conditional tail))))))]
+                                              ((format-vertical/helper) (cons -conditional tail))))))]
     [#:else (format-else doc)]))
 
 (define-pretty format-#%app
@@ -120,15 +150,15 @@
        [([-head #f]) (alt (pretty-node #:unfits unfits
                                        (try-indent #:n 0
                                                    #:because-of (cons -head tail)
-                                                   ((format-verticle/helper) (cons -head tail))))
+                                                   ((format-vertical/helper) (cons -head tail))))
                           ;; pretty cases
                           ((format-if-like/helper (λ (d) fail)) doc))]
        ;; perhaps full of comments, or there's nothing at all
-       [#:else (pretty-node (try-indent #:n 0 #:because-of xs ((format-verticle/helper) xs)))])]
+       [#:else (pretty-node (try-indent #:n 0 #:because-of xs ((format-vertical/helper) xs)))])]
     [else (pretty-node (try-indent #:n 0
                                    #:because-of xs
                                    ;; general case
-                                   (alt ((format-verticle/helper) xs)
+                                   (alt ((format-vertical/helper) xs)
                                         ;; try to fit in one line
                                         (flat (hs-concat (map pretty xs))))))]))
 
@@ -161,7 +191,7 @@
           first-line]
          [_ (v-append first-line
                       (h-append space
-                                ((format-verticle/helper #:body-formatter format-body #:kw-map kw-map)
+                                ((format-vertical/helper #:body-formatter format-body #:kw-map kw-map)
                                  tail)))])))]))
 
 (define-pretty (format-clause-2/indirect #:kw-map [kw-map default-kw-map])
@@ -183,19 +213,20 @@
           ;; general case
           (pretty-node
            #:adjust '("[" "]")
-           (try-indent #:n 0 #:because-of xs ((format-verticle/helper #:kw-map kw-map) xs))))]
+           (try-indent #:n 0 #:because-of xs ((format-vertical/helper #:kw-map kw-map) xs))))]
     [_ (pretty doc)]))
 
 (define-pretty format-binding-pairs/indirect
   #:type values
   (match doc
     [(node _ _ _ #f #f xs)
-     (pretty-node (try-indent #:n 0
-                              #:because-of xs
-                              ;; try to fit in one line
-                              (alt (flat (hs-concat (map (format-clause-2/indirect) xs)))
-                                   ;; general case
-                                   (v-concat (map (format-clause-2/indirect) xs)))))]
+     (pretty-node
+      (try-indent #:n 0
+                  #:because-of xs
+                  ;; try to fit in one line
+                  (alt ((format-horizontal/helper #:body-formatter (format-clause-2/indirect)) xs)
+                       ;; general case
+                       ((format-vertical/helper #:body-formatter (format-clause-2/indirect)) xs))))]
     [_ (pretty doc)]))
 
 (define format-if (format-if-like/helper format-#%app))
@@ -239,7 +270,7 @@
                    (v-append
                     (pretty -parameterize)
                     (h-append (text "   ") (format-binding-pairs/indirect -bindings))
-                    (h-append space (try-indent #:because-of tail ((format-verticle/helper) tail)))))
+                    (h-append space (try-indent #:because-of tail ((format-vertical/helper) tail)))))
                   1)
           (format-let* doc))]
     [#:else (format-#%app doc)]))

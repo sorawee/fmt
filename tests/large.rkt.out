@@ -1528,13 +1528,11 @@
                                        (let ([local-field-accessor (make-struct-field-accessor
                                                                     local-accessor
                                                                     local-field-pos
-                                                                    #f)]
-                                             ...
+                                                                    #f)] ...
                                              [local-field-mutator (make-struct-field-mutator
                                                                    local-mutator
                                                                    local-field-pos
-                                                                   #f)]
-                                             ...)
+                                                                   #f)] ...)
                                          (syntax-parameterize
                                              ([this-param (make-this-map (quote-syntax this-id)
                                                                          (quote-syntax the-finder)
@@ -1602,12 +1600,9 @@
                                                          "expected an identifier after the keyword and default-value expression"
                                                          stx)]))])
                                                stx-def ...
-                                               (letrec ([private-temp private-method]
-                                                        ...
-                                                        [pubment-temp pubment-method]
-                                                        ...
-                                                        [public-final-temp public-final-method]
-                                                        ...)
+                                               (letrec ([private-temp private-method] ...
+                                                        [pubment-temp pubment-method] ...
+                                                        [public-final-temp public-final-method] ...)
                                                  (values
                                                   (list pubment-temp ...
                                                         public-final-temp ...
@@ -4121,13 +4116,11 @@ An example
           (syntax/loc stx
             (let-values ([(method method-obj) (let ([obj obj-expr])
                                                 (values (find-method/who 'with-method obj `name)
-                                                        obj))]
-                         ...)
+                                                        obj))] ...)
               (letrec-syntaxes+values ([(id) (make-with-method-map (quote-syntax set!)
                                                                    (quote-syntax id)
                                                                    (quote-syntax method)
-                                                                   (quote-syntax method-obj))]
-                                       ...)
+                                                                   (quote-syntax method-obj))] ...)
                                       ()
                 body0
                 body1 ...))))))]

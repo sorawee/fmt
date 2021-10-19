@@ -897,10 +897,8 @@
          (define hidden-prefixes (preferences:get 'drracket:define-popup-hidden-prefixes))
          (define popup-infos-to-use
            (for/list ([a-define-popup-capability-info (in-list define-popup-capability-info)]
-                      #:unless
-                      [member
-                       (define-popup-info-long-name a-define-popup-capability-info)
-                       hidden-prefixes])
+                      #:unless (member (define-popup-info-long-name a-define-popup-capability-info)
+                                       hidden-prefixes))
              a-define-popup-capability-info))
          (define unsorted-defns (get-definitions popup-infos-to-use (not sort-by-name?) text))
          (define defns
@@ -2626,20 +2624,11 @@
          (or (get-top-level-focus-window)
              (let ([ft (frame:lookup-focus-table (get-eventspace))]) (and (pair? ft) (car ft)))))
        (for*/list ([frame (in-list (send (group:get-the-frame-group) get-frames))]
-                   #:when
-                   [is-a?
-                    frame
-                    drracket:unit:frame<%>]
+                   #:when (is-a? frame drracket:unit:frame<%>)
                    [tab (in-list (send frame get-tabs))]
-                   #:unless
-                   [and
-                    skip-me?
-                    (eq? focused-frame frame)
-                    (eq? current-tab tab)]
-                   #:when
-                   [let
-                    ([defs (send tab get-defs)])
-                    (and (send defs is-modified?) (send defs get-filename))])
+                   #:unless (and skip-me? (eq? focused-frame frame) (eq? current-tab tab))
+                   #:when (let ([defs (send tab get-defs)])
+                            (and (send defs is-modified?) (send defs get-filename))))
          tab))
 
      (define/private (does-user-want-to-save-all-unsaved-files? save-candidates)
@@ -4507,10 +4496,7 @@
       (define hidden-prefixes (preferences:get 'drracket:define-popup-hidden-prefixes))
       (define visible-infos
         (for/list ([info (in-list infos)]
-                   #:unless
-                   [member
-                    (define-popup-info-long-name info)
-                    hidden-prefixes])
+                   #:unless (member (define-popup-info-long-name info) hidden-prefixes))
           info))
       (define the-info (if (null? visible-infos) (car infos) (car visible-infos)))
       (if vertical? (define-popup-info-short-name the-info) (define-popup-info-long-name the-info))]
