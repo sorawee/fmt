@@ -4594,8 +4594,13 @@ An example
            [(augride names ...) (extract-renamed-names (syntax (names ...)))]
            [(augment-final names ...) (extract-renamed-names (syntax (names ...)))]
 
-           [(define/augment (name . names) . rest) (extract-renamed-names (syntax (name)))]
-           [(define/augment name . rest)
+           [(define/augment (name . names)
+              .
+              rest)
+            (extract-renamed-names (syntax (name)))]
+           [(define/augment name
+              .
+              rest)
             (identifier? (syntax name))
             (extract-renamed-names (syntax (name)))]
            [(define/augride (name . names) . rest) (extract-renamed-names (syntax (name)))]
@@ -4606,8 +4611,13 @@ An example
            [(define/augment-final name . rest)
             (identifier? (syntax name))
             (extract-renamed-names (syntax (name)))]
-           [(define/override (name . names) . rest) (extract-renamed-names (syntax (name)))]
-           [(define/override name . rest)
+           [(define/override (name . names)
+              .
+              rest)
+            (extract-renamed-names (syntax (name)))]
+           [(define/override name
+              .
+              rest)
             (identifier? (syntax name))
             (extract-renamed-names (syntax (name)))]
            [(define/overment (name . names) . rest) (extract-renamed-names (syntax (name)))]

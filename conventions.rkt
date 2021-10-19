@@ -293,7 +293,8 @@
     [("define-syntax-rule") (format-define)]
     [("define-syntax" "define-syntaxes" "define-values-for-syntax") (format-define)]
     [("define-syntax-parameter") (format-define)]
-    [("define/public" "define/private") (format-define)]
+    [("define/public" "define/private" "define/override" "define/augment" "define/pubment")
+     (format-define)]
     [("λ" "lambda") (format-define)]
     [("match-define" "match-define-values") (format-define)]
 
@@ -341,7 +342,7 @@
     [("syntax/loc" "quasisyntax/loc") (format-uniform-body/helper 1)]
     [("when" "unless") (format-uniform-body/helper 1)]
 
-    ;; these are really hacks... they don't support kws in body like #:break well
+    [("mixin") (format-uniform-body/helper 2)]
     [("for/fold" "for*/fold")
      (format-uniform-body/helper 2 #:arg-formatter format-binding-pairs/indirect)]
     [("for" "for*") (format-uniform-body/helper 1 #:arg-formatter format-binding-pairs/indirect)]
