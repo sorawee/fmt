@@ -4588,12 +4588,18 @@ An example
               . rest)
             (identifier? (syntax name))
             (extract-renamed-names (syntax (name)))]
-           [(define/augride (name . names) . rest) (extract-renamed-names (syntax (name)))]
-           [(define/augride name . rest)
+           [(define/augride (name . names)
+              . rest)
+            (extract-renamed-names (syntax (name)))]
+           [(define/augride name
+              . rest)
             (identifier? (syntax name))
             (extract-renamed-names (syntax (name)))]
-           [(define/augment-final (name . names) . rest) (extract-renamed-names (syntax (name)))]
-           [(define/augment-final name . rest)
+           [(define/augment-final (name . names)
+              . rest)
+            (extract-renamed-names (syntax (name)))]
+           [(define/augment-final name
+              . rest)
             (identifier? (syntax name))
             (extract-renamed-names (syntax (name)))]
            [(define/override (name . names)
@@ -4603,12 +4609,18 @@ An example
               . rest)
             (identifier? (syntax name))
             (extract-renamed-names (syntax (name)))]
-           [(define/overment (name . names) . rest) (extract-renamed-names (syntax (name)))]
-           [(define/overment name . rest)
+           [(define/overment (name . names)
+              . rest)
+            (extract-renamed-names (syntax (name)))]
+           [(define/overment name
+              . rest)
             (identifier? (syntax name))
             (extract-renamed-names (syntax (name)))]
-           [(define/override-final (name . names) . rest) (extract-renamed-names (syntax (name)))]
-           [(define/override-final name . rest)
+           [(define/override-final (name . names)
+              . rest)
+            (extract-renamed-names (syntax (name)))]
+           [(define/override-final name
+              . rest)
             (identifier? (syntax name))
             (extract-renamed-names (syntax (name)))]
            [else null]))

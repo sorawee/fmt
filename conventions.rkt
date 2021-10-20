@@ -330,8 +330,10 @@
     [("define-syntax-rule") (format-define)]
     [("define-syntax" "define-syntaxes" "define-values-for-syntax") (format-define)]
     [("define-syntax-parameter") (format-define)]
-    [("define/public" "define/private" "define/override" "define/augment" "define/pubment")
-     (format-define)]
+    [("define/public" "define/private" "define/override" "define/augment") (format-define)]
+    [("define/pubment" "define/augride" "define/overment") (format-define)]
+    [("define/public-final" "define/override-final" "define/augment-final") (format-define)]
+
     [("λ" "lambda") (format-define)]
     [("match-define" "match-define-values") (format-define)]
 
@@ -342,6 +344,12 @@
     [("parameterize" "parameterize*" "syntax-parameterize") format-parameterize]
     [("letrec-syntaxes+values")
      (format-uniform-body/helper 2 #:arg-formatter format-binding-pairs/indirect)]
+
+    [("splicing-let" "splicing-letrec" "splicing-let-values") format-parameterize]
+    [("splicing-letrec-values" "splicing-let-syntax" "splicing-letrec-syntax") format-parameterize]
+    [("splicing-let-syntaxes" "splicing-letrec-syntaxes" "splicing-letrec-syntaxes+values")
+     format-parameterize]
+    [("splicing-parameterize" "splicing-syntax-parameterize") format-parameterize]
 
     [("begin" "begin-for-syntax") (format-uniform-body/helper 0)]
     [("begin0") (format-uniform-body/helper 1)]

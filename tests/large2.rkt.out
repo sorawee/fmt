@@ -1041,9 +1041,13 @@
     (define/public-final (get-defs) defs)
     (define/public-final (get-ints) ints)
     (define/public-final (get-visible-defs) (values visible-defs defs-shown?))
-    (define/public-final (set-visible-defs vd ds?) (set! visible-defs vd) (set! defs-shown? ds?))
+    (define/public-final (set-visible-defs vd ds?)
+      (set! visible-defs vd)
+      (set! defs-shown? ds?))
     (define/public-final (get-visible-ints) (values visible-ints ints-shown?))
-    (define/public-final (set-visible-ints vi is?) (set! visible-ints vi) (set! ints-shown? is?))
+    (define/public-final (set-visible-ints vi is?)
+      (set! visible-ints vi)
+      (set! ints-shown? is?))
     (define/public-final (set-focus-d/i di) (set! focus-d/i di))
     (define/public-final (get-focus-d/i) focus-d/i)
     (define/public-final (get-i) i)
@@ -1144,29 +1148,30 @@
     (define/public-final (is-current-tab?) (eq? this (send frame get-current-tab)))
     (define log-visible? #f)
     (define/public-final (toggle-log)
-                         (set! log-visible? (not log-visible?))
-                         (send frame show/hide-log log-visible?)
-                         (send (get-ints) enable/disable-capture-log log-visible?))
+      (set! log-visible? (not log-visible?))
+      (send frame show/hide-log log-visible?)
+      (send (get-ints) enable/disable-capture-log log-visible?))
     (define/public-final (hide-log)
-                         (when log-visible?
-                           (toggle-log)))
-    (define/public-final
-     (update-log)
-     (send frame show/hide-log log-visible?)
-     (send frame set-logger-text-field-value (send (get-ints) get-user-log-receiver-args-str)))
+      (when log-visible?
+        (toggle-log)))
+    (define/public-final (update-log)
+      (send frame show/hide-log log-visible?)
+      (send frame set-logger-text-field-value (send (get-ints) get-user-log-receiver-args-str)))
     (define/public-final (update-logger-window command)
-                         (when (is-current-tab?)
-                           (send frame update-logger-window command)))
+      (when (is-current-tab?)
+        (send frame update-logger-window command)))
     (define current-planet-status #f)
     (define/public-final (new-planet-status a b)
-                         (set! current-planet-status (cons a b))
-                         (update-planet-status))
-    (define/public-final (clear-planet-status) (set! current-planet-status #f) (update-planet-status))
+      (set! current-planet-status (cons a b))
+      (update-planet-status))
+    (define/public-final (clear-planet-status)
+      (set! current-planet-status #f)
+      (update-planet-status))
     (define/public-final (update-planet-status)
-                         (send frame
-                               show-planet-status
-                               (and current-planet-status (car current-planet-status))
-                               (and current-planet-status (cdr current-planet-status))))
+      (send frame
+            show-planet-status
+            (and current-planet-status (car current-planet-status))
+            (and current-planet-status (cdr current-planet-status))))
     (super-new)))
  ;; should only be called by the tab% object (and the class itself)
  (define-local-member-name disable-evaluation-in-tab
@@ -1212,31 +1217,30 @@
      (define execute-warning-panel #f)
      (define execute-warning-parent-panel #f)
      (define execute-warning-canvas #f)
-     (define/public-final
-      (show/hide-warning-message msg hide-canvas)
-      (when (and execute-warning-parent-panel execute-warning-panel)
-        (cond
-          [msg
-           (cond
-             [execute-warning-canvas (send execute-warning-canvas set-message msg)]
-             [else
-              (set! execute-warning-canvas
-                    (new execute-warning-canvas%
-                         [stretchable-height #t]
-                         [parent execute-warning-panel]
-                         [message msg]))
-              (new close-icon%
-                   [parent execute-warning-panel]
-                   [bg-color "yellow"]
-                   [callback (λ () (hide-canvas))])])
-           (send execute-warning-parent-panel
-                 change-children
-                 (λ (l) (append (remq execute-warning-panel l) (list execute-warning-panel))))]
-          [else (when execute-warning-canvas
-                  (send execute-warning-parent-panel
-                        change-children
-                        (λ (l) (remq execute-warning-panel l)))
-                  (send execute-warning-canvas set-message #f))])))
+     (define/public-final (show/hide-warning-message msg hide-canvas)
+       (when (and execute-warning-parent-panel execute-warning-panel)
+         (cond
+           [msg
+            (cond
+              [execute-warning-canvas (send execute-warning-canvas set-message msg)]
+              [else
+               (set! execute-warning-canvas
+                     (new execute-warning-canvas%
+                          [stretchable-height #t]
+                          [parent execute-warning-panel]
+                          [message msg]))
+               (new close-icon%
+                    [parent execute-warning-panel]
+                    [bg-color "yellow"]
+                    [callback (λ () (hide-canvas))])])
+            (send execute-warning-parent-panel
+                  change-children
+                  (λ (l) (append (remq execute-warning-panel l) (list execute-warning-panel))))]
+           [else (when execute-warning-canvas
+                   (send execute-warning-parent-panel
+                         change-children
+                         (λ (l) (remq execute-warning-panel l)))
+                   (send execute-warning-canvas set-message #f))])))
 
      ;; bind the proc to a field
      ;; so it stays alive as long
@@ -1295,107 +1299,107 @@
 
      (define logger-menu-item #f)
 
-     (define/public-final
-      (show/hide-log show?)
-      (let ([p (preferences:get 'drracket:logging-size-percentage)])
-        (begin-container-sequence)
-        (cond
-          [logger-gui-content-panel
-           (send logger-parent-panel
-                 change-children
-                 (λ (l)
-                   (cond
-                     [(or (and show? (member logger-panel l))
-                          (and (not show?) (not (member logger-panel l))))
-                      ;; if things are already up to date, only update the logger text
-                      (when show?
-                        (update-logger-window #f))
-                      l]
-                     [show?
-                      (new-logger-text)
-                      (send logger-gui-canvas set-editor logger-gui-text)
-                      (update-logger-window #f)
-                      (send logger-menu-item set-label (string-constant hide-log))
-                      (append (remq logger-panel l) (list logger-panel))]
-                     [else
-                      (send logger-menu-item set-label (string-constant show-log))
-                      (set! logger-gui-text #f)
-                      (send logger-gui-canvas set-editor #f)
-                      (remq logger-panel l)])))]
-          [else
-           (when show? ;; if we want to hide and it isn't built yet, do nothing
-             (define logger-gui-content-panel-parent
-               (new-vertical-panel% [style '(border)] [parent logger-panel] [stretchable-height #t]))
-             (set! logger-gui-content-panel
-                   (new-horizontal-panel% [parent logger-gui-content-panel-parent]
-                                          [stretchable-height #f]))
-             (new-logger-text)
-             (set! logger-gui-canvas
-                   (new editor-canvas%
-                        [parent logger-gui-content-panel-parent]
-                        [style '(transparent no-border)]
-                        [editor logger-gui-text]))
-             (new message% [label (string-constant log-messages)] [parent logger-gui-content-panel])
-             (new button%
-                  [label (string-constant help)]
-                  [callback
-                   (λ (x y)
-                     (define-values (path tag)
-                       (xref-tag->path+anchor
-                        (load-collections-xref)
-                        (make-section-tag "follow-log"
-                                          #:doc '(lib "scribblings/drracket/drracket.scrbl"))))
-                     (define url (path->url path))
-                     (define url2
-                       (if tag
-                           (make-url (url-scheme url)
-                                     (url-user url)
-                                     (url-host url)
-                                     (url-port url)
-                                     (url-path-absolute? url)
-                                     (url-path url)
-                                     (url-query url)
-                                     tag)
-                           url))
-                     (send-url (url->string url2)))]
-                  [parent logger-gui-content-panel])
-             (set! logger-text-field
-                   (keymap:call/text-keymap-initializer
-                    (λ ()
-                      (new text-field%
-                           [parent logger-gui-content-panel]
-                           [label "‹level›@‹name› ..."]
-                           [init-value (send (get-interactions-text) get-user-log-receiver-args-str)]
-                           [callback
-                            (λ (tf evt)
-                              (define str (send (send tf get-editor) get-text))
-                              (define args (parse-logger-args str))
-                              (preferences:set 'drracket:logger-receiver-string str)
-                              (send (get-interactions-text)
-                                    set-user-log-receiver-args
-                                    str
-                                    (if (null? args) #f args))
-                              (set-logger-text-field-bg-color args))]))))
-             (set-logger-text-field-bg-color (parse-logger-args (send logger-text-field get-value)))
-             (set! logger-checkbox
-                   (new check-box%
-                        [label (string-constant logger-scroll-on-output)]
-                        [callback
-                         (λ (a b)
-                           (preferences:set 'drracket:logger-scroll-to-bottom?
-                                            (send logger-checkbox get-value)))]
-                        [parent logger-gui-content-panel]
-                        [value (preferences:get 'drracket:logger-scroll-to-bottom?)]))
-             (new button%
-                  [label (string-constant hide-log)]
-                  [callback (λ (x y) (send current-tab hide-log))]
-                  [parent logger-gui-content-panel])
-             (send logger-menu-item set-label (string-constant hide-log))
-             (update-logger-window #f)
-             (send logger-parent-panel change-children (λ (l) (append l (list logger-panel)))))])
-        (with-handlers ([exn:fail? void]) (send logger-parent-panel set-percentages (list p (- 1 p))))
-        (update-logger-button-label)
-        (end-container-sequence)))
+     (define/public-final (show/hide-log show?)
+       (let ([p (preferences:get 'drracket:logging-size-percentage)])
+         (begin-container-sequence)
+         (cond
+           [logger-gui-content-panel
+            (send logger-parent-panel
+                  change-children
+                  (λ (l)
+                    (cond
+                      [(or (and show? (member logger-panel l))
+                           (and (not show?) (not (member logger-panel l))))
+                       ;; if things are already up to date, only update the logger text
+                       (when show?
+                         (update-logger-window #f))
+                       l]
+                      [show?
+                       (new-logger-text)
+                       (send logger-gui-canvas set-editor logger-gui-text)
+                       (update-logger-window #f)
+                       (send logger-menu-item set-label (string-constant hide-log))
+                       (append (remq logger-panel l) (list logger-panel))]
+                      [else
+                       (send logger-menu-item set-label (string-constant show-log))
+                       (set! logger-gui-text #f)
+                       (send logger-gui-canvas set-editor #f)
+                       (remq logger-panel l)])))]
+           [else
+            (when show? ;; if we want to hide and it isn't built yet, do nothing
+              (define logger-gui-content-panel-parent
+                (new-vertical-panel% [style '(border)] [parent logger-panel] [stretchable-height #t]))
+              (set! logger-gui-content-panel
+                    (new-horizontal-panel% [parent logger-gui-content-panel-parent]
+                                           [stretchable-height #f]))
+              (new-logger-text)
+              (set! logger-gui-canvas
+                    (new editor-canvas%
+                         [parent logger-gui-content-panel-parent]
+                         [style '(transparent no-border)]
+                         [editor logger-gui-text]))
+              (new message% [label (string-constant log-messages)] [parent logger-gui-content-panel])
+              (new button%
+                   [label (string-constant help)]
+                   [callback
+                    (λ (x y)
+                      (define-values (path tag)
+                        (xref-tag->path+anchor
+                         (load-collections-xref)
+                         (make-section-tag "follow-log"
+                                           #:doc '(lib "scribblings/drracket/drracket.scrbl"))))
+                      (define url (path->url path))
+                      (define url2
+                        (if tag
+                            (make-url (url-scheme url)
+                                      (url-user url)
+                                      (url-host url)
+                                      (url-port url)
+                                      (url-path-absolute? url)
+                                      (url-path url)
+                                      (url-query url)
+                                      tag)
+                            url))
+                      (send-url (url->string url2)))]
+                   [parent logger-gui-content-panel])
+              (set! logger-text-field
+                    (keymap:call/text-keymap-initializer
+                     (λ ()
+                       (new text-field%
+                            [parent logger-gui-content-panel]
+                            [label "‹level›@‹name› ..."]
+                            [init-value (send (get-interactions-text) get-user-log-receiver-args-str)]
+                            [callback
+                             (λ (tf evt)
+                               (define str (send (send tf get-editor) get-text))
+                               (define args (parse-logger-args str))
+                               (preferences:set 'drracket:logger-receiver-string str)
+                               (send (get-interactions-text)
+                                     set-user-log-receiver-args
+                                     str
+                                     (if (null? args) #f args))
+                               (set-logger-text-field-bg-color args))]))))
+              (set-logger-text-field-bg-color (parse-logger-args (send logger-text-field get-value)))
+              (set! logger-checkbox
+                    (new check-box%
+                         [label (string-constant logger-scroll-on-output)]
+                         [callback
+                          (λ (a b)
+                            (preferences:set 'drracket:logger-scroll-to-bottom?
+                                             (send logger-checkbox get-value)))]
+                         [parent logger-gui-content-panel]
+                         [value (preferences:get 'drracket:logger-scroll-to-bottom?)]))
+              (new button%
+                   [label (string-constant hide-log)]
+                   [callback (λ (x y) (send current-tab hide-log))]
+                   [parent logger-gui-content-panel])
+              (send logger-menu-item set-label (string-constant hide-log))
+              (update-logger-window #f)
+              (send logger-parent-panel change-children (λ (l) (append l (list logger-panel)))))])
+         (with-handlers ([exn:fail? void])
+                        (send logger-parent-panel set-percentages (list p (- 1 p))))
+         (update-logger-button-label)
+         (end-container-sequence)))
 
      (define/public (set-logger-text-field-value str)
        (when logger-text-field
@@ -1936,8 +1940,8 @@
      (define was-locked? #f)
 
      (define/public-final (disable-evaluation-in-tab tab)
-                          (when (eq? tab current-tab)
-                            (disable-evaluation)))
+       (when (eq? tab current-tab)
+         (disable-evaluation)))
 
      (define/pubment (disable-evaluation)
        (when execute-menu-item
@@ -1946,8 +1950,8 @@
        (inner (void) disable-evaluation))
 
      (define/public-final (enable-evaluation-in-tab tab)
-                          (when (eq? tab current-tab)
-                            (enable-evaluation)))
+       (when (eq? tab current-tab)
+         (enable-evaluation)))
 
      (define/pubment (enable-evaluation)
        (when execute-menu-item
@@ -2841,28 +2845,28 @@
      (define/public-final (close-current-tab) (close-given-tab current-tab))
 
      (define/public-final (close-ith-tab i)
-                          (when (< i (length tabs))
-                            (close-given-tab (list-ref tabs i))))
+       (when (< i (length tabs))
+         (close-given-tab (list-ref tabs i))))
 
      (define/public-final (close-given-tab tab-to-close)
-                          (define subsequent-tabs
-                            (let loop ([l-tabs tabs])
-                              (cond
-                                [(null? l-tabs) #f]
-                                [(eq? (car l-tabs) tab-to-close) (cdr l-tabs)]
-                                [else (loop (cdr l-tabs))])))
-                          ;; make sure we have at least 2 tabs and the tab we're closing exists
-                          (when (and subsequent-tabs (pair? (cdr tabs)))
-                            (when (close-tab tab-to-close)
-                              (for ([tab (in-list subsequent-tabs)])
-                                (send tab set-i (- (send tab get-i) 1)))
-                              (set! tabs (remq tab-to-close tabs))
-                              (send tabs-panel delete (send tab-to-close get-i))
-                              (update-menu-bindings)
-                              (cond
-                                [(eq? tab-to-close current-tab)
-                                 (change-to-tab (argmax (λ (tab) (send tab get-last-touched)) tabs))]
-                                [else (update-tabs-labels)]))))
+       (define subsequent-tabs
+         (let loop ([l-tabs tabs])
+           (cond
+             [(null? l-tabs) #f]
+             [(eq? (car l-tabs) tab-to-close) (cdr l-tabs)]
+             [else (loop (cdr l-tabs))])))
+       ;; make sure we have at least 2 tabs and the tab we're closing exists
+       (when (and subsequent-tabs (pair? (cdr tabs)))
+         (when (close-tab tab-to-close)
+           (for ([tab (in-list subsequent-tabs)])
+             (send tab set-i (- (send tab get-i) 1)))
+           (set! tabs (remq tab-to-close tabs))
+           (send tabs-panel delete (send tab-to-close get-i))
+           (update-menu-bindings)
+           (cond
+             [(eq? tab-to-close current-tab)
+              (change-to-tab (argmax (λ (tab) (send tab get-last-touched)) tabs))]
+             [else (update-tabs-labels)]))))
 
      ;; a helper private method for close-current-tab -- doesn't close an arbitrary tab.
      (define/private (close-tab tab)
