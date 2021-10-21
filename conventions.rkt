@@ -265,13 +265,13 @@
   #:type node?
   (match/extract (node-content doc) #:as unfits tail
     [([-parameterize #f] [-bindings #f])
-     (alt (worsen (pretty-node
-                   #:unfits unfits
-                   (v-append
-                    (pretty -parameterize)
-                    (h-append (text "   ") (format-binding-pairs/indirect -bindings))
-                    (h-append space (try-indent #:because-of tail ((format-vertical/helper) tail)))))
-                  1)
+     (alt (cost (pretty-node
+                 #:unfits unfits
+                 (v-append
+                  (pretty -parameterize)
+                  (h-append (text "   ") (format-binding-pairs/indirect -bindings))
+                  (h-append space (try-indent #:because-of tail ((format-vertical/helper) tail)))))
+                1)
           (format-let* doc))]
     [#:else (format-#%app doc)]))
 
@@ -340,7 +340,7 @@
     [("let*") format-let*]
     [("let-values" "let*-values" "letrec" "letrec-values") format-parameterize]
     [("let-syntax" "letrec-syntax" "let-syntaxes" "letrec-syntaxes") format-parameterize]
-    [("with-syntax" "with-syntax*" "shared") format-parameterize]
+    [("with-syntax" "with-syntax*" "with-handlers" "with-handlers*" "shared") format-parameterize]
     [("parameterize" "parameterize*" "syntax-parameterize") format-parameterize]
     [("letrec-syntaxes+values")
      (format-uniform-body/helper 2 #:arg-formatter format-binding-pairs/indirect)]
@@ -351,7 +351,7 @@
      format-parameterize]
     [("splicing-parameterize" "splicing-syntax-parameterize") format-parameterize]
 
-    [("begin" "begin-for-syntax") (format-uniform-body/helper 0)]
+    [("begin" "begin-for-syntax") (format-uniform-body/helper 0 #:require-body? #f)]
     [("begin0") (format-uniform-body/helper 1)]
     [("module+") (format-uniform-body/helper 1)]
     [("define-syntax-class") (format-uniform-body/helper 1)]

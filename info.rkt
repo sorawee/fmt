@@ -1,6 +1,6 @@
 #lang info
 (define collection "fmt")
-(define deps '("pprint-compact"
+(define deps '(["pprint-compact" #:version "0.0.1"]
                "syntax-color-lib"
                "base"))
 (define build-deps '("scribble-lib" "racket-doc" "rackunit-lib"))
