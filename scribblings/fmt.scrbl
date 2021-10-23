@@ -3,6 +3,7 @@
          scribble/example
          "util.rkt"
          "kws.rkt"
+         (only-in fmt/conventions all-kws)
          @for-label[racket/base
                     racket/string
                     racket/contract
@@ -112,7 +113,7 @@ which means the @tech{formatter map} wants to let other fallback
 }
 
 @defthing[standard-formatter-map formatter-map/c]{
-  The fallback @tech{formatter map}. It defines format styles for the following forms:
+  The fallback @tech{formatter map}. It defines format styles for the following @(number->string (length all-kws)) forms:
 
   @(verbatim (get-kws))
 
