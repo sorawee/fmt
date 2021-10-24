@@ -76,20 +76,15 @@
                     xs)]
       [(list (and kw (atom _ content 'hash-colon-keyword)) xs ...)
        (define pos (kw-map content xs))
-       (cond
-         [(zero? pos) (v-append-if (pretty kw) xs)]
-         [else
-          (define count (for/last ([i (in-range pos)] [_x (in-list xs)]) i))
-          (cond
-            [(= (or count -1) (sub1 pos))
-             (define-values (front back) (split-at xs pos))
-             (cond
-               [(andmap visible? front)
-                (v-append-if (alt (hs-append (pretty kw) (hs-concat (map format-kw-arg front)))
-                                  (v-append (pretty kw) (v-concat (map format-kw-arg front))))
-                             back)]
-               [else (v-append-if (pretty kw) xs)])]
-            [else (v-append-if (pretty kw) xs)])])]
+       (define (do-it xs docs) (v-append-if (alt (hs-concat docs) (v-concat docs)) xs))
+       (let loop2 ([xs xs] [left pos] [acc (list (pretty kw))])
+         (cond
+           [(zero? left) (do-it xs (reverse acc))]
+           [else (match xs
+                   ['() (do-it xs (reverse acc))]
+                   [(cons x xs) (cond
+                                  [(visible? x) (loop2 xs (sub1 left) (cons (format-kw-arg x) acc))]
+                                  [else (loop2 xs left (cons (pretty x) acc))])])]))]
       [(list x xs ...) (v-append-if (format-body x) xs)])))
 
 ;; failable
@@ -100,26 +95,27 @@
   #:default [format-body pretty]
   #:default [format-kw-arg pretty]
 
-  (flat (let loop ([xs doc])
-          (define (h-append-if x xs)
-            (match xs
-              ['() x]
-              [_ (hs-append x (loop xs))]))
+  (flat
+   (let loop ([xs doc])
+     (define (h-append-if x xs)
+       (match xs
+         ['() x]
+         [_ (hs-append x (loop xs))]))
 
-          (match xs
-            ['() empty-doc]
-            [(list (and kw (atom _ content 'hash-colon-keyword)) xs ...)
-             (define pos (kw-map content xs))
-             (cond
-               [(zero? pos) (h-append-if (pretty kw) xs)]
-               [else
-                (define count (for/last ([i (in-range pos)] [_x (in-list xs)]) i))
-                (cond
-                  [(= (or count -1) (sub1 pos))
-                   (define-values (front back) (split-at xs pos))
-                   (h-append-if (hs-append (pretty kw) (hs-concat (map format-kw-arg front))) back)]
-                  [else (h-append-if (pretty kw) xs)])])]
-            [(list x xs ...) (h-append-if (format-body x) xs)]))))
+     (match xs
+       ['() empty-doc]
+       [(list (and kw (atom _ content 'hash-colon-keyword)) xs ...)
+        (define pos (kw-map content xs))
+        (define (do-it xs docs) (h-append-if (hs-concat docs) xs))
+        (let loop2 ([xs xs] [left pos] [acc (list (pretty kw))])
+          (cond
+            [(zero? left) (do-it xs (reverse acc))]
+            [else (match xs
+                    ['() (do-it xs (reverse acc))]
+                    [(cons x xs) (cond
+                                   [(visible? x) (loop2 xs (sub1 left) (cons (format-kw-arg x) acc))]
+                                   [else (loop2 xs left (cons (pretty x) acc))])])]))]
+       [(list x xs ...) (h-append-if (format-body x) xs)]))))
 
 (define-pretty (format-if-like/helper format-else)
   #:type node?

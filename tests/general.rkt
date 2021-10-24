@@ -78,3 +78,16 @@ g
 
 (syntax-parse stx #:disable-colon-notation #:context 1 #:literals #;123 2 #:track-literals
               [hello #:with a 3 #:when bbb #:fail-when blah "def" world])
+
+
+(for ([a (in-list xs)]
+      #:unless
+      ;; a comment is here
+      (equal? a 1))
+  a)
+
+(for ([a (in-list xs)]
+      #:unless
+      #;(a comment is here)
+      (equal? a 1))
+  a)
