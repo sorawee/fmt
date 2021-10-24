@@ -1397,7 +1397,7 @@
               (update-logger-window #f)
               (send logger-parent-panel change-children (λ (l) (append l (list logger-panel)))))])
          (with-handlers ([exn:fail? void])
-                        (send logger-parent-panel set-percentages (list p (- 1 p))))
+           (send logger-parent-panel set-percentages (list p (- 1 p))))
          (update-logger-button-label)
          (end-container-sequence)))
 
@@ -1643,18 +1643,18 @@
             (cond
               [(equal? query 'no) #f]
               [(equal? query 'yes)
-               (with-handlers
-                ([exn:fail:filesystem?
-                  (λ (exn)
-                    (message-box (string-constant drscheme)
-                                 (gui-utils:format-literal-label
-                                  (string-constant error-erasing-log-directory)
-                                  (if (exn? exn) (format "~a" (exn-message exn)) (format "~s" exn)))
-                                 this
-                                 #:dialog-mixin frame:focus-table-mixin)
-                    #f)])
-                (for-each (λ (file) (delete-file (build-path transcript-directory file))) dir-list)
-                #t)])))))
+               (with-handlers ([exn:fail:filesystem?
+                                (λ (exn)
+                                  (message-box
+                                   (string-constant drscheme)
+                                   (gui-utils:format-literal-label
+                                    (string-constant error-erasing-log-directory)
+                                    (if (exn? exn) (format "~a" (exn-message exn)) (format "~s" exn)))
+                                   this
+                                   #:dialog-mixin frame:focus-table-mixin)
+                                  #f)])
+                 (for-each (λ (file) (delete-file (build-path transcript-directory file))) dir-list)
+                 #t)])))))
 
      (define/override (make-root-area-container cls parent)
        (let* ([_module-browser-parent-panel
@@ -2239,22 +2239,22 @@
 
            ;; with-handlers prevents bad calls to set-percentages
            ;; might still leave GUI in bad state, however.
-           (with-handlers
-            ([exn:fail? (λ (x) (void))])
-            (send
-             resizable-panel
-             set-percentages
-             (let loop ([canvases orig-canvases] [percentages orig-percentages])
-               (cond
-                 [(null? canvases) (error 'split "couldn't split; didn't find canvas")]
-                 [(null? percentages) (error 'split
-                                             "wrong number of percentages: ~s ~s"
-                                             orig-percentages
-                                             (send resizable-panel get-children))]
-                 [else (let ([canvas (car canvases)])
-                         (if (eq? canvas-to-be-split canvas)
-                             (list* (/ (car percentages) 2) (/ (car percentages) 2) (cdr percentages))
-                             (cons (car percentages) (loop (cdr canvases) (cdr percentages)))))]))))
+           (with-handlers ([exn:fail? (λ (x) (void))])
+             (send
+              resizable-panel
+              set-percentages
+              (let loop ([canvases orig-canvases] [percentages orig-percentages])
+                (cond
+                  [(null? canvases) (error 'split "couldn't split; didn't find canvas")]
+                  [(null? percentages) (error 'split
+                                              "wrong number of percentages: ~s ~s"
+                                              orig-percentages
+                                              (send resizable-panel get-children))]
+                  [else
+                   (let ([canvas (car canvases)])
+                     (if (eq? canvas-to-be-split canvas)
+                         (list* (/ (car percentages) 2) (/ (car percentages) 2) (cdr percentages))
+                         (cons (car percentages) (loop (cdr canvases) (cdr percentages)))))]))))
 
            (set-visible-region new-canvas ox oy ow oh cursor-y)
            (set-visible-region canvas-to-be-split ox oy ow oh cursor-y)
@@ -2388,7 +2388,7 @@
           ;; this line makes the soon-to-be-bigger-canvas bigger
           ;; if it fails, we're out of luck, but at least we don't crash.
           (with-handlers ([exn:fail? (λ (x) (void))])
-                         (send resizable-panel set-percentages percentages))
+            (send resizable-panel set-percentages percentages))
 
           (send soon-to-be-bigger-canvas scroll-to bx by bw bh #t)
           (send target set-editor #f)
@@ -2463,7 +2463,7 @@
                     (= 1 (length interactions-canvases))
                     (= 2 (length new-children)))
            (with-handlers ([exn:fail? (λ (x) (void))])
-                          (send resizable-panel set-percentages (list p (- 1 p)))))
+             (send resizable-panel set-percentages (list p (- 1 p)))))
 
          (send resizable-panel end-container-sequence)
          (when (ormap (λ (child) (and (is-a? child editor-canvas%) (not (send child has-focus?))))
@@ -2955,8 +2955,8 @@
 
      (define/private (pathname-equal? p1 p2)
        (with-handlers ([exn:fail? (λ (x) #f)])
-                      (string=? (path->string (normal-case-path (normalize-path p1)))
-                                (path->string (normal-case-path (normalize-path p2))))))
+         (string=? (path->string (normal-case-path (normalize-path p1)))
+                   (path->string (normal-case-path (normalize-path p2))))))
 
      (define/override (make-visible filename)
        (let ([tab (find-matching-tab filename)])
@@ -3395,7 +3395,7 @@
                change-children
                (λ (l) (cons module-browser-panel (remq module-browser-panel l))))
          (with-handlers ([exn:fail? void])
-                        (send module-browser-parent-panel set-percentages (list p (- 1 p))))
+           (send module-browser-parent-panel set-percentages (list p (- 1 p))))
          (send module-browser-parent-panel end-container-sequence)
          (calculate-module-browser)))
 
