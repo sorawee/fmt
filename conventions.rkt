@@ -433,6 +433,10 @@
     [("for" "for*") (format-uniform-body/helper 1 #:arg-formatter format-binding-pairs/indirect)]
     [("for/list" "for*/list")
      (format-uniform-body/helper 1 #:arg-formatter format-binding-pairs/indirect)]
+    [("for/and" "for*/and" "for/or" "for*/or")
+     (format-uniform-body/helper 1 #:arg-formatter format-binding-pairs/indirect)]
+    [("for/first" "for*/first" "for/last" "for*/last")
+     (format-uniform-body/helper 1 #:arg-formatter format-binding-pairs/indirect)]
     [("for/hash" "for*/hash")
      (format-uniform-body/helper 1 #:arg-formatter format-binding-pairs/indirect)]
     [("for/hasheq" "for*/hasheq")
