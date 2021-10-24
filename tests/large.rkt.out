@@ -454,7 +454,8 @@
                  (values (cons (car l) in) out)]
                 [else (values in (out-cons (car l) out))])))))
 
-    (define (extract* kws l) (let-values ([(in out) (extract kws l void)]) in))
+    (define (extract* kws l)
+      (let-values ([(in out) (extract kws l void)]) in))
 
     (define ((flatten/def-ctx def-ctx) alone l)
       (apply append
@@ -663,7 +664,8 @@
                      (loop (expand stx locals) #f name locals)
                      (bad "bad form for method definition" orig-stx))])))
 
-    (define (add-method-property l) (syntax-property l 'method-arity-error #t))
+    (define (add-method-property l)
+      (syntax-property l 'method-arity-error #t))
 
     ;; `class' wants to be priviledged with respect to
     ;; syntax taints: save the declaration-time inspector and use it
@@ -1891,7 +1893,8 @@
                                                (define member-name (check-member-key 'id expr))
                                                stx-def))))]))
 
-(define (generate-local-member-name id) (string->uninterned-symbol (symbol->string id)))
+(define (generate-local-member-name id)
+  (string->uninterned-symbol (symbol->string id)))
 
 (define-values (struct:member-key make-member-key member-name-key? member-key-ref member-key-set!)
   (make-struct-type 'member-name-key
@@ -1924,7 +1927,8 @@
                                (make-member-key `id))))]
     [(_ x) (raise-syntax-error #f "not an identifier" stx #'x)]))
 
-(define (generate-member-key) (make-member-key (generate-local-member-name (gensym 'member))))
+(define (generate-member-key)
+  (make-member-key (generate-local-member-name (gensym 'member))))
 
 (define (member-name-key=? a b)
   (if (and (member-name-key? a) (member-name-key? b))
@@ -2917,7 +2921,8 @@ An example
           struct:))))
 
 (define-values (prop:object _object? object-ref) (make-struct-type-property 'object 'can-impersonate))
-(define (object? o) (or (_object? o) (wrapped-object? o)))
+(define (object? o)
+  (or (_object? o) (wrapped-object? o)))
 (define (object-ref/unwrap o)
   (cond
     [(_object? o) (object-ref o)]
@@ -3290,7 +3295,8 @@ An example
                    [else (raise-syntax-error 'new "expected name and value binding" stx pr)]))
                (syntax->list (syntax (pr ...))))]))
 
-(define ((make-object/proc blame) class . args) (do-make-object blame class args null))
+(define ((make-object/proc blame) class . args)
+  (do-make-object blame class args null))
 
 (define-syntax make-object
   (make-set!-transformer
@@ -3339,7 +3345,8 @@ An example
             [_else (raise-syntax-error #f "ill-formed by-name argument" (syntax orig-stx) kwarg)]))
         (syntax->list (syntax (kwarg ...))))])))
 
-(define (alist->sexp alist) (map (lambda (pair) (list (car pair) (cdr pair))) alist))
+(define (alist->sexp alist)
+  (map (lambda (pair) (list (car pair) (cdr pair))) alist))
 
 ;; class blame -> class
 ;; takes a class and concretize interface ctc methods
@@ -3446,7 +3453,8 @@ An example
     (define neg-blame (cadddr info))
     (contract ctc meth pos-blame neg-blame m #f)))
 
-(define (make-object-uninitialized class blame) (do-make-object blame class 'uninit 'uninit))
+(define (make-object-uninitialized class blame)
+  (do-make-object blame class 'uninit 'uninit))
 
 (define (do-make-object blame class by-pos-args named-args)
   (cond
@@ -3504,7 +3512,8 @@ An example
                           init-proj-pairs))
   o)
 
-(define (get-field-alist obj) (map (lambda (id) (cons id (get-field/proc id obj))) (field-names obj)))
+(define (get-field-alist obj)
+  (map (lambda (id) (cons id (get-field/proc id obj))) (field-names obj)))
 
 (define (continue-make-object o
                               c
@@ -3987,7 +3996,8 @@ An example
     [(_ name obj val)
      (raise-syntax-error 'set-field! "expected a field name as first argument" stx #'name)]))
 
-(define (set-field!/proc id obj val) (do-set-field! 'set-field! id obj val))
+(define (set-field!/proc id obj val)
+  (do-set-field! 'set-field! id obj val))
 
 (define (do-set-field! who id obj val)
   (cond
@@ -4202,7 +4212,8 @@ An example
     (raise-argument-error 'class->interface "class?" c))
   (class-self-interface c))
 
-(define (interned? sym) (eq? sym (string->symbol (symbol->string sym))))
+(define (interned? sym)
+  (eq? sym (string->symbol (symbol->string sym))))
 
 (define (interface->method-names i)
   (unless (interface? i)
@@ -4221,7 +4232,8 @@ An example
               (values #f #t)
               (loop (vector-ref (class-supers c) (sub1 (class-pos c))) #t))))))
 
-(define (to-sym s) (if (string? s) (string->symbol s) s))
+(define (to-sym s)
+  (if (string? s) (string->symbol s) s))
 
 (define (class-info c)
   (unless (class? c)
@@ -4277,7 +4289,8 @@ An example
      (raise-argument-error 'object-or-false=? "(or/c object? #f)" 1 o1 o2)]
     [else (or (eq? o1 o2) (and o1 o2 (-object=? o1 o2)))]))
 
-(define (-object=? o1 o2) (eq? (object=-original-object o1) (object=-original-object o2)))
+(define (-object=? o1 o2)
+  (eq? (object=-original-object o1) (object=-original-object o2)))
 
 (define (object=-original-object o)
   (define orig-o (if (has-original-object? o) (original-object o) o))
@@ -4484,9 +4497,12 @@ An example
                                (loop (cddr fields)))]))))
     (current-continuation-marks))))
 
-(define (for-class name) (if name (format " for class: ~a" name) ""))
-(define (for-class/which which name) (if name (format " for ~a class: ~a" which name) ""))
-(define (for-intf name) (if name (format " for interface: ~a" name) ""))
+(define (for-class name)
+  (if name (format " for class: ~a" name) ""))
+(define (for-class/which which name)
+  (if name (format " for ~a class: ~a" which name) ""))
+(define (for-intf name)
+  (if name (format " for interface: ~a" name) ""))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;

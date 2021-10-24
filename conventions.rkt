@@ -14,6 +14,7 @@
          format-binding-pairs/indirect
 
          format-define
+         format-define-like
          format-let
          format-let*
          format-require
@@ -76,7 +77,8 @@
                     xs)]
       [(list (and kw (atom _ content 'hash-colon-keyword)) xs ...)
        (define pos (kw-map content xs))
-       (define (do-it xs docs) (v-append-if (alt (hs-concat docs) (v-concat docs)) xs))
+       (define (do-it xs docs)
+         (v-append-if (alt (hs-concat docs) (v-concat docs)) xs))
        (let loop2 ([xs xs] [left pos] [acc (list (pretty kw))])
          (cond
            [(zero? left) (do-it xs (reverse acc))]
@@ -106,7 +108,8 @@
        ['() empty-doc]
        [(list (and kw (atom _ content 'hash-colon-keyword)) xs ...)
         (define pos (kw-map content xs))
-        (define (do-it xs docs) (h-append-if (hs-concat docs) xs))
+        (define (do-it xs docs)
+          (h-append-if (hs-concat docs) xs))
         (let loop2 ([xs xs] [left pos] [acc (list (pretty kw))])
           (cond
             [(zero? left) (do-it xs (reverse acc))]
@@ -227,13 +230,53 @@
 
 (define format-if (format-if-like/helper format-#%app))
 
+(define (low-width m)
+  (<= (measure-last-width m) (current-inline-limit)))
+
+;; try to fit in one line if the body has exactly one form,
+;; else will be multiple lines
+;; for one line, and when it's a function, make sure the body is not too long
+;; (according to low-width)
+#;(define x 1)
+#;(define (y)
+    a
+    b)
+#;(define (foo)
+    111111111111111111111111111111111)
+(define-pretty (format-define #:head-formatter [format-head #f])
+  #:type node?
+  #:default [format-head pretty]
+  (match/extract (node-content doc) #:as unfits tail
+    [([-define #t] [-head #f])
+     ;; fit in one line case; only when there are exactly three things
+     #;(define a b)
+     (alt
+      (pretty-node
+       #:unfits unfits
+       (try-indent
+        #:because-of tail
+        (alt (match tail
+               [(list -e) (match -head
+                            [(? node?) (flat (hs-append (pretty -define)
+                                                        (format-head -head)
+                                                        (select (pretty -e) low-width)))]
+                            [_ (flat (hs-append (pretty -define) (format-head -head) (pretty -e)))])]
+               [_ fail]))))
+      ;; general case
+      #;(define (a b)
+          c
+          d
+          e)
+      ((format-uniform-body/helper 1 #:arg-formatter format-head) doc))]
+    [#:else (format-#%app doc)]))
+
 ;; try to fit in one line if the body has exactly one form,
 ;; else will be multiple lines
 #;(define x 1)
 #;(define (y)
     a
     b)
-(define-pretty (format-define #:head-formatter [format-head #f])
+(define-pretty (format-define-like #:head-formatter [format-head #f])
   #:type node?
   #:default [format-head pretty]
   (match/extract (node-content doc) #:as unfits tail
@@ -273,7 +316,7 @@
 
 ;; unlike format-node-parameterize, don't allow the second form to be in its
 ;; own line, even though it is technically better. It just looks really ugly.
-(define format-let* (format-define #:head-formatter format-binding-pairs/indirect))
+(define format-let* (format-define-like #:head-formatter format-binding-pairs/indirect))
 
 ;; support both named let and usual let
 (define-pretty format-let
@@ -322,16 +365,17 @@
     [("provide" "require" "import" "export" "link" "rename") format-require]
     [("public" "private" "override" "inherit" "field" "init") format-require]
 
-    [("define" "define-for-syntax" "define-values") (format-define)]
-    [("define-syntax-rule") (format-define)]
-    [("define-syntax" "define-syntaxes" "define-values-for-syntax") (format-define)]
-    [("define-syntax-parameter") (format-define)]
-    [("define/public" "define/private" "define/override" "define/augment") (format-define)]
-    [("define/pubment" "define/augride" "define/overment") (format-define)]
-    [("define/public-final" "define/override-final" "define/augment-final") (format-define)]
+    [("define") (format-define)]
+    [("define-for-syntax" "define-values") (format-define-like)]
+    [("define-syntax-rule") (format-define-like)]
+    [("define-syntax" "define-syntaxes" "define-values-for-syntax") (format-define-like)]
+    [("define-syntax-parameter") (format-define-like)]
+    [("define/public" "define/private" "define/override" "define/augment") (format-define-like)]
+    [("define/pubment" "define/augride" "define/overment") (format-define-like)]
+    [("define/public-final" "define/override-final" "define/augment-final") (format-define-like)]
 
-    [("λ" "lambda") (format-define)]
-    [("match-define" "match-define-values") (format-define)]
+    [("λ" "lambda") (format-define-like)]
+    [("match-define" "match-define-values") (format-define-like)]
 
     [("let*") format-let*]
     [("let-values" "let*-values" "letrec" "letrec-values") format-parameterize]

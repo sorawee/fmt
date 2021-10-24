@@ -271,7 +271,8 @@
  ;; a divider between symbols (approx)
  (define (non-letter? x)
    (or (char-whitespace? x) (memq x '(#\` #\' #\, #\; #\" #\{ #\( #\[ #\] #\) #\}))))
- (define (shorten-str str len) (if ((string-length str) . <= . len) str (substring str 0 len)))
+ (define (shorten-str str len)
+   (if ((string-length str) . <= . len) str (substring str 0 len)))
  ;
  ;
  ;
@@ -436,7 +437,8 @@
        (unless definitions-text%
          (set! definitions-text% (make-definitions-text%)))
        definitions-text%)))
- (define (show-line-numbers?) (preferences:get 'drracket:show-line-numbers?))
+ (define (show-line-numbers?)
+   (preferences:get 'drracket:show-line-numbers?))
  (define (make-definitions-text%)
    (let ([definitions-super%
           (text:line-numbers-mixin
@@ -1477,7 +1479,8 @@
               (send logger-gui-text erase)
               (define start (send logger-gui-text last-position))
 
-              (define (insert-one msg) (send logger-gui-text insert msg 0 0))
+              (define (insert-one msg)
+                (send logger-gui-text insert msg 0 0))
 
               (unless (null? logger-messages)
                 ;; skip the last newline in the buffer

@@ -4,7 +4,8 @@
          current-max-blank-lines
          current-indent
          current-app?
-         current-ellipsis?)
+         current-ellipsis?
+         current-inline-limit)
 
 (require racket/match
          racket/string
@@ -19,6 +20,7 @@
      (match d
        [(node _ (? app-prefix?) ")" _ _ _) #t]
        [_ #f]))))
+(define current-inline-limit (make-parameter 32))
 (define current-ellipsis?
   (make-parameter
    (λ (s) (regexp-match #px"^(\\.\\.\\.|\\.\\.\\.\\+|\\.\\.(\\d+))$" s))))

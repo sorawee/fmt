@@ -39,7 +39,8 @@
                             [else (loop xs extract-configs (cons x fits) unfits)])]
             [else (loop xs (cons extract-config extract-configs) fits (cons x unfits))])])])))
 
-(define (pretty-comment comment d) (if comment (full (hs-append d (text comment))) d))
+(define (pretty-comment comment d)
+  (if comment (full (hs-append d (text comment))) d))
 
 (define (pretty-doc xs hook)
   (define loop
