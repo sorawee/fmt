@@ -26,6 +26,10 @@ The package uses @racketmodname[pprint-compact], a very expressive pretty printe
 
 The interface to allow users to extend formatting style is extremely unstable and is still a work in progress. For now, the only thing that is stable is the command @exec{raco fmt}.
 
+@section{Requirements and Installation}
+
+Make sure Racket 8.0 or later is installed. Run @exec{raco pkg install fmt} to install the formatter.
+
 @section{Running @exec{raco fmt}}
 
 @exec{raco fmt @nonterm{file.rkt} ...} reads @nonterm{file.rkt}s and displays the formatted programs to the standard output.
