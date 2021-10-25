@@ -233,15 +233,15 @@
         (define (find-searchable-tokens start end)
           (define tokens (get-tokens start end))
           (for/or ([tok tokens])
-                  (define type (list-ref tok 0))
-                  (cond
-                    [(or (equal? type 'symbol)
-                         (equal? type 'hash-colon-keyword)
-                         ;; The token may have been categorized as a keyword due to
-                         ;; its presence in the tabification preferences:
-                         (equal? type 'keyword))
-                     tok]
-                    [else #f])))
+            (define type (list-ref tok 0))
+            (cond
+              [(or (equal? type 'symbol)
+                   (equal? type 'hash-colon-keyword)
+                   ;; The token may have been categorized as a keyword due to
+                   ;; its presence in the tabification preferences:
+                   (equal? type 'keyword))
+               tok]
+              [else #f])))
 
         (define searchable-token
           (or (and before before+ (<= before pos before+) (find-searchable-tokens before before+))
@@ -380,12 +380,12 @@
                                     (inner (void) after-delete x y))
 
                                   (apply super-make-object args))]
-          [get-program-editor-mixin
-           (λ ()
-             (drracket:tools:only-in-phase 'drracket:unit:get-program-editor-mixin
-                                           'phase2
-                                           'init-complete)
-             program-editor-mixin)]
+          [get-program-editor-mixin (λ ()
+                                      (drracket:tools:only-in-phase
+                                       'drracket:unit:get-program-editor-mixin
+                                       'phase2
+                                       'init-complete)
+                                      program-editor-mixin)]
           [add-to-program-editor-mixin
            (λ (mixin)
              (drracket:tools:only-in-phase 'drracket:unit:add-to-program-editor-mixin 'phase1)
@@ -838,9 +838,9 @@
                 (let* ([current-pos (get-pos editor event)]
                        [current-word (and current-pos (get-current-word editor current-pos))]
                        [defn (and current-word
-                                  (ormap
-                                   (λ (defn) (and (string=? current-word (defn-name defn)) defn))
-                                   (get-definitions capability-info #f editor)))])
+                                  (ormap (λ (defn)
+                                           (and (string=? current-word (defn-name defn)) defn))
+                                         (get-definitions capability-info #f editor)))])
                   (when defn
                     (new separator-menu-item% (parent menu))
                     (new menu-item%
@@ -1420,8 +1420,8 @@
 
      (define/private (new-logger-text)
        (set! logger-gui-text
-             (new (text:hide-caret/selection-mixin (editor:standard-style-list-mixin
-                                                    text:line-spacing%))))
+             (new (text:hide-caret/selection-mixin
+                   (editor:standard-style-list-mixin text:line-spacing%))))
        (send logger-gui-text lock #t))
 
      (define/public (update-logger-window command)
@@ -1573,21 +1573,21 @@
      (define/private (record-definitions)
        (when transcript
          (set! definitions-transcript-counter (+ definitions-transcript-counter 1))
-         (send
-          definitions-text
-          save-file
-          (build-path transcript (format "~a-definitions" (pad-two definitions-transcript-counter)))
-          'copy)))
+         (send definitions-text
+               save-file
+               (build-path transcript
+                           (format "~a-definitions" (pad-two definitions-transcript-counter)))
+               'copy)))
 
      ;; record-ineractions : -> void
      (define/private (record-interactions)
        (when transcript
          (set! interactions-transcript-counter (+ interactions-transcript-counter 1))
-         (send
-          interactions-text
-          save-file
-          (build-path transcript (format "~a-interactions" (pad-two interactions-transcript-counter)))
-          'copy)))
+         (send interactions-text
+               save-file
+               (build-path transcript
+                           (format "~a-interactions" (pad-two interactions-transcript-counter)))
+               'copy)))
 
      ;; pad-two : number -> string
      ;; pads a number to two digits?
@@ -1599,8 +1599,8 @@
      ;; start-transcript : -> void
      ;; turns on the transcript and shows the transcript gui
      (define/private (start-transcript)
-       (let ([transcript-directory (mred:get-directory (string-constant please-choose-a-log-directory)
-                                                       this)])
+       (let ([transcript-directory
+              (mred:get-directory (string-constant please-choose-a-log-directory) this)])
          (when (and transcript-directory (ensure-empty transcript-directory))
            (send transcript-menu-item set-label (string-constant stop-logging))
            (set! transcript transcript-directory)
@@ -1636,13 +1636,13 @@
        (let ([dir-list (directory-list transcript-directory)])
          (or
           (null? dir-list)
-          (let ([query (message-box
-                        (string-constant drscheme)
-                        (gui-utils:format-literal-label (string-constant erase-log-directory-contents)
-                                                        transcript-directory)
-                        this
-                        '(yes-no)
-                        #:dialog-mixin frame:focus-table-mixin)])
+          (let ([query (message-box (string-constant drscheme)
+                                    (gui-utils:format-literal-label
+                                     (string-constant erase-log-directory-contents)
+                                     transcript-directory)
+                                    this
+                                    '(yes-no)
+                                    #:dialog-mixin frame:focus-table-mixin)])
             (cond
               [(equal? query 'no) #f]
               [(equal? query 'yes)
@@ -1660,20 +1660,20 @@
                  #t)])))))
 
      (define/override (make-root-area-container cls parent)
-       (let* ([_module-browser-parent-panel
-               (super make-root-area-container
-                      (make-two-way-prefs-dragable-panel% panel:horizontal-dragable%
-                                                          'drracket:module-browser-size-percentage)
-                      parent)]
+       (let* ([_module-browser-parent-panel (super make-root-area-container
+                                                   (make-two-way-prefs-dragable-panel%
+                                                    panel:horizontal-dragable%
+                                                    'drracket:module-browser-size-percentage)
+                                                   parent)]
               [_module-browser-panel (new-vertical-panel% (parent _module-browser-parent-panel)
                                                           (alignment '(left center))
                                                           (stretchable-width #f))]
               [planet-status-outer-panel (new vertical-pane% [parent _module-browser-parent-panel])]
               [execute-warning-outer-panel (new vertical-pane% [parent planet-status-outer-panel])]
-              [logger-outer-panel
-               (new (make-two-way-prefs-dragable-panel% panel:vertical-dragable%
-                                                        'drracket:logging-size-percentage)
-                    [parent execute-warning-outer-panel])]
+              [logger-outer-panel (new (make-two-way-prefs-dragable-panel%
+                                        panel:vertical-dragable%
+                                        'drracket:logging-size-percentage)
+                                       [parent execute-warning-outer-panel])]
               [trans-outer-panel (new vertical-pane% [parent logger-outer-panel])]
               [root (make-object cls trans-outer-panel)])
          (set! module-browser-parent-panel _module-browser-parent-panel)
@@ -2033,7 +2033,9 @@
        (get-defs-tab-filename (send tab get-defs)))
 
      (define/private (get-defs-tab-label defs tab)
-       (define tab-index (for/or ([i (in-list tabs)] [n (in-naturals 1)]) (and (eq? i tab) n)))
+       (define tab-index
+         (for/or ([i (in-list tabs)] [n (in-naturals 1)])
+           (and (eq? i tab) n)))
        (define i-prefix
          (cond
            [(not tab-index) ""]
@@ -2062,17 +2064,17 @@
          (set! tab-label-cache-valid current-paths)
          (set! tab-label-cache (make-hasheq)))
        (define nfn (simple-form-path fn))
-       (hash-ref!
-        tab-label-cache
-        fn
-        (lambda ()
-          (path->string
-           (or (shrink-path-wrt nfn
-                                (filter values
-                                        (for/list ([other-tab (in-list tabs)])
-                                          (define fn (send (send other-tab get-defs) get-filename))
-                                          (and fn (simple-form-path fn)))))
-               (let-values ([(base name dir?) (split-path nfn)]) name))))))
+       (hash-ref! tab-label-cache
+                  fn
+                  (lambda ()
+                    (path->string
+                     (or (shrink-path-wrt
+                          nfn
+                          (filter values
+                                  (for/list ([other-tab (in-list tabs)])
+                                    (define fn (send (send other-tab get-defs) get-filename))
+                                    (and fn (simple-form-path fn)))))
+                         (let-values ([(base name dir?) (split-path nfn)]) name))))))
 
      (define/private (add-modified-flag text string)
        (if (send text is-modified?)
@@ -2435,11 +2437,11 @@
 
      (define/override (update-shown)
        (super update-shown)
-       (let ([new-children
-              (foldl (λ (shown? children sofar) (if shown? (append children sofar) sofar))
-                     null
-                     (list interactions-shown? definitions-shown?)
-                     (list interactions-canvases definitions-canvases))]
+       (let ([new-children (foldl (λ (shown? children sofar)
+                                    (if shown? (append children sofar) sofar))
+                                  null
+                                  (list interactions-shown? definitions-shown?)
+                                  (list interactions-canvases definitions-canvases))]
              [old-children (send resizable-panel get-children)]
              [p (preferences:get 'drracket:unit-window-size-percentage)])
          (update-defs/ints-resize-corner)
@@ -2505,11 +2507,11 @@
          (send file-menu:print-interactions-item enable interactions-shown?)))
 
      (define/augment (can-close?)
-       (and (andmap
-             (lambda (tab)
-               (or (eq? tab current-tab)
-                   (and (send (send tab get-defs) can-close?) (send (send tab get-ints) can-close?))))
-             tabs)
+       (and (andmap (lambda (tab)
+                      (or (eq? tab current-tab)
+                          (and (send (send tab get-defs) can-close?)
+                               (send (send tab get-ints) can-close?))))
+                    tabs)
             (send interactions-text can-close?)
             (inner #t can-close?)))
      (define/augment (on-close)
@@ -2969,14 +2971,14 @@
      (define/public (find-matching-tab filename)
        (define fn-path (if (string? filename) (string->path filename) filename))
        (for/or ([tab (in-list tabs)])
-               (define tab-filename (send (send tab get-defs) get-filename))
-               (and tab-filename (pathname-equal? fn-path tab-filename) tab)))
+         (define tab-filename (send (send tab get-defs) get-filename))
+         (and tab-filename (pathname-equal? fn-path tab-filename) tab)))
 
      (define/override (editing-this-file? filename)
-       (ormap
-        (λ (tab)
-          (let ([fn (send (send tab get-defs) get-filename)]) (and fn (pathname-equal? fn filename))))
-        tabs))
+       (ormap (λ (tab)
+                (let ([fn (send (send tab get-defs) get-filename)])
+                  (and fn (pathname-equal? fn filename))))
+              tabs))
 
      (define/override (get-menu-item%)
        (class (super get-menu-item%)
@@ -3081,34 +3083,34 @@
                           (string-constant interactions-menu-item-help-string)))
        (set-show-menu-sort-key interactions-item 102)
 
-       (let ([layout-item
-              (new menu:can-restore-menu-item%
-                   [label (string-constant use-horizontal-layout)]
-                   [parent (get-show-menu)]
-                   [callback
-                    (λ (x y)
-                      (define vertical? (send resizable-panel get-vertical?))
-                      (preferences:set 'drracket:defs/ints-horizontal vertical?)
-                      (send resizable-panel set-orientation vertical?)
-                      (define update-shown? (or (not interactions-shown?) (not definitions-shown?)))
-                      (unless interactions-shown?
-                        (toggle-show/hide-interactions))
-                      (unless definitions-shown?
-                        (toggle-show/hide-definitions))
-                      (when update-shown?
-                        (update-shown)))]
-                   [demand-callback
-                    (λ (mi)
-                      (send mi
-                            set-label
-                            (if (send resizable-panel get-vertical?)
-                                (string-constant use-horizontal-layout)
-                                (string-constant use-vertical-layout))))]
-                   [shortcut (if (member 'shift (get-default-shortcut-prefix)) #f #\l)]
-                   [shortcut-prefix
-                    (if (member 'shift (get-default-shortcut-prefix))
-                        (get-default-shortcut-prefix)
-                        (cons 'shift (get-default-shortcut-prefix)))])])
+       (let ([layout-item (new menu:can-restore-menu-item%
+                               [label (string-constant use-horizontal-layout)]
+                               [parent (get-show-menu)]
+                               [callback
+                                (λ (x y)
+                                  (define vertical? (send resizable-panel get-vertical?))
+                                  (preferences:set 'drracket:defs/ints-horizontal vertical?)
+                                  (send resizable-panel set-orientation vertical?)
+                                  (define update-shown?
+                                    (or (not interactions-shown?) (not definitions-shown?)))
+                                  (unless interactions-shown?
+                                    (toggle-show/hide-interactions))
+                                  (unless definitions-shown?
+                                    (toggle-show/hide-definitions))
+                                  (when update-shown?
+                                    (update-shown)))]
+                               [demand-callback
+                                (λ (mi)
+                                  (send mi
+                                        set-label
+                                        (if (send resizable-panel get-vertical?)
+                                            (string-constant use-horizontal-layout)
+                                            (string-constant use-vertical-layout))))]
+                               [shortcut (if (member 'shift (get-default-shortcut-prefix)) #f #\l)]
+                               [shortcut-prefix
+                                (if (member 'shift (get-default-shortcut-prefix))
+                                    (get-default-shortcut-prefix)
+                                    (cons 'shift (get-default-shortcut-prefix)))])])
          (set-show-menu-sort-key layout-item 103))
 
        (let ()
@@ -3437,9 +3439,9 @@
             module-browser-pb
             (drracket:language:make-text/pos definitions-text 0 (send definitions-text last-position))
             (λ (str)
-              (update-status-line 'plt:module-browser
-                                  (gui-utils:trim-string (format module-browser-progress-constant str)
-                                                         200)))
+              (update-status-line
+               'plt:module-browser
+               (gui-utils:trim-string (format module-browser-progress-constant str) 200)))
             (λ (user-thread user-custodian) (send mod-tab set-breakables user-thread user-custodian)))
            (send mod-tab set-breakables old-break-thread old-custodian)
            (send mod-tab enable-evaluation)
@@ -3514,13 +3516,13 @@
      (define close-tab-menu-item #f)
      (define/override (file-menu:between-close-and-quit file-menu)
        (unless (equal? (system-type) 'unix)
-         (set!
-          close-tab-menu-item
-          (new (get-menu-item%)
-               (label (string-constant close-tab))
-               (demand-callback (λ (item) (send item enable (1 . < . (send tabs-panel get-number)))))
-               (parent file-menu)
-               (callback (λ (x y) (close-current-tab))))))
+         (set! close-tab-menu-item
+               (new (get-menu-item%)
+                    (label (string-constant close-tab))
+                    (demand-callback
+                     (λ (item) (send item enable (1 . < . (send tabs-panel get-number)))))
+                    (parent file-menu)
+                    (callback (λ (x y) (close-current-tab))))))
        (super file-menu:between-close-and-quit file-menu))
 
      (define/override (file-menu:save-string) (string-constant save-definitions))
@@ -3763,31 +3765,31 @@
        (super edit-menu:between-select-all-and-find edit-menu))
 
      (define/override (edit-menu:between-paste-and-clear edit-menu)
-       (new
-        menu:can-restore-menu-item%
-        [label (string-constant paste-and-indent-menu-item)]
-        [parent edit-menu]
-        [shortcut #\v]
-        [shortcut-prefix (cons 'shift (get-default-shortcut-prefix))]
-        [demand-callback
-         (λ (item)
-           (define editor (get-edit-target-object))
-           (send
-            item
-            enable
-            (and editor (is-a? editor racket:text<%>) (send editor can-do-edit-operation? 'paste))))]
-        [callback
-         (λ (x y)
-           (define target (get-edit-target-object))
-           (send target begin-edit-sequence)
-           (define start-pos-before (send target get-start-position))
-           (define end-pos-before (send target get-start-position))
-           (define selection-size (- end-pos-before start-pos-before))
-           (define positions-before (- (send target last-position) selection-size))
-           (send target do-edit-operation 'paste)
-           (define amount-to-tabify (- (send target last-position) positions-before))
-           (send target tabify-selection start-pos-before (+ start-pos-before amount-to-tabify))
-           (send target end-edit-sequence))])
+       (new menu:can-restore-menu-item%
+            [label (string-constant paste-and-indent-menu-item)]
+            [parent edit-menu]
+            [shortcut #\v]
+            [shortcut-prefix (cons 'shift (get-default-shortcut-prefix))]
+            [demand-callback
+             (λ (item)
+               (define editor (get-edit-target-object))
+               (send item
+                     enable
+                     (and editor
+                          (is-a? editor racket:text<%>)
+                          (send editor can-do-edit-operation? 'paste))))]
+            [callback
+             (λ (x y)
+               (define target (get-edit-target-object))
+               (send target begin-edit-sequence)
+               (define start-pos-before (send target get-start-position))
+               (define end-pos-before (send target get-start-position))
+               (define selection-size (- end-pos-before start-pos-before))
+               (define positions-before (- (send target last-position) selection-size))
+               (send target do-edit-operation 'paste)
+               (define amount-to-tabify (- (send target last-position) positions-before))
+               (send target tabify-selection start-pos-before (+ start-pos-before amount-to-tabify))
+               (send target end-edit-sequence))])
        (super edit-menu:between-paste-and-clear edit-menu))
 
      ;; capability-menu-items : hash-table[menu -o> (listof (list menu-item number key)))
@@ -3896,16 +3898,16 @@
                                                     settings)))])])
                   (send mi enable (not (null? tp-names)))
                   mi)
-                (map
-                 (λ (name)
-                   (new
-                    menu:can-restore-menu-item%
-                    [label (gui-utils:format-literal-label (string-constant clear-teachpack) name)]
-                    [parent language-menu]
-                    [callback
-                     (λ (item evt)
-                       (update-settings ((teachpack-callbacks-remove tp-callbacks) settings name)))]))
-                 tp-names))))]
+                (map (λ (name)
+                       (new menu:can-restore-menu-item%
+                            [label
+                             (gui-utils:format-literal-label (string-constant clear-teachpack) name)]
+                            [parent language-menu]
+                            [callback
+                             (λ (item evt)
+                               (update-settings
+                                ((teachpack-callbacks-remove tp-callbacks) settings name)))]))
+                     tp-names))))]
            [else
             (set!
              teachpack-items
@@ -4093,25 +4095,25 @@
                     (string-constant semicolon-comment-out-menu-item-label)
                     language-specific-menu
                     (send-method (λ (x) (send x comment-out-selection))))
-       (make-object
-        menu:can-restore-menu-item%
-        (string-constant uncomment-menu-item-label)
-        language-specific-menu
-        (λ (x y)
-          (let ([text (get-focus-object)])
-            (when (is-a? text text%)
-              (let ([admin (send text get-admin)])
-                (cond
-                  [(is-a? admin editor-snip-editor-admin<%>)
-                   (let ([es (send admin get-snip)])
-                     (cond
-                       [(is-a? es comment-box:snip%) (let ([es-admin (send es get-admin)])
-                                                       (when es-admin
-                                                         (let ([ed (send es-admin get-editor)])
-                                                           (when (is-a? ed racket:text<%>)
-                                                             (send ed uncomment-box/selection)))))]
-                       [else (send text uncomment-selection)]))]
-                  [else (send text uncomment-selection)]))))))
+       (make-object menu:can-restore-menu-item%
+                    (string-constant uncomment-menu-item-label)
+                    language-specific-menu
+                    (λ (x y)
+                      (let ([text (get-focus-object)])
+                        (when (is-a? text text%)
+                          (let ([admin (send text get-admin)])
+                            (cond
+                              [(is-a? admin editor-snip-editor-admin<%>)
+                               (let ([es (send admin get-snip)])
+                                 (cond
+                                   [(is-a? es comment-box:snip%)
+                                    (let ([es-admin (send es get-admin)])
+                                      (when es-admin
+                                        (let ([ed (send es-admin get-editor)])
+                                          (when (is-a? ed racket:text<%>)
+                                            (send ed uncomment-box/selection)))))]
+                                   [else (send text uncomment-selection)]))]
+                              [else (send text uncomment-selection)]))))))
 
        (set! insert-menu
              (new (get-menu%)
@@ -4837,13 +4839,13 @@
                                    settings)))]))))))
           (preferences:get 'drracket:recent-language-names))
          (unless added-one?
-           (send
-            (new menu-item%
-                 [label (string-append "  << " (string-constant no-recently-chosen-languages) " >>")]
-                 [parent menu]
-                 [callback void])
-            enable
-            #f))
+           (send (new menu-item%
+                      [label
+                       (string-append "  << " (string-constant no-recently-chosen-languages) " >>")]
+                      [parent menu]
+                      [callback void])
+                 enable
+                 #f))
          (new separator-menu-item% [parent menu]))
        (new menu-item%
             [label (string-constant choose-language-menu-item-label)]
