@@ -10,6 +10,8 @@
          "common.rkt"
          "tokenize.rkt")
 
+(define current-source (make-parameter #f))
+
 ;; these two will be removed by the realign pass
 (struct bare-prefix thing (tok) #:transparent)
 (struct bare-sexp-comment thing () #:transparent)
@@ -38,9 +40,10 @@
     [(list (token _ comment 'line-comment) xs ...) (do-it comment xs)]
     [_ (values obj xs)]))
 
-(define (read-one xs #:source [source #f] #:while-reading [while-reading #f])
+;; while-reading: a still unmatched opener string or false
+(define (read-one xs #:while-reading [while-reading #f])
   (match xs
-    ['() (raise-read-eof-error "unexpected eof" source #f #f #f #f)]
+    ['() (raise-read-eof-error "unexpected eof" (current-source) #f #f #f #f)]
 
     [(cons (token close-srcloc _ `(parenthesis ,(? close-paren? p))) _)
      (cond
@@ -49,9 +52,9 @@
                                      (find-closer while-reading)
                                      while-reading
                                      p)
-                             source
+                             (current-source)
                              close-srcloc)]
-       [else (apply raise-read-error (format "unexpected `~a`" p) source close-srcloc)])]
+       [else (apply raise-read-error (format "unexpected `~a`" p) (current-source) close-srcloc)])]
 
     [(cons (token open-srcloc open-paren `(parenthesis ,(? open-paren? p))) xs)
      (define closer (find-closer p))
@@ -59,9 +62,9 @@
        (match xs
          ['() (apply raise-read-eof-error
                      (format "expected a `~a` to close `~a`" closer p)
-                     source
+                     (current-source)
                      open-srcloc)]
-         [(cons (token _ close-paren `(parenthesis ,(== closer))) xs)
+         [(cons (token close-srcloc close-paren `(parenthesis ,(== closer))) xs)
           (process-tail (node #f open-paren close-paren #f #f (dropf (reverse (dropf acc nl?)) nl?))
                         xs)]
 
@@ -70,14 +73,14 @@
          [(cons (token _ _ `(white-space 1)) xs) (loop xs acc)]
 
          [_
-          (define-values (this xs*) (read-one xs #:source source #:while-reading p))
+          (define-values (this xs*) (read-one xs #:while-reading p))
           (loop xs* (cons this acc))]))]
 
     [(cons (token _ _ `(white-space 0)) xs)
-     (read-one xs #:source source #:while-reading while-reading)]
+     (read-one xs #:while-reading while-reading)]
 
     [(cons (token _ _ `(white-space 1)) xs)
-     (read-one xs #:source source #:while-reading while-reading)]
+     (read-one xs #:while-reading while-reading)]
 
     [(cons (token _ _ `(white-space ,n)) xs) (values (nl (sub1 n)) xs)]
 
@@ -91,15 +94,17 @@
 
     [(cons (token _ content kind) xs) (process-tail (atom #f content kind) xs)]))
 
-(define (read-top xs source)
+(define (read-top xs)
   (let loop ([xs xs] [acc '()])
     (match xs
       ['() (reverse (dropf acc nl?))]
       [(cons (token _ _ `(white-space 0)) xs) (loop xs acc)]
       [(cons (token _ _ `(white-space 1)) xs) (loop xs acc)]
       [_
-       (define-values (this xs*) (read-one xs #:source source))
+       (define-values (this xs*) (read-one xs))
        (loop xs* (cons this acc))])))
 
 (define (read-all program-source max-blank-lines source)
-  (read-top (tokenize program-source source max-blank-lines) source))
+  (define toks (tokenize program-source source max-blank-lines))
+  (parameterize ([current-source source])
+    (read-top toks)))
