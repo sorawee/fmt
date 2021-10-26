@@ -40,47 +40,68 @@
     [(list (token _ comment 'line-comment) xs ...) (do-it comment xs)]
     [_ (values obj xs)]))
 
-;; while-reading: a still unmatched opener string or false
-(define (read-one xs #:while-reading [while-reading #f])
-  (match xs
-    ['() (raise-read-eof-error "unexpected eof" (current-source) #f #f #f #f)]
+(struct done (val) #:transparent)
 
-    [(cons (token close-srcloc _ `(parenthesis ,(? close-paren? p))) _)
-     (cond
-       [while-reading (apply raise-read-error
-                             (format "expected `~a` to close preceding `~a`, found instead `~a`"
-                                     (find-closer while-reading)
-                                     while-reading
-                                     p)
-                             (current-source)
-                             close-srcloc)]
-       [else (apply raise-read-error (format "unexpected `~a`" p) (current-source) close-srcloc)])]
+(define (read-one xs
+                  #:on-closer
+                  [on-closer
+                   (λ (close-srcloc p text xs)
+                     (apply raise-read-error
+                            (format "unexpected `~a`" text)
+                            (current-source)
+                            close-srcloc))]
+                  #:on-eof
+                  [on-eof
+                   (λ () (raise-read-eof-error "unexpected eof"
+                                               (current-source)
+                                               #f
+                                               #f
+                                               #f
+                                               #f))])
+  (match xs
+    ['() (on-eof)]
+
+    [(cons (token close-srcloc text `(parenthesis ,(? close-paren? p))) xs)
+     (on-closer close-srcloc p text xs)]
 
     [(cons (token open-srcloc open-paren `(parenthesis ,(? open-paren? p))) xs)
      (define closer (find-closer p))
      (let loop ([xs xs] [acc '()])
-       (match xs
-         ['() (apply raise-read-eof-error
-                     (format "expected a `~a` to close `~a`" closer p)
-                     (current-source)
-                     open-srcloc)]
-         [(cons (token close-srcloc close-paren `(parenthesis ,(== closer))) xs)
-          (process-tail (node #f open-paren close-paren #f #f (dropf (reverse (dropf acc nl?)) nl?))
-                        xs)]
+       (define-values (this xs*)
+         (read-one xs
+                   #:on-closer
+                   (λ (closer-srcloc closer-sym closer-text xs)
+                     (cond
+                       [(equal? closer-sym closer)
+                        (define-values (this xs*)
+                          (process-tail
+                           (node #f open-paren closer-text #f #f (dropf (reverse (dropf acc nl?)) nl?))
+                           xs))
+                        (values (done this) xs*)]
+                       [else
+                        (apply raise-read-error
+                               (format "expected `~a` to close preceding `~a`, found instead `~a`"
+                                       closer
+                                       p
+                                       closer-text)
+                               (current-source)
+                               closer-srcloc)]))
+                   #:on-eof
+                   (λ ()
+                     (apply raise-read-eof-error
+                            (format "expected a `~a` to close `~a`" closer p)
+                            (current-source)
+                            open-srcloc))))
 
-         [(cons (token _ _ `(white-space 0)) xs) (loop xs acc)]
-
-         [(cons (token _ _ `(white-space 1)) xs) (loop xs acc)]
-
-         [_
-          (define-values (this xs*) (read-one xs #:while-reading p))
-          (loop xs* (cons this acc))]))]
+       (cond
+         [(done? this) (values (done-val this) xs*)]
+         [else (loop xs* (cons this acc))]))]
 
     [(cons (token _ _ `(white-space 0)) xs)
-     (read-one xs #:while-reading while-reading)]
+     (read-one xs #:on-eof on-eof #:on-closer on-closer)]
 
     [(cons (token _ _ `(white-space 1)) xs)
-     (read-one xs #:while-reading while-reading)]
+     (read-one xs #:on-eof on-eof #:on-closer on-closer)]
 
     [(cons (token _ _ `(white-space ,n)) xs) (values (nl (sub1 n)) xs)]
 
@@ -96,13 +117,10 @@
 
 (define (read-top xs)
   (let loop ([xs xs] [acc '()])
-    (match xs
-      ['() (reverse (dropf acc nl?))]
-      [(cons (token _ _ `(white-space 0)) xs) (loop xs acc)]
-      [(cons (token _ _ `(white-space 1)) xs) (loop xs acc)]
-      [_
-       (define-values (this xs*) (read-one xs))
-       (loop xs* (cons this acc))])))
+    (define-values (this xs*) (read-one xs #:on-eof (λ () (values 'eof '()))))
+    (cond
+      [(eq? 'eof this) (reverse (dropf acc nl?))]
+      [else (loop xs* (cons this acc))])))
 
 (define (read-all program-source max-blank-lines source)
   (define toks (tokenize program-source source max-blank-lines))
