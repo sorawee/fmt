@@ -48,6 +48,18 @@
     [("#:track-literals" "#:disable-colon-notation") 0]
     [else 1]))
 
+(define-pretty (format-kw-args -kw pos done format-kw-arg)
+  #:type list?
+  (let loop ([xs doc] [pos pos] [acc (list (pretty -kw))])
+    (cond
+      [(zero? pos) (done xs (reverse acc))]
+      [else (match xs
+              ['() (done xs (reverse acc))]
+              [(cons x xs) (match x
+                             [(atom _ _ 'hash-colon-keyword) (done (cons x xs) (reverse acc))]
+                             [(? visible?) (loop xs (sub1 pos) (cons (format-kw-arg x) acc))]
+                             [_ (loop xs pos (cons (pretty x) acc))])])])))
+
 (define-pretty (format-vertical/helper #:body-formatter [format-body #f]
                                        #:kw-arg-formatter [format-kw-arg #f]
                                        #:kw-map [kw-map default-kw-map])
@@ -76,17 +88,11 @@
                          (v-append (format-body x) (pretty ellipsis)))
                     xs)]
       [(list (and kw (atom _ content 'hash-colon-keyword)) xs ...)
-       (define pos (kw-map content xs))
-       (define (do-it xs docs)
-         (v-append-if (alt (hs-concat docs) (v-concat docs)) xs))
-       (let loop2 ([xs xs] [left pos] [acc (list (pretty kw))])
-         (cond
-           [(zero? left) (do-it xs (reverse acc))]
-           [else (match xs
-                   ['() (do-it xs (reverse acc))]
-                   [(cons x xs) (cond
-                                  [(visible? x) (loop2 xs (sub1 left) (cons (format-kw-arg x) acc))]
-                                  [else (loop2 xs left (cons (pretty x) acc))])])]))]
+       ((format-kw-args kw
+                        (kw-map content xs)
+                        (λ (xs docs) (v-append-if (alt (hs-concat docs) (v-concat docs)) xs))
+                        format-kw-arg)
+        xs)]
       [(list x xs ...) (v-append-if (format-body x) xs)])))
 
 ;; failable
@@ -106,18 +112,11 @@
           (match xs
             ['() empty-doc]
             [(list (and kw (atom _ content 'hash-colon-keyword)) xs ...)
-             (define pos (kw-map content xs))
-             (define (do-it xs docs)
-               (h-append-if (hs-concat docs) xs))
-             (let loop2 ([xs xs] [left pos] [acc (list (pretty kw))])
-               (cond
-                 [(zero? left) (do-it xs (reverse acc))]
-                 [else (match xs
-                         ['() (do-it xs (reverse acc))]
-                         [(cons x xs) (cond
-                                        [(visible? x)
-                                         (loop2 xs (sub1 left) (cons (format-kw-arg x) acc))]
-                                        [else (loop2 xs left (cons (pretty x) acc))])])]))]
+             ((format-kw-args kw
+                              (kw-map content xs)
+                              (λ (xs docs) (h-append-if (hs-concat docs) xs))
+                              format-kw-arg)
+              xs)]
             [(list x xs ...) (h-append-if (format-body x) xs)]))))
 
 (define-pretty (format-if-like/helper format-else)

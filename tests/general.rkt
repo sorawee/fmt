@@ -91,3 +91,8 @@ g
       #;(a comment is here)
       (equal? a 1))
   a)
+
+(syntax-parse stx
+  [b
+   #:with b #:with a 1 #:with #:with z 3
+   2])
