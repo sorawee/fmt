@@ -348,15 +348,18 @@
     [#:else (format-#%app doc)]))
 
 ;; support optional super id: either
-#;(struct name super (fields ...)
-    #:kw)
-#;(struct name (fields ...)
-    #:kw)
+#;(struct name super (fields ...) #:kw)
+#;(struct name (fields ...) #:kw)
 (define-pretty format-struct
   #:type node?
   (match/extract (node-content doc) #:as unfits tail
-    [([_ #t] [_ #t] [(? atom?) #f]) ((format-uniform-body/helper 3 #:require-body? #f) doc)]
-    [#:else ((format-uniform-body/helper 2 #:require-body? #f) doc)]))
+    [([-struct #t] [-name #t] [(? atom? -super) #f])
+     (alt ((format-uniform-body/helper 3 #:require-body? #f) doc)
+          (pretty-node ((format-horizontal/helper) (list* -struct -name -super tail))))]
+    [([-struct #t] [-name #t] [-fields #f])
+     (alt ((format-uniform-body/helper 2 #:require-body? #f) doc)
+          (pretty-node ((format-horizontal/helper) (list* -struct -name -fields tail))))]
+    [#:else (format-#%app doc)]))
 
 (define/record (standard-formatter-map name) #:record all-kws
   (case name

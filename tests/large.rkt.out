@@ -2941,8 +2941,7 @@ An example
 ;; init-checker   - these three fields respectively are functions to run when
 ;; field-checker    a sealed class is subclassed and should error when a sealed
 ;; method-checker   member is added in the subclass
-(struct seal (sym inst-checker init-checker field-checker method-checker)
-  #:transparent)
+(struct seal (sym inst-checker init-checker field-checker method-checker) #:transparent)
 
 (define-values (prop:seals has-seals? get-seals) (make-impersonator-property 'class-seals))
 
