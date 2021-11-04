@@ -35,7 +35,8 @@
          "params.rkt"
          "record.rkt")
 
-(define (default-kw-map _s _xs) 1)
+(define (default-kw-map _s _xs)
+  1)
 
 (define (syntax-parse-pattern-directive-kw-map s _xs)
   (case s
@@ -249,18 +250,15 @@
     [([-define #t] [-head #f])
      ;; fit in one line case; only when there are exactly three things
      #;(define a b)
-     (alt (pretty-node
-           #:unfits unfits
-           (try-indent
-            #:because-of tail
-            (alt (match tail
-                   [(list -e)
-                    (match -head
-                      [(? node?) (flat (hs-append (pretty -define)
-                                                  (format-head -head)
-                                                  (select (pretty -e) low-width)))]
-                      [_ (flat (hs-append (pretty -define) (format-head -head) (pretty -e)))])]
-                   [_ fail]))))
+     (alt (pretty-node #:unfits unfits
+                       (try-indent #:because-of tail
+                                   (alt (match tail
+                                          [(list -e) (match -head
+                                                       [(? node?) fail]
+                                                       [_ (flat (hs-append (pretty -define)
+                                                                           (format-head -head)
+                                                                           (pretty -e)))])]
+                                          [_ fail]))))
           ;; general case
           #;(define (a b)
               c

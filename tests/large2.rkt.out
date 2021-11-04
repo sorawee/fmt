@@ -322,7 +322,8 @@
         (set! ok? #t)
         (send dlg show #f)]
        [else (message-box (string-constant drscheme) v dlg #:dialog-mixin frame:focus-table-mixin)]))
-   (define (cancel-callback) (send dlg show #f))
+   (define (cancel-callback)
+     (send dlg show #f))
    (define-values (ok cancel)
      (gui-utils:ok/cancel-buttons bp (λ (x y) (ok-callback)) (λ (x y) (cancel-callback))))
    (let ([mw (max (send den-m get-width) (send num-m get-width))])

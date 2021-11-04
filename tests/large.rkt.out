@@ -353,10 +353,14 @@
             (λ (o) (ppos (old-ref o) neg-party))
             (λ (o v) (old-set! o (pneg v neg-party))))))
 
-(define (field-info-internal-ref fi) (unsafe-vector-ref fi 0))
-(define (field-info-internal-set! fi) (unsafe-vector-ref fi 1))
-(define (field-info-external-ref fi) (unsafe-vector-ref fi 2))
-(define (field-info-external-set! fi) (unsafe-vector-ref fi 3))
+(define (field-info-internal-ref fi)
+  (unsafe-vector-ref fi 0))
+(define (field-info-internal-set! fi)
+  (unsafe-vector-ref fi 1))
+(define (field-info-external-ref fi)
+  (unsafe-vector-ref fi 2))
+(define (field-info-external-set! fi)
+  (unsafe-vector-ref fi 3))
 
 ;;--------------------------------------------------------------------
 ;;  class macros
@@ -477,7 +481,8 @@
                   l)))
 
     ;; Used with flatten:
-    (define (pair i) (cons i i))
+    (define (pair i)
+      (cons i i))
 
     (define (normalize-init/field i)
       ;; Put i in ((iid eid) optional-expr) form
@@ -671,8 +676,10 @@
     ;; syntax taints: save the declaration-time inspector and use it
     ;; to disarm syntax taints
     (define method-insp (variable-reference->module-declaration-inspector (#%variable-reference)))
-    (define (disarm stx) (syntax-disarm stx method-insp))
-    (define (rearm new old) (syntax-rearm new old))
+    (define (disarm stx)
+      (syntax-disarm stx method-insp))
+    (define (rearm new old)
+      (syntax-rearm new old))
 
     ;; --------------------------------------------------------------------------------
     ;; Start here:
@@ -4047,7 +4054,8 @@ An example
     [(_ name obj)
      (raise-syntax-error 'get-field "expected a field name as first argument" stx (syntax name))]))
 
-(define (get-field/proc id obj) (do-get-field 'get-field id obj))
+(define (get-field/proc id obj)
+  (do-get-field 'get-field id obj))
 
 (define (do-get-field who id obj)
   (cond
