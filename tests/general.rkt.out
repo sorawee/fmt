@@ -98,3 +98,6 @@ c
    #:with
    #:with z 3
    2])
+
+(struct a (a b) ; hello
+  )

@@ -353,10 +353,12 @@
   (match/extract (node-content doc) #:as unfits tail
     [([-struct #t] [-name #t] [(? atom? -super) #f])
      (alt ((format-uniform-body/helper 3 #:require-body? #f) doc)
-          (pretty-node ((format-horizontal/helper) (list* -struct -name -super tail))))]
+          (pretty-node (try-indent #:because-of (cons -super tail)
+                                   ((format-horizontal/helper) (list* -struct -name -super tail)))))]
     [([-struct #t] [-name #t] [-fields #f])
      (alt ((format-uniform-body/helper 2 #:require-body? #f) doc)
-          (pretty-node ((format-horizontal/helper) (list* -struct -name -fields tail))))]
+          (pretty-node (try-indent #:because-of (cons -fields tail)
+                                   ((format-horizontal/helper) (list* -struct -name -fields tail)))))]
     [#:else (format-#%app doc)]))
 
 (define/record (standard-formatter-map name) #:record all-kws

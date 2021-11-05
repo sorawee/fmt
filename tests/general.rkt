@@ -96,3 +96,6 @@ g
   [b
    #:with b #:with a 1 #:with #:with z 3
    2])
+
+(struct a (a b) ; hello
+      )
