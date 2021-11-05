@@ -191,9 +191,9 @@
        (provide id
                 ...))]))
 
-(provide-renaming-class-keyword [private -private]
-                                [public -public]
-                                [override -override]
+(provide-renaming-class-keyword (private -private)
+                                (public -public)
+                                (override -override)
                                 [augride -augride]
                                 [pubment -pubment]
                                 [overment -overment]
@@ -203,7 +203,7 @@
                                 [augment-final -augment-final]
                                 [rename-super -rename-super]
                                 [rename-inner -rename-inner]
-                                [inherit -inherit]
+                                (inherit -inherit)
                                 [inherit-field -inherit-field]
                                 [inherit/super -inherit/super]
                                 [inherit/inner -inherit/inner]
@@ -1994,7 +1994,7 @@
                 init-args ; list of symbols in order; #f => only by position
                 init-mode ; 'normal, 'stop (don't accept by-pos for super), or 'list
                 ; initializer
-                [init #:mutable] ; :   object
+                (init #:mutable) ; :   object
                 ;     (object class (box boolean) leftover-args new-by-pos-args new-named-args
                 ;      -> void) // always continue-make-super?
                 ;     class
@@ -3076,7 +3076,7 @@ An example
                 public-ids ; (listof symbol) (in any order?!?)
                 contracts ; (hashof symbol? contract?)
                 ; (union #f class) -- means that anything implementing
-                [class #:mutable] ; this interface must be derived from this class
+                (class #:mutable) ; this interface must be derived from this class
                 properties) ; (listof (vector gensym prop val))
   #:inspector insp)
 
