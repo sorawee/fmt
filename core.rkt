@@ -67,7 +67,7 @@
   (begin0 (v-concat (map loop xs))
     (set-box! current-pretty #f)))
 
-(define (pretty-node* n d #:node [the-node n] #:unfits [unfits '()] #:adjust [adjust #f])
+(define (pretty-node* n d #:node [the-node n] #:unfits [unfits '()] #:adjust [adjust '("(" ")")])
   (match-define (node comment opener closer prefix breakable-prefix _) the-node)
   (define doc
     (pretty-comment comment

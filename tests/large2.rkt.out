@@ -1924,18 +1924,18 @@
               (send (car cs) set-resize-corner #f)
               (loop (cdr cs))]))))
 
-     [define definitions-item #f]
-     [define interactions-item #f]
-     [define name-message #f]
-     [define save-button #f]
-     [define save-init-shown? #f]
+     (define definitions-item #f)
+     (define interactions-item #f)
+     (define name-message #f)
+     (define save-button #f)
+     (define save-init-shown? #f)
 
-     [define/private set-save-init-shown? (λ (x) (set! save-init-shown? x))]
+     (define/private set-save-init-shown? (λ (x) (set! save-init-shown? x)))
 
-     [define canvas-show-mode #f]
-     [define allow-split? #f]
-     [define forced-quit? #f]
-     [define search-canvas #f]
+     (define canvas-show-mode #f)
+     (define allow-split? #f)
+     (define forced-quit? #f)
+     (define search-canvas #f)
 
      (define/public (make-searchable canvas)
        (update-info)
@@ -2094,7 +2094,7 @@
                        candidate))
                 candidate-prefixes)))
 
-     [define/override get-canvas% (λ () (drracket:get/extend:get-definitions-canvas))]
+     (define/override get-canvas% (λ () (drracket:get/extend:get-definitions-canvas)))
 
      (define/public (update-running running?) (send running-canvas set-running running?))
      (define/public (ensure-defs-shown)
@@ -3480,7 +3480,7 @@
                   (shortcut #\t)
                   (parent file-menu)
                   (callback (λ (x y) (create-new-tab))))))
-     [define/override file-menu:between-open-and-revert
+     (define/override file-menu:between-open-and-revert
        (lambda (file-menu)
          (new
           menu:can-restore-menu-item%
@@ -3513,7 +3513,7 @@
              (when pth
                (handler:edit-file pth)))])
          (super file-menu:between-open-and-revert file-menu)
-         (make-object separator-menu-item% file-menu))]
+         (make-object separator-menu-item% file-menu)))
      (define close-tab-menu-item #f)
      (define/override (file-menu:between-close-and-quit file-menu)
        (unless (equal? (system-type) 'unix)
@@ -3564,7 +3564,7 @@
          (make-object separator-menu-item% file-menu)
          (super file-menu:between-save-as-and-print file-menu)))
 
-     [define/override file-menu:print-string (λ () (string-constant print-definitions))]
+     (define/override file-menu:print-string (λ () (string-constant print-definitions)))
      (define/override (file-menu:between-print-and-close file-menu)
        (set! file-menu:print-interactions-item
              (make-object
@@ -4309,12 +4309,12 @@
             [alignment '(right top)]
             [stretchable-height #f]))
 
-     [define top-panel (make-object horizontal-panel% top-outer-panel)]
-     [define name-panel
+     (define top-panel (make-object horizontal-panel% top-outer-panel))
+     (define name-panel
        (new-horizontal-panel% (parent top-panel)
                               (alignment '(left center))
                               (stretchable-width #f)
-                              (stretchable-height #f))]
+                              (stretchable-height #f)))
      (define panel-with-tabs
        (new vertical-pane% (parent (get-definitions/interactions-panel-parent))))
      (define tabs-panel
@@ -4373,9 +4373,9 @@
      (set! name-message (new drs-name-message% [parent name-panel]))
      (send name-message stretchable-width #t)
      (send name-message set-allow-shrinking 160)
-     [define teachpack-items null]
-     [define break-button (void)]
-     [define execute-button (void)]
+     (define teachpack-items null)
+     (define break-button (void))
+     (define execute-button (void))
      (set! button-panel
            (new panel:horizontal-discrete-sizes%
                 [parent top-panel]
@@ -4441,7 +4441,7 @@
      (define remove-bug-icon-callback
        (preferences:add-callback 'drracket:saved-bug-reports (λ (p v) (set-bug-label v))))
 
-     [define func-defs-canvas (new func-defs-canvas% (parent name-panel) (frame this))]
+     (define func-defs-canvas (new func-defs-canvas% (parent name-panel) (frame this)))
 
      (set! execute-button
            (new switchable-button%

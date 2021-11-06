@@ -120,11 +120,12 @@
               xs)]
             [(list x xs ...) (h-append-if (format-body x) xs)]))))
 
-(define-pretty (format-if-like/helper format-else)
+(define-pretty (format-if-like/helper format-else #:adjust [adjust '("(" ")")])
   #:type node?
   (match/extract (node-content doc) #:as unfits tail
     [([-if #t] [-conditional #f])
      (pretty-node #:unfits unfits
+                  #:adjust adjust
                   (hs-append (flat (pretty -if))
                              (try-indent #:n 0
                                          #:because-of (cons -conditional tail)
@@ -147,14 +148,17 @@
      (match/extract xs #:as unfits tail
        ;; mostly vertical
        [([-head #f]) (alt (pretty-node #:unfits unfits
+                                       #:adjust #f
                                        (try-indent #:n 0
                                                    #:because-of (cons -head tail)
                                                    ((format-vertical/helper) (cons -head tail))))
                           ;; pretty cases
-                          ((format-if-like/helper (λ (d) fail)) doc))]
+                          ((format-if-like/helper #:adjust #f (λ (d) fail)) doc))]
        ;; perhaps full of comments, or there's nothing at all
-       [#:else (pretty-node (try-indent #:n 0 #:because-of xs ((format-vertical/helper) xs)))])]
-    [else (pretty-node (try-indent #:n 0
+       [#:else (pretty-node #:adjust #f
+                            (try-indent #:n 0 #:because-of xs ((format-vertical/helper) xs)))])]
+    [else (pretty-node #:adjust #f
+                       (try-indent #:n 0
                                    #:because-of xs
                                    ;; general case
                                    (alt ((format-vertical/helper) xs)
