@@ -346,7 +346,7 @@
                   (hs-append (flat (pretty -provide))
                              (try-indent #:n 0
                                          #:because-of (cons -first-arg tail)
-                                         (v-concat (map pretty (cons -first-arg tail))))))]
+                                         ((format-vertical/helper) (cons -first-arg tail)))))]
     [#:else (format-#%app doc)]))
 
 ;; support optional super id: either
@@ -369,7 +369,8 @@
   (case name
     [("if") format-if]
     [("provide" "require" "import" "export" "link" "rename") format-require]
-    [("public" "private" "override" "inherit" "field" "init") format-require]
+    [("public" "private" "override" "augment" "inherit" "field" "init") format-require]
+    [("pubment" "public-final" "overment" "override-final" "augride" "augment-final") format-require]
 
     [("define") (format-define)]
     [("define-for-syntax" "define-values") (format-define-like)]

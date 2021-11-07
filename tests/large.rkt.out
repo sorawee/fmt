@@ -188,19 +188,18 @@
      (begin
        (define-syntax (id stx) (rewrite-renaming-class-keyword stx #'internal-id)) ...
        (define-syntax (internal-id stx) (do-class-keyword stx 'id)) ...
-       (provide id
-                ...))]))
+       (provide id ...))]))
 
 (provide-renaming-class-keyword (private -private)
                                 (public -public)
                                 (override -override)
-                                [augride -augride]
-                                [pubment -pubment]
-                                [overment -overment]
-                                [augment -augment]
-                                [public-final -public-final]
-                                [override-final -override-final]
-                                [augment-final -augment-final]
+                                (augride -augride)
+                                (pubment -pubment)
+                                (overment -overment)
+                                (augment -augment)
+                                (public-final -public-final)
+                                (override-final -override-final)
+                                (augment-final -augment-final)
                                 [rename-super -rename-super]
                                 [rename-inner -rename-inner]
                                 (inherit -inherit)
@@ -223,8 +222,7 @@
      (begin
        (define-syntax (id stx) (rewrite-naming-class-keyword stx #'internal-id)) ...
        (define-syntax (internal-id stx) (do-class-keyword stx 'id)) ...
-       (provide id
-                ...))]))
+       (provide id ...))]))
 
 (provide-naming-class-keyword [inspect -inspect] [init-rest -init-rest])
 
@@ -237,8 +235,7 @@
   (syntax-rules ()
     [(_ id ...) (begin
                   (define-syntax (id stx) (do-class-contract-keyword stx)) ...
-                  (provide id
-                           ...))]))
+                  (provide id ...))]))
 
 (provide-class-contract-keyword absent)
 
@@ -281,8 +278,7 @@
     [(_ [internal-id id] ...) (begin
                                 (define-syntax (internal-id stx) (do-define-like-internal stx)) ...
                                 (define-syntax (id stx) (do-define-like stx #'internal-id)) ...
-                                (provide id
-                                         ...))]))
+                                (provide id ...))]))
 
 (provide-class-define-like-keyword [-field field] [-init init] [-init-field init-field])
 
@@ -4593,15 +4589,9 @@ An example
                                define/augment
                                define/augride
                                define/augment-final)
-           [(inherit names
-                     ...)
-            (extract-renamed-names (syntax (names ...)))]
-           [(rename [x names]
-                    ...)
-            (syntax->list (syntax (names ...)))]
-           [(override names
-                      ...)
-            (extract-renamed-names (syntax (names ...)))]
+           [(inherit names ...) (extract-renamed-names (syntax (names ...)))]
+           [(rename [x names] ...) (syntax->list (syntax (names ...)))]
+           [(override names ...) (extract-renamed-names (syntax (names ...)))]
            [(overment names ...) (extract-renamed-names (syntax (names ...)))]
            [(override-final names ...) (extract-renamed-names (syntax (names ...)))]
            [(augment names ...) (extract-renamed-names (syntax (names ...)))]
