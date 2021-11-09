@@ -10,7 +10,6 @@
 
 (struct token (srcloc text type) #:transparent)
 
-
 ;; tokenize :: string? natural-number/c any/c -> (listof token?)
 (define (tokenize program-source max-blank-lines source)
   (define max-newlines (add1 max-blank-lines))
@@ -18,7 +17,9 @@
   (port-count-lines! p)
   (let loop ([mode #f])
     (define start-srcloc (call-with-values (λ () (port-next-location p)) list))
-    (match-define-values (text type paren-type start-pos end-pos _ new-mode) (module-lexer p 0 mode))
+    (match-define-values (text type paren-type start-pos end-pos _ new-mode)
+      #;(module-lexer* p 0 mode)
+      (module-lexer p 0 mode))
     (cond
       [(eof-object? text) '()]
       [else
@@ -53,3 +54,9 @@
                         (substring program-source (sub1 start-pos) (sub1 end-pos))
                         'block-comment)]))
        (cons current (loop new-mode))])))
+
+(module+ main
+  (tokenize "#lang racket/base
+a
+#;#;(abc) def
+qwe" 1 #f))
