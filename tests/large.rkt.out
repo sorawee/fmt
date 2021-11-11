@@ -1003,9 +1003,7 @@
                       (let loop ([exprs exprs] [ms null] [pms null] [es null] [sd null])
                         (if (null? exprs)
                             (values (reverse ms) (reverse pms) (reverse es) (reverse sd))
-                            (syntax-case (car exprs)
-                                         (define-values define-syntaxes
-                                           )
+                            (syntax-case (car exprs) (define-values define-syntaxes)
                               [(d-v (id ...) expr)
                                (free-identifier=? #'d-v #'define-values)
                                (let ([ids (syntax->list (syntax (id ...)))])

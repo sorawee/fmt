@@ -252,17 +252,18 @@
   #:default [format-head pretty]
   (match/extract (node-content doc) #:as unfits tail
     [([-define #t] [-head #f])
-     ;; fit in one line case; only when there are exactly three things
+     ;; fit in one line case; only when there are either two or three things
      #;(define a b)
-     (alt (pretty-node #:unfits unfits
-                       (try-indent #:because-of tail
-                                   (alt (match tail
-                                          [(list -e) (match -head
-                                                       [(? node?) fail]
-                                                       [_ (flat (hs-append (pretty -define)
-                                                                           (format-head -head)
-                                                                           (pretty -e)))])]
-                                          [_ fail]))))
+     (alt (pretty-node
+           #:unfits unfits
+           (try-indent
+            #:because-of tail
+            (flat (match -head
+                    [(? node?) fail]
+                    [_ (match tail
+                         ['() (hs-append (pretty -define) (format-head -head))]
+                         [(list -e) (hs-append (pretty -define) (format-head -head) (pretty -e))]
+                         [_ fail])]))))
           ;; general case
           #;(define (a b)
               c
@@ -282,15 +283,16 @@
   #:default [format-head pretty]
   (match/extract (node-content doc) #:as unfits tail
     [([-define #t] [-head #f])
-     ;; fit in one line case; only when there are exactly three things
+     ;; fit in one line case; only when there are either two or three things
      #;(define a b)
-     (alt (pretty-node #:unfits unfits
-                       (try-indent #:because-of tail
-                                   (alt (match tail
-                                          [(list -e) (flat (hs-append (pretty -define)
-                                                                      (format-head -head)
-                                                                      (pretty -e)))]
-                                          [_ fail]))))
+     (alt (pretty-node
+           #:unfits unfits
+           (try-indent
+            #:because-of tail
+            (flat (match tail
+                    ['() (hs-append (pretty -define) (format-head -head))]
+                    [(list -e) (hs-append (pretty -define) (format-head -head) (pretty -e))]
+                    [_ fail]))))
           ;; general case
           #;(define (a b)
               c

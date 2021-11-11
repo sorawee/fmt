@@ -54,8 +54,7 @@ c
 ; def
 ''g
 
-(let loop
-  )
+(let loop)
 
 (foo 'abc def)
 
