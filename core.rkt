@@ -90,7 +90,8 @@
 (begin-for-syntax
   (define-syntax-class header
     (pattern name:id)
-    (pattern h:function-header #:with name #'h.name)))
+    (pattern h:function-header
+      #:with name #'h.name)))
 
 (define-syntax-parse-rule (define-pretty head:header
                             #:type p?

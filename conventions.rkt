@@ -367,97 +367,99 @@
                                    ((format-horizontal/helper) (list* -struct -name -fields tail)))))]
     [#:else (format-#%app doc)]))
 
-(define/record (standard-formatter-map name) #:record all-kws
-  (case name
-    [("if") format-if]
-    [("provide" "require" "import" "export" "link" "rename") format-require]
-    [("public" "private" "override" "augment" "inherit" "field" "init") format-require]
-    [("pubment" "public-final" "overment" "override-final" "augride" "augment-final") format-require]
+(define/record standard-formatter-map #:record all-kws
+  [("if") format-if]
+  [("provide" "require" "import" "export" "link" "rename") format-require]
+  [("public" "private" "override" "augment" "inherit" "field" "init") format-require]
+  [("pubment" "public-final" "overment" "override-final" "augride" "augment-final") format-require]
 
-    [("define") (format-define)]
-    [("define-for-syntax" "define-values") (format-define-like)]
-    [("define-syntax-rule") (format-define-like)]
-    [("define-syntax" "define-syntaxes" "define-values-for-syntax") (format-define-like)]
-    [("define-syntax-parameter") (format-define-like)]
-    [("define/public" "define/private" "define/override" "define/augment") (format-define-like)]
-    [("define/pubment" "define/augride" "define/overment") (format-define-like)]
-    [("define/public-final" "define/override-final" "define/augment-final") (format-define-like)]
+  [("define") (format-define)]
+  [("define-for-syntax" "define-values") (format-define-like)]
+  [("define-syntax-rule") (format-define-like)]
+  [("define-syntax" "define-syntaxes" "define-values-for-syntax") (format-define-like)]
+  [("define-syntax-parameter") (format-define-like)]
+  [("define/public" "define/private" "define/override" "define/augment") (format-define-like)]
+  [("define/pubment" "define/augride" "define/overment") (format-define-like)]
+  [("define/public-final" "define/override-final" "define/augment-final") (format-define-like)]
 
-    [("λ" "lambda") (format-define-like)]
-    [("match-define" "match-define-values") (format-define-like)]
+  [("λ" "lambda") (format-define-like)]
+  [("match-define" "match-define-values") (format-define-like)]
 
-    [("let*") format-let*]
-    [("let-values" "let*-values" "letrec" "letrec-values") format-parameterize]
-    [("let-syntax" "letrec-syntax" "let-syntaxes" "letrec-syntaxes") format-parameterize]
-    [("with-syntax" "with-syntax*" "with-handlers" "with-handlers*" "shared") format-parameterize]
-    [("parameterize" "parameterize*" "syntax-parameterize") format-parameterize]
-    [("letrec-syntaxes+values")
-     (format-uniform-body/helper 2 #:arg-formatter format-binding-pairs/indirect)]
+  [("let*") format-let*]
+  [("let-values" "let*-values" "letrec" "letrec-values") format-parameterize]
+  [("let-syntax" "letrec-syntax" "let-syntaxes" "letrec-syntaxes") format-parameterize]
+  [("with-syntax" "with-syntax*" "with-handlers" "with-handlers*" "shared") format-parameterize]
+  [("parameterize" "parameterize*" "syntax-parameterize") format-parameterize]
+  [("letrec-syntaxes+values")
+   (format-uniform-body/helper 2 #:arg-formatter format-binding-pairs/indirect)]
 
-    [("splicing-let" "splicing-letrec" "splicing-let-values") format-parameterize]
-    [("splicing-letrec-values" "splicing-let-syntax" "splicing-letrec-syntax") format-parameterize]
-    [("splicing-let-syntaxes" "splicing-letrec-syntaxes" "splicing-letrec-syntaxes+values")
-     format-parameterize]
-    [("splicing-parameterize" "splicing-syntax-parameterize") format-parameterize]
+  [("splicing-let" "splicing-letrec" "splicing-let-values") format-parameterize]
+  [("splicing-letrec-values" "splicing-let-syntax" "splicing-letrec-syntax") format-parameterize]
+  [("splicing-let-syntaxes" "splicing-letrec-syntaxes" "splicing-letrec-syntaxes+values")
+   format-parameterize]
+  [("splicing-parameterize" "splicing-syntax-parameterize") format-parameterize]
 
-    [("begin" "begin-for-syntax") (format-uniform-body/helper 0 #:require-body? #f)]
-    [("begin0") (format-uniform-body/helper 1)]
-    [("module+") (format-uniform-body/helper 1)]
-    [("define-syntax-class" "define-match-expander") (format-uniform-body/helper 1)]
-    [("class") (format-uniform-body/helper 1 #:require-body? #f)]
-    [("module" "module*") (format-uniform-body/helper 2)]
+  [("begin" "begin-for-syntax") (format-uniform-body/helper 0 #:require-body? #f)]
+  [("begin0") (format-uniform-body/helper 1)]
+  [("module+") (format-uniform-body/helper 1)]
+  [("define-syntax-class" "define-match-expander") (format-uniform-body/helper 1)]
+  [("class") (format-uniform-body/helper 1 #:require-body? #f)]
+  [("module" "module*") (format-uniform-body/helper 2)]
 
-    [("cond" "case-lambda")
-     (format-uniform-body/helper 0 #:body-formatter (format-clause-2/indirect) #:require-body? #f)]
+  [("cond" "case-lambda")
+   (format-uniform-body/helper 0 #:body-formatter (format-clause-2/indirect) #:require-body? #f)]
 
-    [("syntax-rules" "match" "match*" "case")
-     (format-uniform-body/helper 1 #:body-formatter (format-clause-2/indirect) #:require-body? #f)]
+  [("syntax-rules" "match" "match*" "case")
+   (format-uniform-body/helper 1 #:body-formatter (format-clause-2/indirect) #:require-body? #f)]
 
-    [("define-syntax-parse-rule" "define-simple-macro" "pattern")
-     (format-uniform-body/helper 1 #:kw-map syntax-parse-pattern-directive-kw-map)]
+  [("define-syntax-parse-rule" "define-simple-macro")
+   (format-uniform-body/helper 1 #:kw-map syntax-parse-pattern-directive-kw-map)]
 
-    [("syntax-parse" "define-syntax-parser")
-     (format-uniform-body/helper
-      1
-      #:require-body? #f
-      #:body-formatter (format-clause-2/indirect #:kw-map syntax-parse-pattern-directive-kw-map)
-      #:kw-map syntax-parse-parse-option-kw-map)]
+  [("pattern")
+   (format-uniform-body/helper 1 #:kw-map syntax-parse-pattern-directive-kw-map #:require-body? #f)]
 
-    [("syntax-parser") (format-uniform-body/helper
-                        0
-                        #:require-body? #f
-                        #:body-formatter (format-clause-2/indirect
-                                          #:kw-map syntax-parse-pattern-directive-kw-map)
-                        #:kw-map syntax-parse-parse-option-kw-map)]
+  [("syntax-parse" "define-syntax-parser")
+   (format-uniform-body/helper
+    1
+    #:require-body? #f
+    #:body-formatter (format-clause-2/indirect #:kw-map syntax-parse-pattern-directive-kw-map)
+    #:kw-map syntax-parse-parse-option-kw-map)]
 
-    [("syntax-case" "instantiate")
-     (format-uniform-body/helper 2 #:body-formatter (format-clause-2/indirect) #:require-body? #f)]
+  [("syntax-parser")
+   (format-uniform-body/helper
+    0
+    #:require-body? #f
+    #:body-formatter (format-clause-2/indirect #:kw-map syntax-parse-pattern-directive-kw-map)
+    #:kw-map syntax-parse-parse-option-kw-map)]
 
-    [("syntax/loc" "quasisyntax/loc") (format-uniform-body/helper 1)]
-    [("when" "unless") (format-uniform-body/helper 1)]
+  [("syntax-case" "instantiate")
+   (format-uniform-body/helper 2 #:body-formatter (format-clause-2/indirect) #:require-body? #f)]
 
-    [("mixin") (format-uniform-body/helper 2)]
-    [("for/fold" "for*/fold")
-     (format-uniform-body/helper 2 #:arg-formatter format-binding-pairs/indirect)]
-    [("for" "for*") (format-uniform-body/helper 1 #:arg-formatter format-binding-pairs/indirect)]
-    [("for/list" "for*/list")
-     (format-uniform-body/helper 1 #:arg-formatter format-binding-pairs/indirect)]
-    [("for/and" "for*/and" "for/or" "for*/or")
-     (format-uniform-body/helper 1 #:arg-formatter format-binding-pairs/indirect)]
-    [("for/first" "for*/first" "for/last" "for*/last")
-     (format-uniform-body/helper 1 #:arg-formatter format-binding-pairs/indirect)]
-    [("for/hash" "for*/hash")
-     (format-uniform-body/helper 1 #:arg-formatter format-binding-pairs/indirect)]
-    [("for/hasheq" "for*/hasheq")
-     (format-uniform-body/helper 1 #:arg-formatter format-binding-pairs/indirect)]
-    [("for/hasheqv" "for*/hasheqv")
-     (format-uniform-body/helper 1 #:arg-formatter format-binding-pairs/indirect)]
-    [("for/vector" "for*/vector")
-     (format-uniform-body/helper 1 #:arg-formatter format-binding-pairs/indirect)]
+  [("syntax/loc" "quasisyntax/loc") (format-uniform-body/helper 1)]
+  [("when" "unless") (format-uniform-body/helper 1)]
 
-    [("let") format-let]
+  [("mixin") (format-uniform-body/helper 2)]
+  [("for/fold" "for*/fold")
+   (format-uniform-body/helper 2 #:arg-formatter format-binding-pairs/indirect)]
+  [("for" "for*") (format-uniform-body/helper 1 #:arg-formatter format-binding-pairs/indirect)]
+  [("for/list" "for*/list")
+   (format-uniform-body/helper 1 #:arg-formatter format-binding-pairs/indirect)]
+  [("for/and" "for*/and" "for/or" "for*/or")
+   (format-uniform-body/helper 1 #:arg-formatter format-binding-pairs/indirect)]
+  [("for/first" "for*/first" "for/last" "for*/last")
+   (format-uniform-body/helper 1 #:arg-formatter format-binding-pairs/indirect)]
+  [("for/hash" "for*/hash")
+   (format-uniform-body/helper 1 #:arg-formatter format-binding-pairs/indirect)]
+  [("for/hasheq" "for*/hasheq")
+   (format-uniform-body/helper 1 #:arg-formatter format-binding-pairs/indirect)]
+  [("for/hasheqv" "for*/hasheqv")
+   (format-uniform-body/helper 1 #:arg-formatter format-binding-pairs/indirect)]
+  [("for/vector" "for*/vector")
+   (format-uniform-body/helper 1 #:arg-formatter format-binding-pairs/indirect)]
 
-    [("struct") format-struct]
-    [("define-struct") (format-uniform-body/helper 2 #:require-body? #f)]
+  [("let") format-let]
 
-    [else format-#%app]))
+  [("struct") format-struct]
+  [("define-struct") (format-uniform-body/helper 2 #:require-body? #f)]
+
+  [else format-#%app])
