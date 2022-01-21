@@ -413,7 +413,7 @@
     [("syntax-rules" "match" "match*" "case")
      (format-uniform-body/helper 1 #:body-formatter (format-clause-2/indirect) #:require-body? #f)]
 
-    [("define-syntax-parse-rule" "define-simple-macro")
+    [("define-syntax-parse-rule" "define-simple-macro" "pattern")
      (format-uniform-body/helper 1 #:kw-map syntax-parse-pattern-directive-kw-map)]
 
     [("syntax-parse" "define-syntax-parser")
