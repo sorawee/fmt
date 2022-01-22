@@ -30,13 +30,14 @@
          ['() #f]
          [(cons x xs)
           (cond
-            [(visible? x) (cond
-                            [(and extract-config (commentable-inline-comment x))
-                             (loop xs
-                                   extract-configs
-                                   (cons (strip-comment x) fits)
-                                   (cons (line-comment (commentable-inline-comment x)) unfits))]
-                            [else (loop xs extract-configs (cons x fits) unfits)])]
+            [(visible? x)
+             (cond
+               [(and extract-config (commentable-inline-comment x))
+                (loop xs
+                      extract-configs
+                      (cons (strip-comment x) fits)
+                      (cons (line-comment (commentable-inline-comment x)) unfits))]
+               [else (loop xs extract-configs (cons x fits) unfits)])]
             [else (loop xs (cons extract-config extract-configs) fits (cons x unfits))])])])))
 
 (define (pretty-comment comment d)
@@ -44,25 +45,26 @@
 
 (define (pretty-doc xs hook)
   (define loop
-    (memoize
-     (λ (d)
-       (match d
-         [(nl n) (full (v-concat (make-list n empty-doc)))]
-         [(atom comment content _) (pretty-comment comment (text content))]
-         [(line-comment comment) (full (text comment))]
-         [(node _ _ _ _ _ xs) (match (extract xs (list #f))
-                                [#f ((hook #f) d)]
-                                [(list (list (atom _ content 'symbol)) _ _) ((hook content) d)]
-                                [_ ((hook #f) d)])]
-         [(wrapper comment tok content) (pretty-comment comment (h-append (text tok) (loop content)))]
-         [(sexp-comment comment style tok xs)
-          (pretty-comment comment
-                          (match style
-                            ['newline (v-append (text tok) (v-concat (map loop xs)))]
-                            ['any
-                             (define :x (loop (first xs)))
-                             (alt (h-append (text tok) :x) (v-append (text tok) :x))]
-                            ['disappeared (loop (first xs))]))]))))
+    (memoize (λ (d)
+               (match d
+                 [(nl n) (full (v-concat (make-list n empty-doc)))]
+                 [(atom comment content _) (pretty-comment comment (text content))]
+                 [(line-comment comment) (full (text comment))]
+                 [(node _ _ _ _ _ xs)
+                  (match (extract xs (list #f))
+                    [#f ((hook #f) d)]
+                    [(list (list (atom _ content 'symbol)) _ _) ((hook content) d)]
+                    [_ ((hook #f) d)])]
+                 [(wrapper comment tok content)
+                  (pretty-comment comment (h-append (text tok) (loop content)))]
+                 [(sexp-comment comment style tok xs)
+                  (pretty-comment comment
+                                  (match style
+                                    ['newline (v-append (text tok) (v-concat (map loop xs)))]
+                                    ['any
+                                     (define :x (loop (first xs)))
+                                     (alt (h-append (text tok) :x) (v-append (text tok) :x))]
+                                    ['disappeared (loop (first xs))]))]))))
   (set-box! current-pretty loop)
   (begin0 (v-concat (map loop xs))
     (set-box! current-pretty #f)))
@@ -102,10 +104,11 @@
   (define (head d)
     (let ([pretty-proc (unbox current-pretty)])
       (cond
-        [(p? d) (syntax-parameterize ([pretty (make-rename-transformer #'pretty-proc)]
-                                      [doc (make-rename-transformer #'d)])
-                  (let* ([from (or from to)] ... [a b] ...)
-                    body ...))]
+        [(p? d)
+         (syntax-parameterize ([pretty (make-rename-transformer #'pretty-proc)]
+                               [doc (make-rename-transformer #'d)])
+           (let* ([from (or from to)] ... [a b] ...)
+             body ...))]
         [else (raise-argument-error 'head.name (symbol->string 'p?) d)]))))
 
 (define-syntax-parse-rule (pretty-node args ...)
@@ -125,7 +128,9 @@
        (match (extract -xs '(req-status ...))
          [(list (list pat ...) unfits tail)
           body ...]
-         [_ (match/extract -xs #:as unfits tail
-              . rst)]))]
-  [(_ xs #:as unfits tail [#:else body ...+]) #'(let ()
-                                                  body ...)])
+         [_
+          (match/extract -xs #:as unfits tail
+            . rst)]))]
+  [(_ xs #:as unfits tail [#:else body ...+])
+   #'(let ()
+       body ...)])
