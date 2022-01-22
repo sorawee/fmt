@@ -54,12 +54,14 @@
   (let loop ([xs doc] [pos pos] [acc (list (pretty -kw))])
     (cond
       [(zero? pos) (done xs (reverse acc))]
-      [else (match xs
-              ['() (done xs (reverse acc))]
-              [(cons x xs) (match x
-                             [(atom _ _ 'hash-colon-keyword) (done (cons x xs) (reverse acc))]
-                             [(? visible?) (loop xs (sub1 pos) (cons (format-kw-arg x) acc))]
-                             [_ (loop xs pos (cons (pretty x) acc))])])])))
+      [else
+       (match xs
+         ['() (done xs (reverse acc))]
+         [(cons x xs)
+          (match x
+            [(atom _ _ 'hash-colon-keyword) (done (cons x xs) (reverse acc))]
+            [(? visible?) (loop xs (sub1 pos) (cons (format-kw-arg x) acc))]
+            [_ (loop xs pos (cons (pretty x) acc))])])])))
 
 (define-pretty (format-vertical/helper #:body-formatter [format-body #f]
                                        #:kw-arg-formatter [format-kw-arg #f]
@@ -147,23 +149,25 @@
     [((current-app?) doc)
      (match/extract xs #:as unfits tail
        ;; mostly vertical
-       [([-head #f]) (alt (pretty-node #:unfits unfits
-                                       #:adjust #f
-                                       (try-indent #:n 0
-                                                   #:because-of (cons -head tail)
-                                                   ((format-vertical/helper) (cons -head tail))))
-                          ;; pretty cases
-                          ((format-if-like/helper #:adjust #f (λ (d) fail)) doc))]
+       [([-head #f])
+        (alt (pretty-node #:unfits unfits
+                          #:adjust #f
+                          (try-indent #:n 0
+                                      #:because-of (cons -head tail)
+                                      ((format-vertical/helper) (cons -head tail))))
+             ;; pretty cases
+             ((format-if-like/helper #:adjust #f (λ (d) fail)) doc))]
        ;; perhaps full of comments, or there's nothing at all
        [#:else (pretty-node #:adjust #f
                             (try-indent #:n 0 #:because-of xs ((format-vertical/helper) xs)))])]
-    [else (pretty-node #:adjust #f
-                       (try-indent #:n 0
-                                   #:because-of xs
-                                   ;; general case
-                                   (alt ((format-vertical/helper) xs)
-                                        ;; try to fit in one line
-                                        (flat (hs-concat (map pretty xs))))))]))
+    [else
+     (pretty-node #:adjust #f
+                  (try-indent #:n 0
+                              #:because-of xs
+                              ;; general case
+                              (alt ((format-vertical/helper) xs)
+                                   ;; try to fit in one line
+                                   (flat (hs-concat (map pretty xs))))))]))
 
 (define-pretty (format-uniform-body/helper n
                                            #:arg-formatter [format-arg #f]
@@ -192,12 +196,13 @@
          ['()
           #:when (not require-body?)
           first-line]
-         [_ (v-append first-line
-                      (h-append space
-                                ((format-vertical/helper #:body-formatter format-body #:kw-map kw-map)
-                                 tail)))])))]))
+         [_
+          (v-append first-line
+                    (h-append space
+                              ((format-vertical/helper #:body-formatter format-body #:kw-map kw-map)
+                               tail)))])))]))
 
-(define-pretty (format-clause-2/indirect #:kw-map [kw-map default-kw-map])
+(define-pretty (format-clause-2/indirect #:kw-map [kw-map default-kw-map] #:flat? [flat? #t])
   #:type values
   (match doc
     [(node _ (or "(" "[") (or ")" "]") #f #f xs)
@@ -206,11 +211,13 @@
      (alt (match/extract xs #:as unfits tail
             [([-head #t] [-something #f])
              (match tail
-               ['() (pretty-node #:adjust '("[" "]")
-                                 #:unfits unfits
-                                 (try-indent #:n 0
-                                             #:because-of (list -something)
-                                             (hs-append (flat (pretty -head)) (pretty -something))))]
+               ['()
+                (pretty-node #:adjust '("[" "]")
+                             #:unfits unfits
+                             (try-indent #:n 0
+                                         #:because-of (list -something)
+                                         (let ([line (hs-append (pretty -head) (pretty -something))])
+                                           (if flat? (flat line) line))))]
                [_ fail])]
             [#:else fail])
           ;; general case
@@ -224,12 +231,13 @@
   (match doc
     [(node _ _ _ #f #f xs)
      (pretty-node
-      (try-indent #:n 0
-                  #:because-of xs
-                  ;; try to fit in one line
-                  (alt ((format-horizontal/helper #:body-formatter (format-clause-2/indirect)) xs)
-                       ;; general case
-                       ((format-vertical/helper #:body-formatter (format-clause-2/indirect)) xs))))]
+      (try-indent
+       #:n 0
+       #:because-of xs
+       ;; try to fit in one line
+       (alt ((format-horizontal/helper #:body-formatter (format-clause-2/indirect #:flat? #f)) xs)
+            ;; general case
+            ((format-vertical/helper #:body-formatter (format-clause-2/indirect #:flat? #f)) xs))))]
     [_ (pretty doc)]))
 
 (define format-if (format-if-like/helper format-#%app))
@@ -260,10 +268,11 @@
             #:because-of tail
             (flat (match -head
                     [(? node?) fail]
-                    [_ (match tail
-                         ['() (hs-append (pretty -define) (format-head -head))]
-                         [(list -e) (hs-append (pretty -define) (format-head -head) (pretty -e))]
-                         [_ fail])]))))
+                    [_
+                     (match tail
+                       ['() (hs-append (pretty -define) (format-head -head))]
+                       [(list -e) (hs-append (pretty -define) (format-head -head) (pretty -e))]
+                       [_ fail])]))))
           ;; general case
           #;(define (a b)
               c
