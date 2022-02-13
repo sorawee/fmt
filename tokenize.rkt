@@ -37,6 +37,9 @@
                                     [else num-newlines])))]
 
            [(eq? type 'sexp-comment)
+            ;; we need to re-read because sexp-comment's text is always #;
+            ;; but when it appears before #lang, we want to read its content
+            ;; and treat it as a block comment.
             (define re-read (substring program-source (sub1 start-pos) (sub1 end-pos)))
             (cond
               [(equal? text re-read) (token srcloc text 'sexp-comment)]
@@ -47,14 +50,17 @@
            [(not (eq? type 'comment)) (token srcloc text type)]
            ;; non-empty regular line comment
            [(non-empty-string? text)
+            ;; we need to re-read due to #31
             (define re-read (substring program-source (sub1 start-pos) (sub1 end-pos)))
             (token srcloc re-read 'line-comment)]
            ;; empty regular line comment
            [(= end-pos (add1 start-pos)) (token srcloc ";" 'line-comment)]
            ;; block comment
-           [else (token srcloc
-                        (substring program-source (sub1 start-pos) (sub1 end-pos))
-                        'block-comment)]))
+           [else
+            ;; we need to re-read because block comment's content is always empty
+            (token srcloc
+                   (substring program-source (sub1 start-pos) (sub1 end-pos))
+                   'block-comment)]))
        (cons current (loop new-mode))])))
 
 (module+ main
