@@ -46,7 +46,9 @@
            ;; non-comment
            [(not (eq? type 'comment)) (token srcloc text type)]
            ;; non-empty regular line comment
-           [(non-empty-string? text) (token srcloc (string-append ";" text) 'line-comment)]
+           [(non-empty-string? text)
+            (define re-read (substring program-source (sub1 start-pos) (sub1 end-pos)))
+            (token srcloc re-read 'line-comment)]
            ;; empty regular line comment
            [(= end-pos (add1 start-pos)) (token srcloc ";" 'line-comment)]
            ;; block comment
