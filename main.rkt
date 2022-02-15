@@ -29,11 +29,12 @@
                         #:width [width (current-width)]
                         #:max-blank-lines [max-blank-lines (current-max-blank-lines)]
                         #:indent [indent (current-indent)])
+  (define doc (realign (read-all program-source source max-blank-lines)))
   (define s
     (pretty-format
      #:width width
      #:indent indent
-     (pretty-doc (realign (read-all program-source source max-blank-lines))
+     (pretty-doc doc
                  (compose-formatter-map formatter-map standard-formatter-map))))
 
   (string-join (for/list ([line (in-list (string-split s "\n"))])

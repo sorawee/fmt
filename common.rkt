@@ -5,6 +5,7 @@
          (struct-out visible)
          (struct-out node)
          (struct-out atom)
+         (struct-out full-atom)
          (struct-out nl)
          (struct-out line-comment)
          (struct-out sexp-comment)
@@ -17,6 +18,7 @@
 (struct visible commentable () #:transparent)
 (struct node visible (opener closer prefix breakable-prefix content) #:transparent)
 (struct atom visible (content type) #:transparent)
+(struct full-atom atom () #:transparent)
 ;; invariant: n >= 1
 (struct nl thing (n) #:transparent)
 (struct line-comment thing (content) #:transparent)

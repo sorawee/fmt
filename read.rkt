@@ -6,6 +6,7 @@
 
 (require racket/match
          racket/list
+         racket/string
          syntax/readerr
          "common.rkt"
          "tokenize.rkt")
@@ -112,6 +113,10 @@
     [(cons (token _ comment 'line-comment) xs) (values (line-comment comment) xs)]
 
     [(cons (token _ _ 'sexp-comment) xs) (values (bare-sexp-comment) xs)]
+
+    [(cons (token _ content 'string) xs)
+     #:when (string-prefix? content "#<<")
+     (process-tail (full-atom #f content 'string) xs)]
 
     [(cons (token _ content kind) xs) (process-tail (atom #f content kind) xs)]))
 

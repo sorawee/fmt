@@ -48,6 +48,7 @@
     (memoize (λ (d)
                (match d
                  [(nl n) (full (v-concat (make-list n empty-doc)))]
+                 [(full-atom _ content _) (full (text content))]
                  [(atom comment content _) (pretty-comment comment (text content))]
                  [(line-comment comment) (full (text comment))]
                  [(node _ _ _ _ _ xs)
@@ -115,7 +116,7 @@
   (pretty-node* doc args ...))
 
 (define (require-newline? d)
-  (or (and (commentable? d) (commentable-inline-comment d)) (line-comment? d) (nl? d)))
+  (or (and (commentable? d) (commentable-inline-comment d)) (line-comment? d) (nl? d) (full-atom? d)))
 
 (define (try-indent d #:n [n 1] #:because-of xs)
   (match xs
