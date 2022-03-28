@@ -13,6 +13,7 @@
 
 (require racket/string
          racket/contract
+         racket/format
          pprint-compact
          "common.rkt"
          "core.rkt"
@@ -50,7 +51,7 @@
 (define (pretty-format* x
                         #:width [width (current-width)]
                         #:formatter-map [formatter-map empty-formatter-map])
-  (program-format (print x) #:formatter-map formatter-map #:width width))
+  (program-format (~s x) #:formatter-map formatter-map #:width width))
 
 (define (pretty-print* x
                        #:width [width (current-width)]
