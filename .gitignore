@@ -1,6 +1,8 @@
+*.elc
 *~
 \#*
 .\#*
 .DS_Store
+.cask/
 compiled/
 /doc/
