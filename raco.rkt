@@ -102,5 +102,5 @@
      (case (current-in-place?)
        [(#f) (displayln out)]
        [(#t) (with-output-to-file filename
-               #:exists 'truncate/replace
+               #:exists 'must-truncate
                (λ () (displayln out)))]))])
