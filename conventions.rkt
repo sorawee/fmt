@@ -399,6 +399,9 @@
   [("let-syntax" "letrec-syntax" "let-syntaxes" "letrec-syntaxes") format-parameterize]
   [("with-syntax" "with-syntax*" "with-handlers" "with-handlers*" "shared") format-parameterize]
   [("parameterize" "parameterize*" "syntax-parameterize") format-parameterize]
+  [("match-let" "match-let*" "match-let-values" "match-let*-values") format-parameterize]
+  [("match-letrec" "match-letrec-values") format-parameterize]
+
   [("letrec-syntaxes+values")
    (format-uniform-body/helper 2 #:arg-formatter format-binding-pairs/indirect)]
 
@@ -415,7 +418,7 @@
   [("class") (format-uniform-body/helper 1 #:require-body? #f)]
   [("module" "module*") (format-uniform-body/helper 2)]
 
-  [("cond" "case-lambda")
+  [("cond" "case-lambda" "match-lambda" "match-lambda*" "match-lambda**")
    (format-uniform-body/helper 0 #:body-formatter (format-clause-2/indirect) #:require-body? #f)]
 
   [("syntax-rules" "match" "match*" "case")
