@@ -99,3 +99,22 @@ g
 
 (struct a (a b) ; hello
       )
+
+(for/list/concurrent ([i (in-range 10)])
+  i)
+
+(for/list/concurrent #:group (make-thread-group)
+                     ([i (in-range 10)])
+  i)
+
+(for/vector ([i (in-range 10)]) i)
+
+(for/vector #:length 20
+            ([i (in-range 10)]) i)
+
+(for/vector #:length 20 #:fill 5
+            ([i (in-range 10)]) i)
+
+(for/vector #:length 20 #:fill (let ()
+                                 5)
+            ([i (in-range 10)]) i)

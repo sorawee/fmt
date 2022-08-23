@@ -376,6 +376,58 @@
                                    ((format-horizontal/helper) (list* -struct -name -fields tail)))))]
     [#:else (format-#%app doc)]))
 
+;; some for forms support keyword arguments before the clauses
+#;(for/vector #:length 10
+              ([i (in-range 10)])
+    i)
+#;(for/vector #:length 10 #:fill 20
+              ([i (in-range 10)])
+    i)
+#;(for/list/concurrent #:group (make-thread-group)
+                       ([i (in-range 10)])
+    i)
+(define-pretty (format-for-like n)
+  #:type node?
+  (match/extract (node-content doc) #:as unfits tail
+    [([-for-name #t] [(and (atom _ _ 'hash-colon-keyword) -kwd) #t])
+     (define-values (kwds groups body)
+       (let loop ([kwds null]
+                  [groups null]
+                  [tail (cons -kwd tail)])
+         (match tail
+           [(list (and (atom _ _ 'hash-colon-keyword) -kwd) -kwd-arg -tail* ...)
+            #:when (null? groups)
+            (loop (cons (cons -kwd -kwd-arg) kwds) groups -tail*)]
+           [(list (? node? -group) -tail* ...)
+            #:when (< (length groups) n)
+            (loop kwds (cons -group groups) -tail*)]
+           [_
+            (values
+             (apply hs-append
+                    (for/list ([p (in-list (reverse kwds))])
+                      (hs-append
+                       (pretty (car p))
+                       (pretty (cdr p)))))
+             (for/list ([g (in-list (reverse groups))])
+               (format-binding-pairs/indirect g))
+             (h-append space ((format-vertical/helper) tail)))])))
+
+     (define first-line
+       (hs-append
+        (pretty -for-name)
+        (v-append
+         kwds
+         (alt
+          (flat (hs-concat groups))
+          (v-concat groups)))))
+     (pretty-node
+      #:unfits unfits
+      (try-indent
+       #:because-of (list* -for-name -kwd tail)
+       (v-append first-line body)))]
+    [#:else
+     ((format-uniform-body/helper n #:arg-formatter format-binding-pairs/indirect) doc)]))
+
 (define/record standard-formatter-map #:record all-kws
   [("if") format-if]
   [("provide" "require" "import" "export" "link" "rename") format-require]
@@ -452,22 +504,27 @@
 
   [("mixin") (format-uniform-body/helper 2)]
   [("for/fold" "for*/fold")
-   (format-uniform-body/helper 2 #:arg-formatter format-binding-pairs/indirect)]
-  [("for" "for*") (format-uniform-body/helper 1 #:arg-formatter format-binding-pairs/indirect)]
+   (format-for-like 2)]
+  [("for" "for*")
+   (format-for-like 1)]
   [("for/list" "for*/list")
-   (format-uniform-body/helper 1 #:arg-formatter format-binding-pairs/indirect)]
+   (format-for-like 1)]
   [("for/and" "for*/and" "for/or" "for*/or")
-   (format-uniform-body/helper 1 #:arg-formatter format-binding-pairs/indirect)]
+   (format-for-like 1)]
   [("for/first" "for*/first" "for/last" "for*/last")
-   (format-uniform-body/helper 1 #:arg-formatter format-binding-pairs/indirect)]
+   (format-for-like 1)]
   [("for/hash" "for*/hash")
-   (format-uniform-body/helper 1 #:arg-formatter format-binding-pairs/indirect)]
+   (format-for-like 1)]
   [("for/hasheq" "for*/hasheq")
-   (format-uniform-body/helper 1 #:arg-formatter format-binding-pairs/indirect)]
+   (format-for-like 1)]
   [("for/hasheqv" "for*/hasheqv")
-   (format-uniform-body/helper 1 #:arg-formatter format-binding-pairs/indirect)]
+   (format-for-like 1)]
   [("for/vector" "for*/vector")
-   (format-uniform-body/helper 1 #:arg-formatter format-binding-pairs/indirect)]
+   (format-for-like 1)]
+  [("for/async" "for*/async")
+   (format-for-like 1)]
+  [("for/list/concurrent" "for*/list/concurrent")
+   (format-for-like 1)]
 
   [("let") format-let]
 
