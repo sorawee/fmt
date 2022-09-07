@@ -119,7 +119,9 @@
   (reinsert-reader formatted ctx))
 
 (define (contains-reader? lines)
-  (string-contains? (list-ref lines 2) "#reader"))
+  (and
+   (>= (length lines) 3)
+   (string-contains? (list-ref lines 2) "#reader")))
 
 (define (do-format s)
   (define LINES (string-split s "\n"))
