@@ -5,6 +5,7 @@
 
 (require racket/cmdline
          racket/file
+         racket/list
          racket/match
          racket/string
          (rename-in "main.rkt"
@@ -88,11 +89,43 @@
     [("-standard") empty-formatter-map]
     [else (dynamic-require (current-config) 'the-formatter-map (λ () empty-formatter-map))]))
 
-(define (do-format s)
+
+(define-struct strip-ctx (lines reader))
+
+(define (strip-reader lines)
+  ;; find the index of the first string starting with "#reader" in the LINES
+  (define READER-IDX 2)
+  (define READER (list-ref lines READER-IDX))
+
+  (define LINES* (list-set lines READER-IDX ""))
+
+  (make-strip-ctx (string-join LINES* "\n") READER))
+
+(define (reinsert-reader s ctx)
+  (define LINES (string-split s "\n"))
+  (define LINES* (list-update LINES 2
+                              (lambda (l) (string-append l (strip-ctx-reader ctx)))))
+  (string-join LINES* "\n"))
+
+(define (do-format-normal s)
   (program-format s
                   #:formatter-map the-map
                   #:width (current-width)
                   #:max-blank-lines (current-max-blank-lines)))
+
+(define (do-format-strip-reader lines)
+  (define ctx (strip-reader lines))
+  (define formatted (do-format-normal (strip-ctx-lines ctx)))
+  (reinsert-reader formatted ctx))
+
+(define (contains-reader? lines)
+  (string-contains? (list-ref lines 2) "#reader"))
+
+(define (do-format s)
+  (define LINES (string-split s "\n"))
+  (if (contains-reader? LINES)
+      (do-format-strip-reader LINES)
+      (do-format-normal s)))
 
 (match filenames
   ['() (displayln (do-format (string-join (for/list ([line (in-lines)]) line) "\n")))]
