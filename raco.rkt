@@ -116,7 +116,8 @@
   ['() (displayln (do-format (string-join (for/list ([line (in-lines)]) line) "\n")))]
   [_
    (for ([filename (in-list filenames)])
-     (define out (do-format (file->string filename)))
+     ;; use file->lines to handle CRLF on Windows
+     (define out (do-format (string-join (file->lines filename) "\n")))
      (case (current-in-place?)
        [(#f) (displayln out)]
        [(#t) (with-output-to-file filename
