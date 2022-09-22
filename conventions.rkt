@@ -242,13 +242,9 @@
 
 (define format-if (format-if-like/helper format-#%app))
 
-(define (low-width m)
-  (<= (measure-last-width m) (current-inline-limit)))
-
 ;; try to fit in one line if the body has exactly one form,
 ;; else will be multiple lines
-;; for one line, and when it's a function, make sure the body is not too long
-;; (according to low-width)
+;; for one line, and when it's a function, always format vertically.
 #;(define x 1)
 #;(define (y)
     a
@@ -283,10 +279,9 @@
 
 ;; try to fit in one line if the body has exactly one form,
 ;; else will be multiple lines
-#;(define x 1)
-#;(define (y)
-    a
-    b)
+#;(define-values (xxxxxxxxxxx yyyyyyyyyyy) 1)
+#;(define-values (xxxxxxxxxxx yyyyyyyyyyy)
+    11111111111111111111111111111111111111111111111111111111111111111111111)
 (define-pretty (format-define-like #:head-formatter [format-head #f])
   #:type node?
   #:default [format-head pretty]
@@ -391,9 +386,7 @@
   (match/extract (node-content doc) #:as unfits tail
     [([-for-name #t] [(and (atom _ _ 'hash-colon-keyword) -kwd) #t])
      (define-values (kwds groups body)
-       (let loop ([kwds null]
-                  [groups null]
-                  [tail (cons -kwd tail)])
+       (let loop ([kwds null] [groups null] [tail (cons -kwd tail)])
          (match tail
            [(list (and (atom _ _ 'hash-colon-keyword) -kwd) -kwd-arg -tail* ...)
             #:when (null? groups)
@@ -402,31 +395,19 @@
             #:when (< (length groups) n)
             (loop kwds (cons -group groups) -tail*)]
            [_
-            (values
-             (apply hs-append
-                    (for/list ([p (in-list (reverse kwds))])
-                      (hs-append
-                       (pretty (car p))
-                       (pretty (cdr p)))))
-             (for/list ([g (in-list (reverse groups))])
-               (format-binding-pairs/indirect g))
-             (h-append space ((format-vertical/helper) tail)))])))
+            (values (apply hs-append
+                           (for/list ([p (in-list (reverse kwds))])
+                             (hs-append (pretty (car p)) (pretty (cdr p)))))
+                    (for/list ([g (in-list (reverse groups))])
+                      (format-binding-pairs/indirect g))
+                    (h-append space ((format-vertical/helper) tail)))])))
 
      (define first-line
-       (hs-append
-        (pretty -for-name)
-        (v-append
-         kwds
-         (alt
-          (flat (hs-concat groups))
-          (v-concat groups)))))
-     (pretty-node
-      #:unfits unfits
-      (try-indent
-       #:because-of (list* -for-name -kwd tail)
-       (v-append first-line body)))]
-    [#:else
-     ((format-uniform-body/helper n #:arg-formatter format-binding-pairs/indirect) doc)]))
+       (hs-append (pretty -for-name)
+                  (v-append kwds (alt (flat (hs-concat groups)) (v-concat groups)))))
+     (pretty-node #:unfits unfits
+                  (try-indent #:because-of (list* -for-name -kwd tail) (v-append first-line body)))]
+    [#:else ((format-uniform-body/helper n #:arg-formatter format-binding-pairs/indirect) doc)]))
 
 (define/record standard-formatter-map #:record all-kws
   [("if") format-if]
@@ -503,28 +484,17 @@
   [("when" "unless") (format-uniform-body/helper 1)]
 
   [("mixin") (format-uniform-body/helper 2)]
-  [("for/fold" "for*/fold")
-   (format-for-like 2)]
-  [("for" "for*")
-   (format-for-like 1)]
-  [("for/list" "for*/list")
-   (format-for-like 1)]
-  [("for/and" "for*/and" "for/or" "for*/or")
-   (format-for-like 1)]
-  [("for/first" "for*/first" "for/last" "for*/last")
-   (format-for-like 1)]
-  [("for/hash" "for*/hash")
-   (format-for-like 1)]
-  [("for/hasheq" "for*/hasheq")
-   (format-for-like 1)]
-  [("for/hasheqv" "for*/hasheqv")
-   (format-for-like 1)]
-  [("for/vector" "for*/vector")
-   (format-for-like 1)]
-  [("for/async" "for*/async")
-   (format-for-like 1)]
-  [("for/list/concurrent" "for*/list/concurrent")
-   (format-for-like 1)]
+  [("for/fold" "for*/fold") (format-for-like 2)]
+  [("for" "for*") (format-for-like 1)]
+  [("for/list" "for*/list") (format-for-like 1)]
+  [("for/and" "for*/and" "for/or" "for*/or") (format-for-like 1)]
+  [("for/first" "for*/first" "for/last" "for*/last") (format-for-like 1)]
+  [("for/hash" "for*/hash") (format-for-like 1)]
+  [("for/hasheq" "for*/hasheq") (format-for-like 1)]
+  [("for/hasheqv" "for*/hasheqv") (format-for-like 1)]
+  [("for/vector" "for*/vector") (format-for-like 1)]
+  [("for/async" "for*/async") (format-for-like 1)]
+  [("for/list/concurrent" "for*/list/concurrent") (format-for-like 1)]
 
   [("let") format-let]
 
