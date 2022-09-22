@@ -1,0 +1,5 @@
+#lang racket
+
+(define/match (replace-inst lst1 lst2) [('() lst) (cons lst1 lst2)])
+
+(replace-inst '() '(1 2))

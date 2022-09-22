@@ -454,7 +454,7 @@
   [("cond" "case-lambda" "match-lambda" "match-lambda*" "match-lambda**")
    (format-uniform-body/helper 0 #:body-formatter (format-clause-2/indirect) #:require-body? #f)]
 
-  [("syntax-rules" "match" "match*" "case")
+  [("syntax-rules" "match" "match*" "case" "define/match")
    (format-uniform-body/helper 1 #:body-formatter (format-clause-2/indirect) #:require-body? #f)]
 
   [("define-syntax-parse-rule" "define-simple-macro")
