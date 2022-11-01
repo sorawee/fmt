@@ -14,5 +14,5 @@
 (define raco-commands
   '(("fmt"
      fmt/raco
-     "format a Racket code"
+     "format a Racket program"
      42)))

@@ -1,6 +1,6 @@
 #lang racket/base
 
-(provide standard-formatter-map
+(provide standard-form-map
 
          format-vertical/helper
          format-horizontal/helper
@@ -86,7 +86,7 @@
        (v-append-if (alt (hs-append (pretty dot) (format-body x))
                          (v-append (pretty dot) (format-body x)))
                     xs)]
-      [(list x (and ellipsis (atom _ (? (current-ellipsis?)) 'symbol)) xs ...)
+      [(list x (and ellipsis (atom _ (? (:ellipsis?)) 'symbol)) xs ...)
        (v-append-if (alt (hs-append (format-body x) (pretty ellipsis))
                          (v-append (format-body x) (pretty ellipsis)))
                     xs)]
@@ -146,7 +146,7 @@
   #:let [xs (filter-not nl? (node-content doc))]
   #:let [doc (struct-copy node doc [content xs])]
   (cond
-    [((current-app?) doc)
+    [((:app?) doc)
      (match/extract xs #:as unfits tail
        ;; mostly vertical
        [([-head #f])
@@ -409,7 +409,7 @@
                   (try-indent #:because-of (list* -for-name -kwd tail) (v-append first-line body)))]
     [#:else ((format-uniform-body/helper n #:arg-formatter format-binding-pairs/indirect) doc)]))
 
-(define/record standard-formatter-map #:record all-kws
+(define/record standard-form-map #:record all-kws
   [("if") format-if]
   [("provide" "require" "import" "export" "link" "rename") format-require]
   [("public" "private" "override" "augment" "inherit" "field" "init") format-require]
