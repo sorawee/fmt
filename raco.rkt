@@ -117,9 +117,11 @@
   [_
    (for ([filename (in-list filenames)])
      ;; use file->lines to handle CRLF on Windows
-     (define out (do-format (string-join (file->lines filename) "\n")))
+     (define original (string-join (file->lines filename) "\n"))
+     (define out (do-format original))
      (case (current-in-place?)
        [(#f) (displayln out)]
-       [(#t) (with-output-to-file filename
-               #:exists 'must-truncate
-               (λ () (displayln out)))]))])
+       [(#t) (or (equal? original out)
+                 (with-output-to-file filename
+                   #:exists 'must-truncate
+                   (λ () (displayln out))))]))])
