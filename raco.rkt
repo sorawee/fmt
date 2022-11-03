@@ -121,7 +121,7 @@
      (define out (do-format original))
      (case (current-in-place?)
        [(#f) (displayln out)]
-       [(#t) (or (equal? original out)
-                 (with-output-to-file filename
-                   #:exists 'must-truncate
-                   (λ () (displayln out))))]))])
+       [(#t) (unless (equal? original out)
+               (with-output-to-file filename
+                 #:exists 'must-truncate
+                 (λ () (displayln out))))]))])
