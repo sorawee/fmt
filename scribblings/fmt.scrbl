@@ -149,6 +149,9 @@ which means the @tech{formatter map} wants to let other fallback
 @section{Related work}
 
 @itemlist[
+  @item{@link["https://github.com/6cdh/racket-fixw"]{fixw} (by @link["https://github.com/6cdh"]{6cdh})
+        is a Racket formatter that only fixes spaces (in the same style as gofmt).
+        It will indent and add/remove spaces to normalize them, but does not add/remove newlines.}
   @item{@link["https://docs.racket-lang.org/drracket/"]{DrRacket} (by the Racket team) is a Racket editor. It has an indenter which can re-indent code, but cannot in general re-format code. Users can add custom keywords to the four predefined keyword categories, but cannot define a new category (without a plug-in).}
   @item{@link["https://github.com/mxork/raco-format/"]{@tt{raco-format}} (by @link["https://github.com/mxork"]{Dan Anderson}) is a command-line tool that invokes DrRacket's indenter.}
   @item{@link["https://racket-mode.com/"]{Racket Mode} (by @link["https://greghendershott.com/"]{Greg Hendershott}) is a mode in Emacs for editing Racket code.
