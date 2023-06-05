@@ -427,6 +427,8 @@
   [("λ" "lambda") (format-define-like)]
   [("match-define" "match-define-values") (format-define-like)]
 
+  [("define/contract") (format-define-like)]
+
   [("let*") format-let*]
   [("let-values" "let*-values" "letrec" "letrec-values") format-parameterize]
   [("let-syntax" "letrec-syntax" "let-syntaxes" "letrec-syntaxes") format-parameterize]
