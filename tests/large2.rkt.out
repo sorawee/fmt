@@ -384,12 +384,12 @@
                                     (inner (void) after-delete x y))
 
                                   (apply super-make-object args))]
-          [get-program-editor-mixin (λ ()
-                                      (drracket:tools:only-in-phase
-                                       'drracket:unit:get-program-editor-mixin
-                                       'phase2
-                                       'init-complete)
-                                      program-editor-mixin)]
+          [get-program-editor-mixin
+           (λ ()
+             (drracket:tools:only-in-phase 'drracket:unit:get-program-editor-mixin
+                                           'phase2
+                                           'init-complete)
+             program-editor-mixin)]
           [add-to-program-editor-mixin
            (λ (mixin)
              (drracket:tools:only-in-phase 'drracket:unit:add-to-program-editor-mixin 'phase1)
@@ -1425,8 +1425,8 @@
 
      (define/private (new-logger-text)
        (set! logger-gui-text
-             (new (text:hide-caret/selection-mixin
-                   (editor:standard-style-list-mixin text:line-spacing%))))
+             (new (text:hide-caret/selection-mixin (editor:standard-style-list-mixin
+                                                    text:line-spacing%))))
        (send logger-gui-text lock #t))
 
      (define/public (update-logger-window command)
@@ -1605,8 +1605,8 @@
      ;; start-transcript : -> void
      ;; turns on the transcript and shows the transcript gui
      (define/private (start-transcript)
-       (let ([transcript-directory
-              (mred:get-directory (string-constant please-choose-a-log-directory) this)])
+       (let ([transcript-directory (mred:get-directory (string-constant please-choose-a-log-directory)
+                                                       this)])
          (when (and transcript-directory (ensure-empty transcript-directory))
            (send transcript-menu-item set-label (string-constant stop-logging))
            (set! transcript transcript-directory)
@@ -1642,13 +1642,13 @@
        (let ([dir-list (directory-list transcript-directory)])
          (or
           (null? dir-list)
-          (let ([query (message-box (string-constant drscheme)
-                                    (gui-utils:format-literal-label
-                                     (string-constant erase-log-directory-contents)
-                                     transcript-directory)
-                                    this
-                                    '(yes-no)
-                                    #:dialog-mixin frame:focus-table-mixin)])
+          (let ([query (message-box
+                        (string-constant drscheme)
+                        (gui-utils:format-literal-label (string-constant erase-log-directory-contents)
+                                                        transcript-directory)
+                        this
+                        '(yes-no)
+                        #:dialog-mixin frame:focus-table-mixin)])
             (cond
               [(equal? query 'no) #f]
               [(equal? query 'yes)
@@ -1666,20 +1666,20 @@
                  #t)])))))
 
      (define/override (make-root-area-container cls parent)
-       (let* ([_module-browser-parent-panel (super make-root-area-container
-                                                   (make-two-way-prefs-dragable-panel%
-                                                    panel:horizontal-dragable%
-                                                    'drracket:module-browser-size-percentage)
-                                                   parent)]
+       (let* ([_module-browser-parent-panel
+               (super make-root-area-container
+                      (make-two-way-prefs-dragable-panel% panel:horizontal-dragable%
+                                                          'drracket:module-browser-size-percentage)
+                      parent)]
               [_module-browser-panel (new-vertical-panel% (parent _module-browser-parent-panel)
                                                           (alignment '(left center))
                                                           (stretchable-width #f))]
               [planet-status-outer-panel (new vertical-pane% [parent _module-browser-parent-panel])]
               [execute-warning-outer-panel (new vertical-pane% [parent planet-status-outer-panel])]
-              [logger-outer-panel (new (make-two-way-prefs-dragable-panel%
-                                        panel:vertical-dragable%
-                                        'drracket:logging-size-percentage)
-                                       [parent execute-warning-outer-panel])]
+              [logger-outer-panel
+               (new (make-two-way-prefs-dragable-panel% panel:vertical-dragable%
+                                                        'drracket:logging-size-percentage)
+                    [parent execute-warning-outer-panel])]
               [trans-outer-panel (new vertical-pane% [parent logger-outer-panel])]
               [root (make-object cls trans-outer-panel)])
          (set! module-browser-parent-panel _module-browser-parent-panel)
@@ -2075,14 +2075,15 @@
        (hash-ref! tab-label-cache
                   fn
                   (lambda ()
-                    (path->string
-                     (or (shrink-path-wrt
-                          nfn
-                          (filter values
-                                  (for/list ([other-tab (in-list tabs)])
-                                    (define fn (send (send other-tab get-defs) get-filename))
-                                    (and fn (simple-form-path fn)))))
-                         (let-values ([(base name dir?) (split-path nfn)]) name))))))
+                    (path->string (or (shrink-path-wrt nfn
+                                                       (filter values
+                                                               (for/list ([other-tab (in-list tabs)])
+                                                                 (define fn
+                                                                   (send (send other-tab get-defs)
+                                                                         get-filename))
+                                                                 (and fn (simple-form-path fn)))))
+                                      (let-values ([(base name dir?) (split-path nfn)])
+                                        name))))))
 
      (define/private (add-modified-flag text string)
        (if (send text is-modified?)
@@ -2916,7 +2917,9 @@
              (if (ormap (λ (x) (send x has-focus?)) interactions-canvases) 'ints 'defs)))
 
      (define/private (get-tab-visible-regions txt)
-       (map (λ (canvas) (let-values ([(x y w h _) (get-visible-region canvas)]) (list x y w h)))
+       (map (λ (canvas)
+              (let-values ([(x y w h _) (get-visible-region canvas)])
+                (list x y w h)))
             (send txt get-canvases)))
 
      (inherit set-text-to-search
@@ -3130,28 +3133,28 @@
          (define (overview-shown?)
            (send (send (get-current-tab) get-defs) get-inline-overview-enabled?))
          (define overview-menu-item
-           (new
-            menu:can-restore-menu-item%
-            (shortcut #\u)
-            (label
-             (if (overview-shown?) (string-constant hide-overview) (string-constant show-overview)))
-            (parent (get-show-menu))
-            [demand-callback
-             (λ (mi)
-               (send mi
-                     set-label
-                     (if (overview-shown?)
-                         (string-constant hide-overview)
-                         (string-constant show-overview))))]
-            (callback
-             (λ (menu evt)
-               (cond
-                 [(overview-shown?)
-                  (preferences:set 'drracket:inline-overview-shown? #f)
-                  (send (send (get-current-tab) get-defs) set-inline-overview-enabled? #f)]
-                 [else
-                  (preferences:set 'drracket:inline-overview-shown? #t)
-                  (send (send (get-current-tab) get-defs) set-inline-overview-enabled? #t)])))))
+           (new menu:can-restore-menu-item%
+                (shortcut #\u)
+                (label (if (overview-shown?)
+                           (string-constant hide-overview)
+                           (string-constant show-overview)))
+                (parent (get-show-menu))
+                [demand-callback
+                 (λ (mi)
+                   (send mi
+                         set-label
+                         (if (overview-shown?)
+                             (string-constant hide-overview)
+                             (string-constant show-overview))))]
+                (callback
+                 (λ (menu evt)
+                   (cond
+                     [(overview-shown?)
+                      (preferences:set 'drracket:inline-overview-shown? #f)
+                      (send (send (get-current-tab) get-defs) set-inline-overview-enabled? #f)]
+                     [else
+                      (preferences:set 'drracket:inline-overview-shown? #t)
+                      (send (send (get-current-tab) get-defs) set-inline-overview-enabled? #t)])))))
          (set-show-menu-sort-key overview-menu-item 301))
 
        (set! module-browser-menu-item
@@ -3364,9 +3367,9 @@
        (send module-browser-panel begin-container-sequence)
        (unless module-browser-ec
          (set! module-browser-pb
-               (drracket:module-overview:make-module-overview-pasteboard
-                #t
-                (λ (x) (mouse-currently-over x))))
+               (drracket:module-overview:make-module-overview-pasteboard #t
+                                                                         (λ (x)
+                                                                           (mouse-currently-over x))))
          (set! module-browser-ec (make-object editor-canvas% module-browser-panel module-browser-pb))
 
          (let* ([show-callback (λ (cb key)
@@ -3394,11 +3397,11 @@
                                    (string-constant module-browser-name-long)
                                    (string-constant module-browser-name-very-long)))
                     (selection (preferences:get 'drracket:module-browser:name-length))
-                    (callback
-                     (λ (x y)
-                       (let ([selection (send module-browser-name-length-choice get-selection)])
-                         (preferences:set 'drracket:module-browser:name-length selection)
-                         (update-module-browser-name-length selection))))))
+                    (callback (λ (x y)
+                                (let ([selection (send module-browser-name-length-choice
+                                                       get-selection)])
+                                  (preferences:set 'drracket:module-browser:name-length selection)
+                                  (update-module-browser-name-length selection))))))
          (update-module-browser-name-length (preferences:get 'drracket:module-browser:name-length))
 
          (set! module-browser-button
@@ -3452,9 +3455,9 @@
             module-browser-pb
             (drracket:language:make-text/pos definitions-text 0 (send definitions-text last-position))
             (λ (str)
-              (update-status-line
-               'plt:module-browser
-               (gui-utils:trim-string (format module-browser-progress-constant str) 200)))
+              (update-status-line 'plt:module-browser
+                                  (gui-utils:trim-string (format module-browser-progress-constant str)
+                                                         200)))
             (λ (user-thread user-custodian) (send mod-tab set-breakables user-thread user-custodian)))
            (send mod-tab set-breakables old-break-thread old-custodian)
            (send mod-tab enable-evaluation)
@@ -3520,8 +3523,9 @@
                (get-module-path-from-user
                 #:init (or editing-module-path (preferences:get 'drracket:open-module-path-last-used))
                 #:pref 'drracket:open-module-path-last-used
-                #:current-directory
-                (and editing-path (let-values ([(base name dir?) (split-path editing-path)]) base))))
+                #:current-directory (and editing-path
+                                         (let-values ([(base name dir?) (split-path editing-path)])
+                                           base))))
              (when pth
                (handler:edit-file pth)))])
          (super file-menu:between-open-and-revert file-menu)
@@ -3532,8 +3536,8 @@
          (set! close-tab-menu-item
                (new (get-menu-item%)
                     (label (string-constant close-tab))
-                    (demand-callback
-                     (λ (item) (send item enable (1 . < . (send tabs-panel get-number)))))
+                    (demand-callback (λ (item)
+                                       (send item enable (1 . < . (send tabs-panel get-number)))))
                     (parent file-menu)
                     (callback (λ (x y) (close-current-tab))))))
        (super file-menu:between-close-and-quit file-menu))
@@ -3868,10 +3872,10 @@
      (define/public (get-special-menu) insert-menu)
 
      (define/public (choose-language-callback)
-       (let ([new-settings (drracket:language-configuration:language-dialog
-                            #f
-                            (send definitions-text get-next-settings)
-                            this)])
+       (let ([new-settings (drracket:language-configuration:language-dialog #f
+                                                                            (send definitions-text
+                                                                                  get-next-settings)
+                                                                            this)])
          (when new-settings
            (send definitions-text set-next-settings new-settings))))
 
@@ -3919,32 +3923,32 @@
                             [parent language-menu]
                             [callback
                              (λ (item evt)
-                               (update-settings
-                                ((teachpack-callbacks-remove tp-callbacks) settings name)))]))
+                               (update-settings ((teachpack-callbacks-remove tp-callbacks) settings
+                                                                                           name)))]))
                      tp-names))))]
            [else
-            (set!
-             teachpack-items
-             (list
-              (new menu:can-restore-menu-item%
-                   [label (string-constant add-teachpack-menu-item-label)]
-                   [parent language-menu]
-                   [callback
-                    (λ (_1 _2)
-                      (message-box
-                       (string-constant drscheme)
-                       (gui-utils:format-literal-label
-                        (string-constant teachpacks-only-in-languages)
-                        (apply string-append
-                               (reverse
-                                (filter
-                                 values
-                                 (map (λ (l)
-                                        (and (send l capability-value 'drscheme:teachpack-menu-items)
-                                             (format "\n  ~a" (send l get-language-name))))
-                                      (drracket:language-configuration:get-languages))))))
-                       this
-                       #:dialog-mixin frame:focus-table-mixin))])))])))
+            (set! teachpack-items
+                  (list (new menu:can-restore-menu-item%
+                             [label (string-constant add-teachpack-menu-item-label)]
+                             [parent language-menu]
+                             [callback
+                              (λ (_1 _2)
+                                (message-box
+                                 (string-constant drscheme)
+                                 (gui-utils:format-literal-label
+                                  (string-constant teachpacks-only-in-languages)
+                                  (apply string-append
+                                         (reverse
+                                          (filter
+                                           values
+                                           (map (λ (l)
+                                                  (and (send l
+                                                             capability-value
+                                                             'drscheme:teachpack-menu-items)
+                                                       (format "\n  ~a" (send l get-language-name))))
+                                                (drracket:language-configuration:get-languages))))))
+                                 this
+                                 #:dialog-mixin frame:focus-table-mixin))])))])))
 
      (define/private (initialize-menus)
        (define mb (get-menu-bar))
@@ -4748,15 +4752,15 @@
    (define msg2 (new message% [parent top-hp] [label (string-constant limit-memory-megabytes)]))
    (define bp (new-horizontal-panel% [parent d]))
    (define-values (ok-button cancel-button)
-     (gui-utils:ok/cancel-buttons
-      bp
-      (λ (a b)
-        (cond
-          [(send limited-rb get-selection)
-           (set! result (string->number (send (send tb get-editor) get-text)))]
-          [else (set! result #t)])
-        (send d show #f))
-      (λ (a b) (send d show #f))))
+     (gui-utils:ok/cancel-buttons bp
+                                  (λ (a b)
+                                    (cond
+                                      [(send limited-rb get-selection)
+                                       (set! result
+                                             (string->number (send (send tb get-editor) get-text)))]
+                                      [else (set! result #t)])
+                                    (send d show #f))
+                                  (λ (a b) (send d show #f))))
 
    (define result #f)
 
@@ -5107,21 +5111,20 @@
      (send (send frame get-interactions-text) initialize-console)
      frame)))
 
-(define/contract
- (compute-label-string fn)
- (-> (or/c path? #f) label-string?)
- (cond
-   [fn
-    (define base-title (format (string-constant module-browser-in-file) ""))
-    (define str (path->string fn))
-    (define limit (- 200 (string-length base-title)))
-    (define str-to-use
-      (if (<= (string-length str) limit)
-          str
-          (string-append "..."
-                         (substring str (+ (- (string-length str) limit) 3) (string-length str)))))
-    (format (string-constant module-browser-in-file) str-to-use)]
-   [else (string-constant module-browser-no-file)]))
+(define/contract (compute-label-string fn)
+  (-> (or/c path? #f) label-string?)
+  (cond
+    [fn
+     (define base-title (format (string-constant module-browser-in-file) ""))
+     (define str (path->string fn))
+     (define limit (- 200 (string-length base-title)))
+     (define str-to-use
+       (if (<= (string-length str) limit)
+           str
+           (string-append "..."
+                          (substring str (+ (- (string-length str) limit) 3) (string-length str)))))
+     (format (string-constant module-browser-in-file) str-to-use)]
+    [else (string-constant module-browser-no-file)]))
 
 ;; is-lang-line? : string -> boolean
 ;; given the first line in the editor, this returns #t if it is a #lang line.

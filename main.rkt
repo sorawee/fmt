@@ -1,4 +1,8 @@
+;; The main file for fmt
+
 #lang racket/base
+
+(define-logger fmt)
 
 (provide program-format
          empty-formatter-map
@@ -14,7 +18,8 @@
 (require racket/string
          racket/contract
          racket/format
-         pprint-compact
+         racket/match
+         (except-in pretty-expressive flatten)
          "common.rkt"
          "core.rkt"
          "read.rkt"
@@ -28,17 +33,48 @@
                         #:formatter-map [formatter-map empty-formatter-map]
                         #:source [source #f]
                         #:width [width (current-width)]
+                        #:limit [limit (current-limit)]
                         #:max-blank-lines [max-blank-lines (current-max-blank-lines)]
                         #:indent [indent (current-indent)])
   (define doc (realign (read-all program-source source max-blank-lines)))
-  (define s
-    (pretty-format
-     #:width width
-     #:indent indent
-     (pretty-doc doc
-                 (compose-formatter-map formatter-map standard-formatter-map))))
+  (match-define-values [(list s) _ real _]
+    (time-apply
+     (λ ()
+       (pretty-format/factory
+        (pretty-doc doc (compose-formatter-map formatter-map standard-formatter-map))
+        (cost-factory
+         (match-lambda**
+          [((list b1 h1 c1) (list b2 h2 c2))
+           (cond
+             [(= b1 b2)
+              (cond
+                [(= h1 h2) (<= c1 c2)]
+                [else (< h1 h2)])]
+             [else (< b1 b2)])])
+         (match-lambda**
+          [((list b1 h1 c1) (list b2 h2 c2))
+           (list (+ b1 b2) (+ h1 h2) (+ c1 c2))])
+         (λ (c l)
+           (define stop (+ c l))
+           (cond
+             [(> stop width)
+              (define start (max width c))
+              (define a (- start width))
+              (define b (- stop start))
+              (list (* b (+ (* 2 a) b)) 0 0)]
+             [else (list 0 0 0)]))
+         (λ (i) (list 0 1 0))
+         limit)
+        #:offset indent))
+     '()))
 
-  (string-join (for/list ([line (in-list (string-split s "\n"))])
+  (define all-lines (string-split s "\n"))
+
+  (log-fmt-debug "([duration ~a] [lines ~a])"
+                 (exact->inexact (/ real 1000))
+                 (length all-lines))
+
+  (string-join (for/list ([line (in-list all-lines)])
                  (string-trim line #:left? #f))
                "\n"))
 

@@ -1,3 +1,5 @@
+;; This file defines the core of code formatter
+
 #lang racket/base
 
 (provide pretty-doc
@@ -13,18 +15,19 @@
          try-indent)
 
 (require racket/match
+         racket/string
          racket/list
          racket/stxparam
          syntax/parse/define
-         pprint-compact
-         pprint-compact/memoize
+         (except-in pretty-expressive flatten)
+         (only-in (submod pretty-expressive/doc private) make-text)
          "common.rkt"
          (for-syntax racket/base syntax/parse/lib/function-header))
 
 (define (extract xs extract-configs)
   (let loop ([xs xs] [extract-configs extract-configs] [fits '()] [unfits '()])
     (match extract-configs
-      ['() (list (reverse fits) (filter-not nl? (reverse unfits)) xs)]
+      ['() (list (reverse fits) (filter-not newl? (reverse unfits)) xs)]
       [(cons extract-config extract-configs)
        (match xs
          ['() #f]
@@ -41,15 +44,25 @@
             [else (loop xs (cons extract-config extract-configs) fits (cons x unfits))])])])))
 
 (define (pretty-comment comment d)
-  (if comment (full (hs-append d (text comment))) d))
+  (if comment (full (<s> d (text comment))) d))
+
+(define (memoize f #:backend [backend make-weak-hasheq])
+  (define table (backend))
+  (λ (x) (hash-ref! table x (λ () (f x)))))
 
 (define (pretty-doc xs hook)
   (define loop
     (memoize (λ (d)
                (match d
-                 [(nl n) (full (v-concat (make-list n empty-doc)))]
+                 [(newl n) (full (v-concat (make-list n empty-doc)))]
                  [(full-atom _ content _) (full (text content))]
-                 [(atom comment content _) (pretty-comment comment (text content))]
+                 [(atom comment content type)
+                  (pretty-comment
+                   comment
+                   (make-text content
+                              (match type
+                                ['block-comment (apply max (map string-length (string-split content "\n")))]
+                                [_ (string-length content)])))]
                  [(line-comment comment) (full (text comment))]
                  [(node _ _ _ _ _ xs)
                   (match (extract xs (list #f))
@@ -57,14 +70,14 @@
                     [(list (list (atom _ content 'symbol)) _ _) ((hook content) d)]
                     [_ ((hook #f) d)])]
                  [(wrapper comment tok content)
-                  (pretty-comment comment (h-append (text tok) (loop content)))]
+                  (pretty-comment comment (<> (text tok) (align (loop content))))]
                  [(sexp-comment comment style tok xs)
                   (pretty-comment comment
                                   (match style
-                                    ['newline (v-append (text tok) (v-concat (map loop xs)))]
+                                    ['newline (apply <$> (text tok) (map loop xs))]
                                     ['any
                                      (define :x (loop (first xs)))
-                                     (alt (h-append (text tok) :x) (v-append (text tok) :x))]
+                                     (alt (<$> (text tok) :x) (<> (text tok) (align :x)))]
                                     ['disappeared (loop (first xs))]))]))))
   (set-box! current-pretty loop)
   (begin0 (v-concat (map loop xs))
@@ -74,16 +87,17 @@
   (match-define (node comment opener closer prefix breakable-prefix _) the-node)
   (define doc
     (pretty-comment comment
-                    (h-append (text (string-append (or prefix "") (if adjust (first adjust) opener)))
-                              d
-                              (text (if adjust (second adjust) closer)))))
+                    (<> (text (string-append (or prefix "") (if adjust (first adjust) opener)))
+                        (align d)
+                        (text (if adjust (second adjust) closer)))))
   (define doc*
     (if breakable-prefix
-        (alt (h-append (text breakable-prefix) doc) (v-append (text breakable-prefix) doc))
+        (alt (<$> (text breakable-prefix) doc)
+             (<> (text breakable-prefix) (align doc)))
         doc))
   (match unfits
     ['() doc*]
-    [_ (v-append (v-concat (map (unbox current-pretty) unfits)) doc*)]))
+    [_ (<$> (v-concat (map (unbox current-pretty) unfits)) doc*)]))
 
 (define current-pretty (box #f))
 (define-syntax-parameter pretty
@@ -115,18 +129,24 @@
 (define-syntax-parse-rule (pretty-node args ...)
   (pretty-node* doc args ...))
 
+(define spaces-table (make-hasheq))
+
+(define (spaces n)
+  (hash-ref! spaces-table n
+             (λ () (text (make-string n #\space)))))
+
 (define (require-newline? d)
-  (or (and (commentable? d) (commentable-inline-comment d)) (line-comment? d) (nl? d) (full-atom? d)))
+  (or (and (commentable? d) (commentable-inline-comment d)) (line-comment? d) (newl? d) (full-atom? d)))
 
 (define (try-indent d #:n [n 1] #:because-of xs)
   (match xs
     ['() d]
-    [_ (if (require-newline? (last xs)) (indent-next n d) d)]))
+    [_ (if (require-newline? (last xs)) (<$> d (spaces n)) d)]))
 
 (define-syntax-parser match/extract
-  [(_ xs #:as unfits tail [([pat req-status:boolean] ...) body ...+] . rst)
+  [(_ xs #:as unfits tail [([pat req-status] ...) body ...+] . rst)
    #'(let ([-xs xs])
-       (match (extract -xs '(req-status ...))
+       (match (extract -xs (list req-status ...))
          [(list (list pat ...) unfits tail)
           body ...]
          [_

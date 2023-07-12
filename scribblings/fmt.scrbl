@@ -8,7 +8,7 @@
                     racket/string
                     racket/contract
                     fmt
-                    pprint-compact]
+                    pretty-expressive]
          @for-syntax[racket/base]]
 
 @(define evaluator (make-base-eval))
@@ -22,7 +22,7 @@
 
 This package provides a tool @exec{raco fmt} to reformat Racket code.
 
-The package uses @racketmodname[pprint-compact], a very expressive pretty printer library, to compute the most optimal layout of the output code, and uses @racketmodname[syntax-color/module-lexer #:indirect] to lex the input program.
+The package uses @racketmodname[pretty-expressive], a very expressive pretty printer library, to compute the most optimal layout of the output code, and uses @racketmodname[syntax-color/module-lexer #:indirect] to lex the input program.
 
 The interface to allow users to extend formatting style is extremely unstable and is still a work in progress. For now, the only thing that is stable is the command @exec{raco fmt}.
 
@@ -160,7 +160,7 @@ which means the @tech{formatter map} wants to let other fallback
   @item{@racketmodname[racket/pretty] (by the Racket team) is a library for pretty printing an S-expression value.
         It does not support comments, is less expressive and less optimal than @racketmodname[fmt].}
   @item{@racketmodname[pprint #:indirect] (by @link["http://calculist.org/"]{Dave Herman} and @link["https://www.asumu.xyz/"]{Asumu Takikawa}) is a library for pretty printing an arbitrary document.
-       It is based on Wadler's pretty printer, which is less expressive and less optimal than @racketmodname[pprint-compact]
+       It is based on Wadler/Leijen's pretty printer, which is less expressive and less optimal than @racketmodname[pretty-expressive]
        (but has better performance).}
   @item{@link["https://github.com/Shuumatsu/racket-pretty-printer/"]{@tt{racket-pretty-printer}} (by @link["https://github.com/Shuumatsu"]{为世人降下祝福}) is a Racket formatter written in Haskell.
         It uses Wadler's pretty printer, so it has the limitations as described in the above item.}

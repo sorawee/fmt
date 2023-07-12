@@ -3,7 +3,7 @@
 (provide get-kws)
 
 (require racket/match
-         pprint-compact
+         pretty-expressive
          (only-in fmt/conventions all-kws))
 
 (define (flow xs)
@@ -17,8 +17,8 @@
           (define elem (text x))
           (loop xs
                 (alt (v-append acc elem)
-                     (hs-append acc elem)))]))]))
+                     (as-append acc elem)))]))]))
 
 (define (get-kws)
   (define xs (sort all-kws string<?))
-  (pretty-format (flow xs) #:width 64))
+  (pretty-format (flow xs) #:page-width 64))

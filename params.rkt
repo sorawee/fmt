@@ -1,8 +1,11 @@
+;; This file defines various parameters of fmt
+
 #lang racket/base
 
 (provide current-width
          current-max-blank-lines
          current-indent
+         current-limit
          current-app?
          current-ellipsis?)
 
@@ -11,6 +14,7 @@
          "common.rkt")
 
 (define current-width (make-parameter 102))
+(define current-limit (make-parameter 120))
 (define current-max-blank-lines (make-parameter 1))
 (define current-indent (make-parameter 0))
 (define current-app?

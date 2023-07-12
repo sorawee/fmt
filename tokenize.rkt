@@ -1,3 +1,5 @@
+;; The tokenizer pass
+
 #lang racket/base
 
 (provide tokenize

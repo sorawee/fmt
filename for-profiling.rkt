@@ -1,3 +1,5 @@
+;; An entry suitable for raco profile
+
 #lang racket
 
 (module+ main

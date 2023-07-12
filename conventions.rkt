@@ -1,3 +1,5 @@
+;; This file defines various styles for code formatting
+
 #lang racket/base
 
 (provide standard-formatter-map
@@ -29,7 +31,7 @@
 
 (require racket/match
          racket/list
-         pprint-compact
+         (except-in pretty-expressive flatten)
          "core.rkt"
          "common.rkt"
          "params.rkt"
@@ -74,26 +76,31 @@
     (define (v-append-if x xs)
       (match xs
         ['() x]
-        [_ (v-append x (loop xs))]))
+        [_ (<$> x (loop xs))]))
 
     (match xs
       ['() empty-doc]
       [(list (and dot (atom _ "." 'other)) x (and another-dot (atom _ "." 'other)) xs ...)
-       (v-append-if (alt (hs-append (pretty dot) (format-body x) (pretty another-dot))
-                         (v-append (pretty dot) (format-body x) (pretty another-dot)))
+       (define dot-formatted (pretty dot))
+       (define x-formatted (format-body x))
+       (define another-dot-formatted (pretty another-dot))
+       (v-append-if (alt (flat (<s> dot-formatted x-formatted another-dot-formatted))
+                         (<$> dot-formatted x-formatted another-dot-formatted))
                     xs)]
       [(list (and dot (atom _ "." 'other)) x xs ...)
-       (v-append-if (alt (hs-append (pretty dot) (format-body x))
-                         (v-append (pretty dot) (format-body x)))
+       (define dot-formatted (pretty dot))
+       (define x-formatted (format-body x))
+       (v-append-if (<> dot-formatted (group nl) (align x-formatted))
                     xs)]
       [(list x (and ellipsis (atom _ (? (current-ellipsis?)) 'symbol)) xs ...)
-       (v-append-if (alt (hs-append (format-body x) (pretty ellipsis))
-                         (v-append (format-body x) (pretty ellipsis)))
+       (define body-formatted (format-body x))
+       (define ellipsis-formatted (pretty ellipsis))
+       (v-append-if (<> body-formatted (group nl) ellipsis-formatted)
                     xs)]
       [(list (and kw (atom _ content 'hash-colon-keyword)) xs ...)
        ((format-kw-args kw
                         (kw-map content xs)
-                        (λ (xs docs) (v-append-if (alt (hs-concat docs) (v-concat docs)) xs))
+                        (λ (xs docs) (v-append-if (alt (v-concat docs) (as-concat docs)) xs))
                         format-kw-arg)
         xs)]
       [(list x xs ...) (v-append-if (format-body x) xs)])))
@@ -110,53 +117,64 @@
           (define (h-append-if x xs)
             (match xs
               ['() x]
-              [_ (hs-append x (loop xs))]))
+              [_ (<s> x (loop xs))]))
 
           (match xs
             ['() empty-doc]
             [(list (and kw (atom _ content 'hash-colon-keyword)) xs ...)
              ((format-kw-args kw
                               (kw-map content xs)
-                              (λ (xs docs) (h-append-if (hs-concat docs) xs))
+                              (λ (xs docs) (h-append-if (as-concat docs) xs))
                               format-kw-arg)
               xs)]
             [(list x xs ...) (h-append-if (format-body x) xs)]))))
 
-(define-pretty (format-if-like/helper format-else #:adjust [adjust '("(" ")")])
+(define-pretty (format-if-like/helper format-else
+                                      #:expel-first-comment? [expel-first-comment? #t]
+                                      #:adjust [adjust '("(" ")")])
   #:type node?
   (match/extract (node-content doc) #:as unfits tail
-    [([-if #t] [-conditional #f])
+    [([-if expel-first-comment?] [-conditional #f])
      (pretty-node #:unfits unfits
                   #:adjust adjust
-                  (hs-append (flat (pretty -if))
-                             (try-indent #:n 0
-                                         #:because-of (cons -conditional tail)
-                                         ;; try to fit in one line
-                                         #;(if a b c)
-                                         (alt (flat (hs-concat (map pretty (cons -conditional tail))))
-                                              ;; or multiple lines
-                                              #;(if aaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
-                                                    bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb
-                                                    ccccccccccccccccccccccccccccccccc)
-                                              ((format-vertical/helper) (cons -conditional tail))))))]
+                  (<s> (flat (pretty -if))
+                       (align (try-indent #:n 0
+                                          #:because-of (cons -conditional tail)
+                                          ;; multiple lines
+                                          #;(if aaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+                                                bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb
+                                                ccccccccccccccccccccccccccccccccc)
+                                          (alt ((format-vertical/helper) (cons -conditional tail))
+                                               ;; or one line
+                                               #;(if a b c)
+                                               (flat (as-concat (map pretty (cons -conditional tail)))))))))]
     [#:else (format-else doc)]))
 
 (define-pretty format-#%app
   #:type node?
-  #:let [xs (filter-not nl? (node-content doc))]
+  #:let [xs (filter-not newl? (node-content doc))]
   #:let [doc (struct-copy node doc [content xs])]
   (cond
     [((current-app?) doc)
      (match/extract xs #:as unfits tail
        ;; mostly vertical
        [([-head #f])
-        (alt (pretty-node #:unfits unfits
-                          #:adjust #f
-                          (try-indent #:n 0
-                                      #:because-of (cons -head tail)
-                                      ((format-vertical/helper) (cons -head tail))))
-             ;; pretty cases
-             ((format-if-like/helper #:adjust #f (λ (d) fail)) doc))]
+        (alt (cost '(0 0 1)
+                   (pretty-node #:unfits unfits
+                                #:adjust #f
+                                (try-indent #:n 0
+                                            #:because-of (cons -head tail)
+                                            ((format-vertical/helper) (cons -head tail)))))
+             (match tail
+               [(list (atom _ (? (current-ellipsis?)) 'symbol) _ ...)
+                (pretty-node #:unfits unfits
+                             #:adjust #f
+                             (try-indent #:n 0
+                                         #:because-of (cons -head tail)
+                                         ((format-horizontal/helper) (cons -head tail))))]
+               [_
+                ;; pretty cases
+                ((format-if-like/helper #:expel-first-comment? #f #:adjust #f (λ (d) fail)) doc)]))]
        ;; perhaps full of comments, or there's nothing at all
        [#:else (pretty-node #:adjust #f
                             (try-indent #:n 0 #:because-of xs ((format-vertical/helper) xs)))])]
@@ -167,7 +185,7 @@
                               ;; general case
                               (alt ((format-vertical/helper) xs)
                                    ;; try to fit in one line
-                                   (flat (hs-concat (map pretty xs))))))]))
+                                   (flat (as-concat (map pretty xs))))))]))
 
 (define-pretty (format-uniform-body/helper n
                                            #:arg-formatter [format-arg #f]
@@ -187,7 +205,7 @@
          ['() (pretty -macro-name)]
          [_
           (define args (map format-arg -e))
-          (hs-append (pretty -macro-name) (alt (flat (hs-concat args)) (v-concat args)))]))
+          (<s> (pretty -macro-name) (align (alt (v-concat args) (flat (as-concat args)))))]))
      (pretty-node
       #:unfits unfits
       (try-indent
@@ -197,18 +215,23 @@
           #:when (not require-body?)
           first-line]
          [_
-          (v-append first-line
-                    (h-append space
-                              ((format-vertical/helper #:body-formatter format-body #:kw-map kw-map)
-                               tail)))])))]))
+          (<$> first-line
+               (<> space
+                   (align ((format-vertical/helper #:body-formatter format-body #:kw-map kw-map)
+                           tail))))])))]))
 
 (define-pretty (format-clause-2/indirect #:kw-map [kw-map default-kw-map] #:flat? [flat? #t])
   #:type values
   (match doc
     [(node _ (or "(" "[") (or ")" "]") #f #f xs)
-     ;; try to fit in one line; only when there are exactly two things
-     #;[a b]
-     (alt (match/extract xs #:as unfits tail
+     ;; general case
+     (alt (cost '(0 0 1)
+                (pretty-node
+                 #:adjust '("[" "]")
+                 (try-indent #:n 0 #:because-of xs ((format-vertical/helper #:kw-map kw-map) xs))))
+          ;; try to fit in one line; only when there are exactly two things
+          #;[a b]
+          (match/extract xs #:as unfits tail
             [([-head #t] [-something #f])
              (match tail
                ['()
@@ -216,14 +239,10 @@
                              #:unfits unfits
                              (try-indent #:n 0
                                          #:because-of (list -something)
-                                         (let ([line (hs-append (pretty -head) (pretty -something))])
+                                         (let ([line (<s> (flat (pretty -head)) (align (pretty -something)))])
                                            (if flat? (flat line) line))))]
                [_ fail])]
-            [#:else fail])
-          ;; general case
-          (pretty-node
-           #:adjust '("[" "]")
-           (try-indent #:n 0 #:because-of xs ((format-vertical/helper #:kw-map kw-map) xs))))]
+            [#:else fail]))]
     [_ (pretty doc)]))
 
 (define-pretty format-binding-pairs/indirect
@@ -234,10 +253,10 @@
       (try-indent
        #:n 0
        #:because-of xs
-       ;; try to fit in one line
-       (alt ((format-horizontal/helper #:body-formatter (format-clause-2/indirect #:flat? #f)) xs)
-            ;; general case
-            ((format-vertical/helper #:body-formatter (format-clause-2/indirect #:flat? #f)) xs))))]
+       ;; general case
+       (alt ((format-vertical/helper #:body-formatter (format-clause-2/indirect #:flat? #f)) xs)
+            ;; try to fit in one line
+            ((format-horizontal/helper #:body-formatter (format-clause-2/indirect #:flat? #f)) xs))))]
     [_ (pretty doc)]))
 
 (define format-if (format-if-like/helper format-#%app))
@@ -256,9 +275,15 @@
   #:default [format-head pretty]
   (match/extract (node-content doc) #:as unfits tail
     [([-define #t] [-head #f])
-     ;; fit in one line case; only when there are either two or three things
-     #;(define a b)
-     (alt (pretty-node
+     ;; general case
+     #;(define (a b)
+         c
+         d
+         e)
+     (alt ((format-uniform-body/helper 1 #:arg-formatter format-head) doc)
+          ;; fit in one line case; only when there are either two or three things
+          #;(define a b)
+          (pretty-node
            #:unfits unfits
            (try-indent
             #:because-of tail
@@ -266,15 +291,9 @@
                     [(? node?) fail]
                     [_
                      (match tail
-                       ['() (hs-append (pretty -define) (format-head -head))]
-                       [(list -e) (hs-append (pretty -define) (format-head -head) (pretty -e))]
-                       [_ fail])]))))
-          ;; general case
-          #;(define (a b)
-              c
-              d
-              e)
-          ((format-uniform-body/helper 1 #:arg-formatter format-head) doc))]
+                       ['() (<s> (pretty -define) (format-head -head))]
+                       [(list -e) (<s> (pretty -define) (format-head -head) (pretty -e))]
+                       [_ fail])])))))]
     [#:else (format-#%app doc)]))
 
 ;; try to fit in one line if the body has exactly one form,
@@ -287,22 +306,22 @@
   #:default [format-head pretty]
   (match/extract (node-content doc) #:as unfits tail
     [([-define #t] [-head #f])
-     ;; fit in one line case; only when there are either two or three things
-     #;(define a b)
-     (alt (pretty-node
+     ;; general case
+     #;(define (a b)
+         c
+         d
+         e)
+     (alt ((format-uniform-body/helper 1 #:arg-formatter format-head) doc)
+          ;; fit in one line case; only when there are either two or three things
+          #;(define a b)
+          (pretty-node
            #:unfits unfits
            (try-indent
             #:because-of tail
             (flat (match tail
-                    ['() (hs-append (pretty -define) (format-head -head))]
-                    [(list -e) (hs-append (pretty -define) (format-head -head) (pretty -e))]
-                    [_ fail]))))
-          ;; general case
-          #;(define (a b)
-              c
-              d
-              e)
-          ((format-uniform-body/helper 1 #:arg-formatter format-head) doc))]
+                    ['() (<s> (pretty -define) (format-head -head))]
+                    [(list -e) (<s> (pretty -define) (format-head -head) (pretty -e))]
+                    [_ fail])))))]
     [#:else (format-#%app doc)]))
 
 ;; this is similar to let*, but because the macro name is so long,
@@ -311,14 +330,15 @@
   #:type node?
   (match/extract (node-content doc) #:as unfits tail
     [([-parameterize #f] [-bindings #f])
-     (alt (cost (pretty-node
-                 #:unfits unfits
-                 (v-append
-                  (pretty -parameterize)
-                  (h-append (text "   ") (format-binding-pairs/indirect -bindings))
-                  (h-append space (try-indent #:because-of tail ((format-vertical/helper) tail)))))
-                1)
-          (format-let* doc))]
+     (define bindings (align (format-binding-pairs/indirect -bindings)))
+     (<> (pretty-node
+          #:unfits unfits
+          (<> (pretty -parameterize)
+              (alt (cost '(0 0 3) (<> nl (text "   ") bindings))
+                   (<> (text " ") bindings))
+              nl
+              space
+              (align (try-indent #:because-of tail ((format-vertical/helper) tail))))))]
     [#:else (format-#%app doc)]))
 
 ;; unlike format-node-parameterize, don't allow the second form to be in its
@@ -333,10 +353,10 @@
     [([-let #t] [(? atom? -name) #t] [(? node? -bindings) #f])
      (pretty-node #:unfits unfits
                   (try-indent #:because-of tail
-                              (v-append (hs-append (pretty -let)
-                                                   (pretty -name)
-                                                   (format-binding-pairs/indirect -bindings))
-                                        (h-append space (v-concat (map pretty tail))))))]
+                              (<$> (<s> (pretty -let)
+                                        (pretty -name)
+                                        (align (format-binding-pairs/indirect -bindings)))
+                                   (<> space (align (v-concat (map pretty tail)))))))]
     ;; regular let
     [#:else (format-let* doc)]))
 
@@ -349,10 +369,10 @@
   (match/extract (node-content doc) #:as unfits tail
     [([-provide #t] [-first-arg #f])
      (pretty-node #:unfits unfits
-                  (hs-append (flat (pretty -provide))
-                             (try-indent #:n 0
-                                         #:because-of (cons -first-arg tail)
-                                         ((format-vertical/helper) (cons -first-arg tail)))))]
+                  (<s> (flat (pretty -provide))
+                       (align (try-indent #:n 0
+                                          #:because-of (cons -first-arg tail)
+                                          ((format-vertical/helper) (cons -first-arg tail))))))]
     [#:else (format-#%app doc)]))
 
 ;; support optional super id: either
@@ -395,18 +415,18 @@
             #:when (< (length groups) n)
             (loop kwds (cons -group groups) -tail*)]
            [_
-            (values (apply hs-append
+            (values (apply <s>
                            (for/list ([p (in-list (reverse kwds))])
-                             (hs-append (pretty (car p)) (pretty (cdr p)))))
+                             (<s> (align (pretty (car p))) (align (pretty (cdr p))))))
                     (for/list ([g (in-list (reverse groups))])
                       (format-binding-pairs/indirect g))
-                    (h-append space ((format-vertical/helper) tail)))])))
+                    (<> space (align ((format-vertical/helper) tail))))])))
 
      (define first-line
-       (hs-append (pretty -for-name)
-                  (v-append kwds (alt (flat (hs-concat groups)) (v-concat groups)))))
+       (<s> (pretty -for-name)
+            (align (<$> kwds (alt (v-concat groups) (flat (as-concat groups)))))))
      (pretty-node #:unfits unfits
-                  (try-indent #:because-of (list* -for-name -kwd tail) (v-append first-line body)))]
+                  (try-indent #:because-of (list* -for-name -kwd tail) (<$> first-line body)))]
     [#:else ((format-uniform-body/helper n #:arg-formatter format-binding-pairs/indirect) doc)]))
 
 (define/record standard-formatter-map #:record all-kws
@@ -453,6 +473,8 @@
   [("test-case" "test-suite") (format-uniform-body/helper 1)]
   [("define-syntax-class" "define-match-expander") (format-uniform-body/helper 1)]
   [("class") (format-uniform-body/helper 1 #:require-body? #f)]
+  [("interface") (format-uniform-body/helper 1 #:require-body? #f)]
+  [("interface*") (format-uniform-body/helper 2 #:require-body? #f)]
   [("module" "module*") (format-uniform-body/helper 2)]
 
   [("cond" "case-lambda" "match-lambda" "match-lambda*" "match-lambda**")

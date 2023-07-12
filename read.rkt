@@ -1,3 +1,5 @@
+;; The read pass
+
 #lang racket/base
 
 (provide read-all
@@ -76,7 +78,7 @@
                        [(equal? closer-sym closer)
                         (define-values (this xs*)
                           (process-tail
-                           (node #f open-paren closer-text #f #f (dropf (reverse (dropf acc nl?)) nl?))
+                           (node #f open-paren closer-text #f #f (dropf (reverse (dropf acc newl?)) newl?))
                            xs))
                         (values (done this) xs*)]
                        [else
@@ -104,7 +106,7 @@
     [(cons (token _ _ `(white-space 1)) xs)
      (read-one xs #:on-eof on-eof #:on-closer on-closer)]
 
-    [(cons (token _ _ `(white-space ,n)) xs) (values (nl (sub1 n)) xs)]
+    [(cons (token _ _ `(white-space ,n)) xs) (values (newl (sub1 n)) xs)]
 
     [(cons (token _ (and c (or "'" "`" "#'" "#`")) 'constant) xs) (values (bare-prefix c) xs)]
 
@@ -124,7 +126,7 @@
   (let loop ([xs xs] [acc '()])
     (define-values (this xs*) (read-one xs #:on-eof (λ () (values 'eof '()))))
     (cond
-      [(eq? 'eof this) (reverse (dropf acc nl?))]
+      [(eq? 'eof this) (reverse (dropf acc newl?))]
       [else (loop xs* (cons this acc))])))
 
 (define (read-all program-source max-blank-lines source)

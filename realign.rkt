@@ -1,3 +1,5 @@
+;; A tree fix up
+
 #lang racket/base
 
 (provide realign)
@@ -12,11 +14,11 @@
   (let loop ([xs xs] [just-read-sexp-comment? #f])
     (match xs
       ['() '()]
-      [(cons (? nl? d) xs) (cons d (loop xs #f))]
+      [(cons (? newl? d) xs) (cons d (loop xs #f))]
       [(cons (? atom? d) xs) (cons d (loop xs #f))]
       [(cons (? line-comment? d) xs) (cons d (loop xs #f))]
       [(cons (? bare-sexp-comment?) xs)
-       (define-values (invisibles tail) (splitf-at (loop (dropf xs nl?) #t) (negate visible?)))
+       (define-values (invisibles tail) (splitf-at (loop (dropf xs newl?) #t) (negate visible?)))
        (match tail
          ['() (raise-read-error "sexp-comment without content" #f #f #f #f #f)]
          [(cons visible xs)
@@ -53,7 +55,7 @@
                      xs)])])]
 
       [(cons (bare-prefix tk) xs)
-       (define-values (invisibles tail) (splitf-at (loop (dropf xs nl?) #f) (negate visible?)))
+       (define-values (invisibles tail) (splitf-at (loop (dropf xs newl?) #f) (negate visible?)))
        (match tail
          ['() (raise-read-error "quote without content" #f #f #f #f #f)]
          [(cons visible xs)

@@ -1,3 +1,5 @@
+;; An entry point of raco fmt
+
 #lang racket/base
 
 ; don't run this file for testing:
@@ -10,7 +12,8 @@
          (rename-in "main.rkt"
                     [current-width :current-width]
                     [current-max-blank-lines :current-max-blank-lines]
-                    [current-indent :current-indent]))
+                    [current-indent :current-indent]
+                    [current-limit :current-limit]))
 
 (define current-width
   (make-parameter
@@ -18,11 +21,24 @@
    (λ (n)
      (define as-num (string->number n))
      (cond
-       [(and as-num (or (exact-nonnegative-integer? as-num) (= as-num +inf.0)))
+       [(and as-num (exact-nonnegative-integer? as-num))
         as-num]
        [else (raise-user-error
               'width
-              "must be either a natural number or +inf.0, given: ~a"
+              "must be a natural number, given: ~a"
+              n)]))))
+
+(define current-limit
+  (make-parameter
+   (:current-limit)
+   (λ (n)
+     (define as-num (string->number n))
+     (cond
+       [(and as-num (exact-nonnegative-integer? as-num))
+        as-num]
+       [else (raise-user-error
+              'width
+              "must be a natural number, given: ~a"
               n)]))))
 
 (define current-max-blank-lines
@@ -59,8 +75,12 @@
    #:once-each
    [("--width")
     w
-    "page width limit -- must be a natural number or +inf.0 (default: 80)"
+    "page width limit -- must be a natural number (default: 102)"
     (current-width w)]
+   [("--limit")
+    W
+    "computation width limit -- must be a natural number (default: 120)"
+    (current-limit W)]
    [("--max-blank-lines")
     n
     "max consecutive blank lines -- must be a natural number or +inf.0 (default: 1)"
@@ -92,6 +112,7 @@
   (program-format s
                   #:formatter-map the-map
                   #:width (current-width)
+                  #:limit (current-limit)
                   #:max-blank-lines (current-max-blank-lines)))
 
 (define (do-format s)
