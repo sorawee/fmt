@@ -37,10 +37,10 @@
                         #:max-blank-lines [max-blank-lines (current-max-blank-lines)]
                         #:indent [indent (current-indent)])
   (define doc (realign (read-all program-source source max-blank-lines)))
-  (match-define-values [(list s) _ real _]
+  (match-define-values [(list (info s tainted? _)) _ real _]
     (time-apply
      (λ ()
-       (pretty-format/factory
+       (pretty-format/factory/info
         (pretty-doc doc (compose-formatter-map formatter-map standard-formatter-map))
         (cost-factory
          (match-lambda**
@@ -70,9 +70,10 @@
 
   (define all-lines (string-split s "\n"))
 
-  (log-fmt-debug "([duration ~a] [lines ~a])"
+  (log-fmt-debug "([duration ~a] [lines ~a] [tainted? ~a])"
                  (exact->inexact (/ real 1000))
-                 (length all-lines))
+                 (length all-lines)
+                 (if tainted? "true" "false"))
 
   (string-join (for/list ([line (in-list all-lines)])
                  (string-trim line #:left? #f))
