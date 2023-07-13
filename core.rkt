@@ -70,14 +70,14 @@
                     [(list (list (atom _ content 'symbol)) _ _) ((hook content) d)]
                     [_ ((hook #f) d)])]
                  [(wrapper comment tok content)
-                  (pretty-comment comment (<> (text tok) (align (loop content))))]
+                  (pretty-comment comment (<+> (text tok) (loop content)))]
                  [(sexp-comment comment style tok xs)
                   (pretty-comment comment
                                   (match style
                                     ['newline (apply <$> (text tok) (map loop xs))]
                                     ['any
                                      (define :x (loop (first xs)))
-                                     (alt (<$> (text tok) :x) (<> (text tok) (align :x)))]
+                                     (alt (<$> (text tok) :x) (<+> (text tok) :x))]
                                     ['disappeared (loop (first xs))]))]))))
   (set-box! current-pretty loop)
   (begin0 (v-concat (map loop xs))
@@ -87,13 +87,13 @@
   (match-define (node comment opener closer prefix breakable-prefix _) the-node)
   (define doc
     (pretty-comment comment
-                    (<> (text (string-append (or prefix "") (if adjust (first adjust) opener)))
-                        (align d)
-                        (text (if adjust (second adjust) closer)))))
+                    (<+> (text (string-append (or prefix "") (if adjust (first adjust) opener)))
+                         d
+                         (text (if adjust (second adjust) closer)))))
   (define doc*
     (if breakable-prefix
         (alt (<$> (text breakable-prefix) doc)
-             (<> (text breakable-prefix) (align doc)))
+             (<+> (text breakable-prefix) doc))
         doc))
   (match unfits
     ['() doc*]

@@ -137,17 +137,17 @@
     [([-if expel-first-comment?] [-conditional #f])
      (pretty-node #:unfits unfits
                   #:adjust adjust
-                  (<s> (flat (pretty -if))
-                       (align (try-indent #:n 0
-                                          #:because-of (cons -conditional tail)
-                                          ;; multiple lines
-                                          #;(if aaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
-                                                bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb
-                                                ccccccccccccccccccccccccccccccccc)
-                                          (alt ((format-vertical/helper) (cons -conditional tail))
-                                               ;; or one line
-                                               #;(if a b c)
-                                               (flat (as-concat (map pretty (cons -conditional tail)))))))))]
+                  (<+s> (flat (pretty -if))
+                        (try-indent #:n 0
+                                    #:because-of (cons -conditional tail)
+                                    ;; multiple lines
+                                    #;(if aaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+                                          bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb
+                                          ccccccccccccccccccccccccccccccccc)
+                                    (alt ((format-vertical/helper) (cons -conditional tail))
+                                         ;; or one line
+                                         #;(if a b c)
+                                         (flat (as-concat (map pretty (cons -conditional tail))))))))]
     [#:else (format-else doc)]))
 
 (define-pretty format-#%app
@@ -205,7 +205,7 @@
          ['() (pretty -macro-name)]
          [_
           (define args (map format-arg -e))
-          (<s> (pretty -macro-name) (align (alt (v-concat args) (flat (as-concat args)))))]))
+          (<+s> (pretty -macro-name) (alt (v-concat args) (flat (as-concat args))))]))
      (pretty-node
       #:unfits unfits
       (try-indent
@@ -216,9 +216,10 @@
           first-line]
          [_
           (<$> first-line
-               (<> space
-                   (align ((format-vertical/helper #:body-formatter format-body #:kw-map kw-map)
-                           tail))))])))]))
+               (<+> space ((format-vertical/helper
+                            #:body-formatter format-body
+                            #:kw-map kw-map)
+                           tail)))])))]))
 
 (define-pretty (format-clause-2/indirect #:kw-map [kw-map default-kw-map] #:flat? [flat? #t])
   #:type values
@@ -239,7 +240,7 @@
                              #:unfits unfits
                              (try-indent #:n 0
                                          #:because-of (list -something)
-                                         (let ([line (<s> (flat (pretty -head)) (align (pretty -something)))])
+                                         (let ([line (<+s> (flat (pretty -head)) (pretty -something))])
                                            (if flat? (flat line) line))))]
                [_ fail])]
             [#:else fail]))]
@@ -353,10 +354,10 @@
     [([-let #t] [(? atom? -name) #t] [(? node? -bindings) #f])
      (pretty-node #:unfits unfits
                   (try-indent #:because-of tail
-                              (<$> (<s> (pretty -let)
-                                        (pretty -name)
-                                        (align (format-binding-pairs/indirect -bindings)))
-                                   (<> space (align (v-concat (map pretty tail)))))))]
+                              (<$> (<+s> (pretty -let)
+                                         (pretty -name)
+                                         (format-binding-pairs/indirect -bindings))
+                                   (<+> space (v-concat (map pretty tail))))))]
     ;; regular let
     [#:else (format-let* doc)]))
 
@@ -369,10 +370,10 @@
   (match/extract (node-content doc) #:as unfits tail
     [([-provide #t] [-first-arg #f])
      (pretty-node #:unfits unfits
-                  (<s> (flat (pretty -provide))
-                       (align (try-indent #:n 0
-                                          #:because-of (cons -first-arg tail)
-                                          ((format-vertical/helper) (cons -first-arg tail))))))]
+                  (<+s> (flat (pretty -provide))
+                        (try-indent #:n 0
+                                    #:because-of (cons -first-arg tail)
+                                    ((format-vertical/helper) (cons -first-arg tail)))))]
     [#:else (format-#%app doc)]))
 
 ;; support optional super id: either
@@ -420,11 +421,11 @@
                              (<s> (align (pretty (car p))) (align (pretty (cdr p))))))
                     (for/list ([g (in-list (reverse groups))])
                       (format-binding-pairs/indirect g))
-                    (<> space (align ((format-vertical/helper) tail))))])))
+                    (<+> space ((format-vertical/helper) tail)))])))
 
      (define first-line
-       (<s> (pretty -for-name)
-            (align (<$> kwds (alt (v-concat groups) (flat (as-concat groups)))))))
+       (<+s> (pretty -for-name)
+             (<$> kwds (alt (v-concat groups) (flat (as-concat groups))))))
      (pretty-node #:unfits unfits
                   (try-indent #:because-of (list* -for-name -kwd tail) (<$> first-line body)))]
     [#:else ((format-uniform-body/helper n #:arg-formatter format-binding-pairs/indirect) doc)]))
