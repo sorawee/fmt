@@ -5,7 +5,7 @@
            raco/all-tools
            rackunit)
 
-  (define-runtime-path test-hash-bang.rkt "tests/test-hash-bang.rkt")
+  (define-runtime-path test-hash-bang.rkt "test-cases/test-hash-bang.rkt")
   (check member 'execute (file-or-directory-permissions test-hash-bang.rkt)
          "before -i")
   (define raco-fmt (hash-ref (all-tools) "fmt"))
