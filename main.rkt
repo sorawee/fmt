@@ -70,10 +70,16 @@
 
   (define all-lines (string-split s "\n"))
 
-  (log-fmt-debug "([duration ~a] [lines ~a] [tainted? ~a])"
-                 (exact->inexact (/ real 1000))
-                 (length all-lines)
-                 (if tainted? "true" "false"))
+  (log-message
+   fmt-logger
+   'debug
+   'fmt
+   (format "([duration ~a] [lines ~a] [tainted? ~a])"
+           (exact->inexact (/ real 1000))
+           (length all-lines)
+           (if tainted? "true" "false"))
+   #f
+   #f)
 
   (string-join (for/list ([line (in-list all-lines)])
                  (string-trim line #:left? #f))
