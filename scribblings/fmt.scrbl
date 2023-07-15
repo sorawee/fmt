@@ -22,7 +22,7 @@
 
 This package provides a tool @exec{raco fmt} to reformat Racket code.
 
-The package uses @racketmodname[pretty-expressive], a very expressive pretty printer library, to compute the most optimal layout of the output code, and uses @racketmodname[syntax-color/module-lexer #:indirect] to lex the input program.
+The package uses @racketmodname[syntax-color/module-lexer #:indirect] to lex the input program, and uses @racketmodname[pretty-expressive], an expressive pretty printer library, to compute an optimal layout of the output code.
 
 The interface to allow users to extend formatting style is extremely unstable and is still a work in progress. For now, the only thing that is stable is the command @exec{raco fmt}.
 
@@ -44,16 +44,15 @@ The @exec{raco fmt} command accepts the following flags:
   @item{@DFlag{max-blank-lines} @nonterm{n} --- set the maximum consecutive blank lines limit
         to @nonterm{n}, which must be either a natural number or @racket[+inf.0].
         The default value is @racket[1].}
-  @item{@DFlag{indent} @nonterm{n} --- set the indentation level for subsequent lines to @nonterm{n},
-        which must be a natural number.
+  @item{@DFlag{indent} @nonterm{n} --- set the indentation level in spaces to @nonterm{n} for subsequent lines.
         The default value is @racket[0].}
   @item{@Flag{i} --- modify the input files in-place instead of outputting to standard output.
-        This flag has no effect if @exec{raco fmt} accepts the input from the standard input.}
+        This flag has no effect if @exec{raco fmt} accepts the input from standard input.}
 ]
 
 @section{Examples}
 
-Given the file @filepath{example.rkt} shown on the left, running @exec{raco fmt --width 40 example.rkt} would output the program on the right:
+Given the file @filepath{example.rkt} shown on the left, running @exec{raco fmt --width 40 example.rkt} outputs the program on the right:
 
 @compare[
   @external-file["examples/example.rkt" #:name "example.rkt"]
@@ -133,17 +132,17 @@ which means the @tech{formatter map} wants to let other fallback
 
 @defparam[current-width width (or/c +inf.0 natural-number/c)
           #:value 102]{
-  See @secref["Running_raco_fmt"] for details.
+  Parameter for the page width limit. See @secref["Running_raco_fmt"] for details.
 }
 
 @defparam[current-max-blank-lines max-blank-lines (or/c +inf.0 natural-number/c)
           #:value 1]{
-  See @secref["Running_raco_fmt"] for details.
+  Parameter for the maximum number of blank lines. See @secref["Running_raco_fmt"] for details.
 }
 
 @defparam[current-indent indent natural-number/c
           #:value 0]{
-  See @secref["Running_raco_fmt"] for details.
+  Parameter for the initial indentation level. See @secref["Running_raco_fmt"] for details.
 }
 
 @section{Related work}
