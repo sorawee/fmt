@@ -20,7 +20,6 @@
          racket/stxparam
          syntax/parse/define
          (except-in pretty-expressive flatten)
-         (only-in (submod pretty-expressive/doc private) make-text)
          "common.rkt"
          (for-syntax racket/base syntax/parse/lib/function-header))
 
@@ -55,14 +54,14 @@
     (memoize (λ (d)
                (match d
                  [(newl n) (full (v-concat (make-list n empty-doc)))]
-                 [(full-atom _ content _) (full (text content))]
+                 [(full-atom _ content 'string)
+                  (full (big-text content))]
                  [(atom comment content type)
                   (pretty-comment
                    comment
-                   (make-text content
-                              (match type
-                                ['block-comment (apply max (map string-length (string-split content "\n")))]
-                                [_ (string-length content)])))]
+                   (match type
+                     ['block-comment (big-text content)]
+                     [_ (text content)]))]
                  [(line-comment comment) (full (text comment))]
                  [(node _ _ _ _ _ xs)
                   (match (extract xs (list #f))
