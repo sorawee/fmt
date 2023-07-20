@@ -13,7 +13,7 @@
 (define raco-fmt (hash-ref (all-tools) "fmt"))
 
 (define (regen ext)
-  (for ([f (flatten (map glob paths))] [i (in-naturals)])
+  (for ([f (flatten (map glob paths))])
     (printf "formatting ~a\n" f)
 
     (with-output-to-file (format "~a.~a" f ext)
