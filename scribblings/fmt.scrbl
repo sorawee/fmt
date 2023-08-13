@@ -4,7 +4,7 @@
          "util.rkt"
          "kws.rkt"
          (only-in fmt/conventions all-kws)
-         @for-label[racket/base
+         @for-label[(except-in racket/base newline)
                     racket/string
                     racket/contract
                     fmt
