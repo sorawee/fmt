@@ -1,6 +1,7 @@
 #lang racket
 
-(define x #<<EOF
+(define x
+  #<<EOF
 abc
 EOF
   )

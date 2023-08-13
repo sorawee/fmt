@@ -49,6 +49,9 @@
   (define table (backend))
   (λ (x) (hash-ref! table x (λ () (f x)))))
 
+(define (big-text s)
+  (reset (u-concat (add-between (map text (string-split s "\n")) hard-nl))))
+
 (define (pretty-doc xs hook)
   (define loop
     (memoize (λ (d)

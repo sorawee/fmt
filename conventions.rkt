@@ -30,8 +30,8 @@
          all-kws)
 
 (require racket/match
-         racket/list
-         (except-in pretty-expressive flatten)
+         (except-in racket/list flatten)
+         pretty-expressive
          "core.rkt"
          "common.rkt"
          "params.rkt"
@@ -84,7 +84,7 @@
        (define dot-formatted (pretty dot))
        (define x-formatted (format-body x))
        (define another-dot-formatted (pretty another-dot))
-       (v-append-if (alt (flat (<s> dot-formatted x-formatted another-dot-formatted))
+       (v-append-if (alt (flatten (<s> dot-formatted x-formatted another-dot-formatted))
                          (<$> dot-formatted x-formatted another-dot-formatted))
                     xs)]
       [(list (and dot (atom _ "." 'other)) x xs ...)
@@ -113,21 +113,22 @@
   #:default [format-body pretty]
   #:default [format-kw-arg pretty]
 
-  (flat (let loop ([xs doc])
-          (define (h-append-if x xs)
-            (match xs
-              ['() x]
-              [_ (<s> x (loop xs))]))
+  (flatten
+   (let loop ([xs doc])
+     (define (h-append-if x xs)
+       (match xs
+         ['() x]
+         [_ (<s> x (loop xs))]))
 
-          (match xs
-            ['() empty-doc]
-            [(list (and kw (atom _ content 'hash-colon-keyword)) xs ...)
-             ((format-kw-args kw
-                              (kw-map content xs)
-                              (λ (xs docs) (h-append-if (as-concat docs) xs))
-                              format-kw-arg)
-              xs)]
-            [(list x xs ...) (h-append-if (format-body x) xs)]))))
+     (match xs
+       ['() empty-doc]
+       [(list (and kw (atom _ content 'hash-colon-keyword)) xs ...)
+        ((format-kw-args kw
+                         (kw-map content xs)
+                         (λ (xs docs) (h-append-if (as-concat docs) xs))
+                         format-kw-arg)
+         xs)]
+       [(list x xs ...) (h-append-if (format-body x) xs)]))))
 
 (define-pretty (format-if-like/helper format-else
                                       #:expel-first-comment? [expel-first-comment? #t]
@@ -137,7 +138,7 @@
     [([-if expel-first-comment?] [-conditional #f])
      (pretty-node #:unfits unfits
                   #:adjust adjust
-                  (<+s> (flat (pretty -if))
+                  (<+s> (flatten (pretty -if))
                         (try-indent #:n 0
                                     #:because-of (cons -conditional tail)
                                     ;; multiple lines
@@ -147,7 +148,7 @@
                                     (alt ((format-vertical/helper) (cons -conditional tail))
                                          ;; or one line
                                          #;(if a b c)
-                                         (flat (as-concat (map pretty (cons -conditional tail))))))))]
+                                         (flatten (as-concat (map pretty (cons -conditional tail))))))))]
     [#:else (format-else doc)]))
 
 (define-pretty format-#%app
@@ -185,7 +186,7 @@
                               ;; general case
                               (alt ((format-vertical/helper) xs)
                                    ;; try to fit in one line
-                                   (flat (as-concat (map pretty xs))))))]))
+                                   (flatten (as-concat (map pretty xs))))))]))
 
 (define-pretty (format-uniform-body/helper n
                                            #:arg-formatter [format-arg #f]
@@ -205,7 +206,7 @@
          ['() (pretty -macro-name)]
          [_
           (define args (map format-arg -e))
-          (<+s> (pretty -macro-name) (alt (v-concat args) (flat (as-concat args))))]))
+          (<+s> (pretty -macro-name) (alt (v-concat args) (flatten (as-concat args))))]))
      (pretty-node
       #:unfits unfits
       (try-indent
@@ -240,8 +241,8 @@
                              #:unfits unfits
                              (try-indent #:n 0
                                          #:because-of (list -something)
-                                         (let ([line (<+s> (flat (pretty -head)) (pretty -something))])
-                                           (if flat? (flat line) line))))]
+                                         (let ([line (<+s> (flatten (pretty -head)) (pretty -something))])
+                                           (if flat? (flatten line) line))))]
                [_ fail])]
             [#:else fail]))]
     [_ (pretty doc)]))
@@ -288,13 +289,14 @@
            #:unfits unfits
            (try-indent
             #:because-of tail
-            (flat (match -head
-                    [(? node?) fail]
-                    [_
-                     (match tail
-                       ['() (<s> (pretty -define) (format-head -head))]
-                       [(list -e) (<s> (pretty -define) (format-head -head) (pretty -e))]
-                       [_ fail])])))))]
+            (flatten
+             (match -head
+               [(? node?) fail]
+               [_
+                (match tail
+                  ['() (<s> (pretty -define) (format-head -head))]
+                  [(list -e) (<s> (pretty -define) (format-head -head) (pretty -e))]
+                  [_ fail])])))))]
     [#:else (format-#%app doc)]))
 
 ;; try to fit in one line if the body has exactly one form,
@@ -319,10 +321,11 @@
            #:unfits unfits
            (try-indent
             #:because-of tail
-            (flat (match tail
-                    ['() (<s> (pretty -define) (format-head -head))]
-                    [(list -e) (<s> (pretty -define) (format-head -head) (pretty -e))]
-                    [_ fail])))))]
+            (flatten
+             (match tail
+               ['() (<s> (pretty -define) (format-head -head))]
+               [(list -e) (<s> (pretty -define) (format-head -head) (pretty -e))]
+               [_ fail])))))]
     [#:else (format-#%app doc)]))
 
 ;; this is similar to let*, but because the macro name is so long,
@@ -335,9 +338,9 @@
      (<> (pretty-node
           #:unfits unfits
           (<> (pretty -parameterize)
-              (alt (cost '(0 0 3) (<> nl (text "   ") bindings))
+              (alt (cost '(0 0 3) (<> hard-nl (text "   ") bindings))
                    (<> (text " ") bindings))
-              nl
+              hard-nl
               space
               (align (try-indent #:because-of tail ((format-vertical/helper) tail))))))]
     [#:else (format-#%app doc)]))
@@ -370,7 +373,7 @@
   (match/extract (node-content doc) #:as unfits tail
     [([-provide #t] [-first-arg #f])
      (pretty-node #:unfits unfits
-                  (<+s> (flat (pretty -provide))
+                  (<+s> (flatten (pretty -provide))
                         (try-indent #:n 0
                                     #:because-of (cons -first-arg tail)
                                     ((format-vertical/helper) (cons -first-arg tail)))))]
@@ -425,7 +428,7 @@
 
      (define first-line
        (<+s> (pretty -for-name)
-             (<$> kwds (alt (v-concat groups) (flat (as-concat groups))))))
+             (<$> kwds (alt (v-concat groups) (flatten (as-concat groups))))))
      (pretty-node #:unfits unfits
                   (try-indent #:because-of (list* -for-name -kwd tail) (<$> first-line body)))]
     [#:else ((format-uniform-body/helper n #:arg-formatter format-binding-pairs/indirect) doc)]))
