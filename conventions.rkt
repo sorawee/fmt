@@ -261,6 +261,20 @@
             ((format-horizontal/helper #:body-formatter (format-clause-2/indirect #:flat? #f)) xs))))]
     [_ (pretty doc)]))
 
+(define-pretty format-define-args/indirect
+  #:type values
+  (match doc
+    [(node _ _ _ #f #f xs)
+     (pretty-node
+      (try-indent
+       #:n 0
+       #:because-of xs
+       ;; general case
+       (alt ((format-vertical/helper) xs)
+            ;; try to fit in one line
+            ((format-horizontal/helper) xs))))]
+    [_ (pretty doc)]))
+
 (define format-if (format-if-like/helper format-#%app))
 
 ;; try to fit in one line if the body has exactly one form,
@@ -440,16 +454,18 @@
   [("pubment" "public-final" "overment" "override-final" "augride" "augment-final") format-require]
 
   [("define") (format-define)]
-  [("define-for-syntax" "define-values") (format-define-like)]
+  [("define-for-syntax") (format-define-like)]
   [("define-syntax-rule") (format-define-like)]
-  [("define-syntax" "define-syntaxes" "define-values-for-syntax") (format-define-like)]
+  [("define-syntax") (format-define-like)]
   [("define-syntax-parameter") (format-define-like)]
   [("define/public" "define/private" "define/override" "define/augment") (format-define-like)]
   [("define/pubment" "define/augride" "define/overment") (format-define-like)]
   [("define/public-final" "define/override-final" "define/augment-final") (format-define-like)]
 
-  [("λ" "lambda") (format-define-like)]
-  [("match-define" "match-define-values") (format-define-like)]
+  [("λ" "lambda") (format-define-like #:head-formatter format-define-args/indirect)]
+  [("match-define") (format-define-like)]
+  [("match-define-values" "define-values" "define-syntaxes" "define-values-for-syntax")
+   (format-define-like #:head-formatter format-define-args/indirect)]
 
   [("define/contract") (format-define-like)]
 

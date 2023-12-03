@@ -1627,11 +1627,12 @@
                                                   ;; Attach srcloc (useful for profiling)
                                                   #,
                                                   (quasisyntax/loc stx
-                                                    (lambda (the-obj super-go
-                                                                     si_c
-                                                                     si_inited?
-                                                                     si_leftovers
-                                                                     init-args)
+                                                    (lambda (the-obj
+                                                             super-go
+                                                             si_c
+                                                             si_inited?
+                                                             si_leftovers
+                                                             init-args)
                                                       (syntax-parameterize ([the-finder (quote-syntax
                                                                                          the-obj)])
                                                         (syntax-parameterize
@@ -1785,15 +1786,16 @@
        (class-syntax-protect
         #'(-define-serializable-class orig-stx name super-expression () defn-or-expr ...)))]))
 
-(define-syntaxes (private* public*
-                           pubment*
-                           override*
-                           overment*
-                           augride*
-                           augment*
-                           public-final*
-                           override-final*
-                           augment-final*)
+(define-syntaxes (private*
+                  public*
+                  pubment*
+                  override*
+                  overment*
+                  augride*
+                  augment*
+                  public-final*
+                  override-final*
+                  augment-final*)
   (let ([mk (lambda (who decl-form)
               (lambda (stx)
                 (unless (class-top-level-context? (syntax-local-context))
@@ -1831,15 +1833,16 @@
             (mk 'override-final* (syntax override-final))
             (mk 'augment-final* (syntax augment)))))
 
-(define-syntaxes (define/private define/public
-                   define/pubment
-                   define/override
-                   define/overment
-                   define/augride
-                   define/augment
-                   define/public-final
-                   define/override-final
-                   define/augment-final)
+(define-syntaxes (define/private
+                  define/public
+                  define/pubment
+                  define/override
+                  define/overment
+                  define/augride
+                  define/augment
+                  define/public-final
+                  define/override-final
+                  define/augment-final)
   (let ([mk (lambda (decl-form)
               (lambda (stx)
                 (unless (class-top-level-context? (syntax-local-context))
