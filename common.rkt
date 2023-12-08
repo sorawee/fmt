@@ -18,7 +18,9 @@
 (struct thing () #:transparent)
 (struct commentable thing (inline-comment) #:transparent)
 (struct visible commentable () #:transparent)
-(struct node visible (opener closer prefix breakable-prefix content) #:transparent)
+
+;; prefix :: (listof (cons (or/c 'breakable 'unbreakable) string?))
+(struct node visible (opener closer prefix content) #:transparent)
 (struct atom visible (content type) #:transparent)
 (struct full-atom atom () #:transparent)
 ;; invariant: n >= 1

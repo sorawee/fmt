@@ -32,7 +32,7 @@
             ['()
              #:when (not just-read-sexp-comment?)
              (match visible
-               [(node comment opener closer prefix breakable-prefix content)
+               [(node comment opener closer prefix content)
                 (cons
                  (sexp-comment comment
                                'disappeared
@@ -40,8 +40,7 @@
                                (list (struct-copy node
                                                   visible
                                                   [inline-comment #:parent commentable #f]
-                                                  [breakable-prefix
-                                                   (string-append "#;" (or breakable-prefix ""))])))
+                                                  [prefix (cons (cons 'breakable "#;") prefix)])))
                  xs)]
                [_ (cons (sexp-comment (commentable-inline-comment visible)
                                       'any
@@ -65,13 +64,12 @@
             (match visible
               ;; don't create a new wrapper, just transfer content
               [(wrapper _ tk* _) (struct-copy wrapper visible [tk (string-append tk tk*)])]
-              [(node _ _ _ prefix breakable-prefix _)
-               (case (string-length tk)
-                 [(1) (struct-copy node visible [prefix (string-append tk (or prefix ""))])]
-                 [else (struct-copy node
-                                    visible
-                                    [breakable-prefix (string-append tk (or breakable-prefix ""))])])]
+              [(node _ _ _ prefix _)
+               (match tk
+                 [(app string-length 1)
+                  (struct-copy node visible [prefix (cons (cons 'unbreakable tk) prefix)])]
+                 [_ (struct-copy node visible [prefix (cons (cons 'breakable tk) prefix)])])]
               [_ (wrapper (commentable-inline-comment visible) tk (strip-comment visible))])
             xs))])]
-      [(cons (node comment opener closer prefix breakable-prefix xs*) xs)
-       (cons (node comment opener closer prefix breakable-prefix (loop xs* #f)) (loop xs #f))])))
+      [(cons (node comment opener closer prefix xs*) xs)
+       (cons (node comment opener closer prefix (loop xs* #f)) (loop xs #f))])))

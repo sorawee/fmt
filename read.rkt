@@ -78,7 +78,7 @@
                        [(equal? closer-sym closer)
                         (define-values (this xs*)
                           (process-tail
-                           (node #f open-paren closer-text #f #f (dropf (reverse (dropf acc newl?)) newl?))
+                           (node #f open-paren closer-text '() (dropf (reverse (dropf acc newl?)) newl?))
                            xs))
                         (values (done this) xs*)]
                        [else

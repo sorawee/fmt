@@ -225,7 +225,7 @@
 (define-pretty (format-clause-2/indirect #:kw-map [kw-map default-kw-map] #:flat? [flat? #t])
   #:type values
   (match doc
-    [(node _ (or "(" "[") (or ")" "]") #f #f xs)
+    [(node _ (or "(" "[") (or ")" "]") '() xs)
      ;; general case
      (alt (cost '(0 0 1)
                 (pretty-node
@@ -250,7 +250,7 @@
 (define-pretty format-binding-pairs/indirect
   #:type values
   (match doc
-    [(node _ _ _ #f #f xs)
+    [(node _ _ _ '() xs)
      (pretty-node
       (try-indent
        #:n 0
@@ -264,7 +264,7 @@
 (define-pretty format-define-args/indirect
   #:type values
   (match doc
-    [(node _ _ _ #f #f xs)
+    [(node _ _ _ '() xs)
      (pretty-node
       (try-indent
        #:n 0

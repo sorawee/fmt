@@ -66,7 +66,7 @@
                      ['block-comment (big-text content)]
                      [_ (text content)]))]
                  [(line-comment comment) (full (text comment))]
-                 [(node _ _ _ _ _ xs)
+                 [(node _ _ _ _ xs)
                   (match (extract xs (list #f))
                     [#f ((hook #f) d)]
                     [(list (list (atom _ content 'symbol)) _ _) ((hook content) d)]
@@ -86,17 +86,19 @@
     (set-box! current-pretty #f)))
 
 (define (pretty-node* n d #:node [the-node n] #:unfits [unfits '()] #:adjust [adjust '("(" ")")])
-  (match-define (node comment opener closer prefix breakable-prefix _) the-node)
+  (match-define (node comment opener closer prefix _) the-node)
   (define doc
     (pretty-comment comment
-                    (<+> (text (string-append (or prefix "") (if adjust (first adjust) opener)))
+                    (<+> (text (if adjust (first adjust) opener))
                          d
                          (text (if adjust (second adjust) closer)))))
   (define doc*
-    (if breakable-prefix
-        (alt (<$> (text breakable-prefix) doc)
-             (<+> (text breakable-prefix) doc))
-        doc))
+    (for/fold ([doc doc]) ([prefix (in-list (reverse prefix))])
+      (match prefix
+        [(cons 'breakable tk)
+         (alt (<$> (text tk) doc) (<+> (text tk) doc))]
+        [(cons 'unbreakable tk)
+         (<+> (text tk) doc)])))
   (match unfits
     ['() doc*]
     [_ (<$> (v-concat (map (unbox current-pretty) unfits)) doc*)]))
