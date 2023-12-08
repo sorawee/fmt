@@ -21,7 +21,7 @@
   (make-parameter
    (λ (d)
      (match d
-       [(node _ (? app-prefix?) ")" _ _ _) #t]
+       [(node _ (? app-prefix?) ")" _ _) #t]
        [_ #f]))))
 (define current-ellipsis?
   (make-parameter
