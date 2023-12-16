@@ -21,6 +21,7 @@
          syntax/parse/define
          (except-in pretty-expressive flatten)
          "common.rkt"
+         "params.rkt"
          (for-syntax racket/base syntax/parse/lib/function-header))
 
 (define (extract xs extract-configs)
@@ -89,9 +90,21 @@
   (match-define (node comment opener closer prefix _) the-node)
   (define doc
     (pretty-comment comment
-                    (<+> (text (if adjust (first adjust) opener))
+                    (<+> (text
+                          (match (current-adjust-paren-shape)
+                            [#t
+                             #:when adjust
+                             (first adjust)]
+                            [(or #t #f) opener]
+                            [(cons opener _) opener]))
                          d
-                         (text (if adjust (second adjust) closer)))))
+                         (text
+                          (match (current-adjust-paren-shape)
+                            [#t
+                             #:when adjust
+                             (second adjust)]
+                            [(or #t #f) closer]
+                            [(cons _ closer) closer])))))
   (define doc*
     (for/fold ([doc doc]) ([prefix (in-list (reverse prefix))])
       (match prefix
