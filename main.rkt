@@ -37,7 +37,7 @@
                         #:max-blank-lines [max-blank-lines (current-max-blank-lines)]
                         #:indent [indent (current-indent)])
   (define doc (realign (read-all program-source source max-blank-lines)))
-  (match-define-values [(list (info s tainted? _)) _ real _]
+  (match-define-values [(list s (info tainted? _)) _ real _]
     (time-apply
      (λ ()
        (pretty-format/factory/info
