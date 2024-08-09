@@ -93,9 +93,10 @@
    #f
    #f)
 
-  (string-join (for/list ([line (in-list all-lines)])
-                 (string-trim line #:left? #f))
-               "\n"))
+  (string->immutable-string
+   (string-join (for/list ([line (in-list all-lines)])
+                  (string-trim line #:left? #f))
+                "\n")))
 
 (define ((compose-formatter-map . fs) x)
   (for/or ([f (in-list fs)])
