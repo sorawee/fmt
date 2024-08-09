@@ -87,7 +87,8 @@ c
       (equal? a 1))
   a)
 
-(for ([a (in-list xs)] #:unless #;(a comment is here) (equal? a 1))
+(for ([a (in-list xs)]
+      #:unless #;(a comment is here) (equal? a 1))
   a)
 
 (syntax-parse stx

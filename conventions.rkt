@@ -255,10 +255,7 @@
       (try-indent
        #:n 0
        #:because-of xs
-       ;; general case
-       (alt ((format-vertical/helper #:body-formatter (format-clause-2/indirect #:flat? #f)) xs)
-            ;; try to fit in one line
-            ((format-horizontal/helper #:body-formatter (format-clause-2/indirect #:flat? #f)) xs))))]
+       ((format-vertical/helper #:body-formatter (format-clause-2/indirect #:flat? #f)) xs)))]
     [_ (pretty doc)]))
 
 (define-pretty format-define-args/indirect

@@ -86,7 +86,8 @@
     [(_ name npos)
      (define (name l0)
        (if (list? l0)
-           (let loop ([l l0] [pos npos])
+           (let loop ([l l0]
+                      [pos npos])
              (if (pair? l)
                  (if (eq? pos 1) (car l) (loop (cdr l) (sub1 pos)))
                  (raise-arguments-error 'name "list contains too few elements" "list" l0)))
@@ -103,13 +104,15 @@
 
 (define (last-pair l)
   (if (pair? l)
-      (let loop ([l l] [x (cdr l)])
+      (let loop ([l l]
+                 [x (cdr l)])
         (if (pair? x) (loop x (cdr x)) l))
       (raise-argument-error 'last-pair "pair?" l)))
 
 (define (last l)
   (if (and (pair? l) (list? l))
-      (let loop ([l l] [x (cdr l)])
+      (let loop ([l l]
+                 [x (cdr l)])
         (if (pair? x) (loop x (cdr x)) (car l)))
       (raise-argument-error 'last "(and/c list? (not/c empty?))" l)))
 
@@ -123,7 +126,8 @@
 (define (make-list n x)
   (unless (exact-nonnegative-integer? n)
     (raise-argument-error 'make-list "exact-nonnegative-integer?" 0 n x))
-  (let loop ([n n] [r '()])
+  (let loop ([n n]
+             [r '()])
     (if (zero? n) r (loop (sub1 n) (cons x r)))))
 
 (define (list-update l i f)
@@ -159,7 +163,8 @@
 (define (take list0 n0)
   (unless (exact-nonnegative-integer? n0)
     (raise-argument-error 'take "exact-nonnegative-integer?" 1 list0 n0))
-  (let loop ([list list0] [n n0])
+  (let loop ([list list0]
+             [n n0])
     (cond
       [(zero? n) '()]
       [(pair? list) (cons (car list) (loop (cdr list) (sub1 n)))]
@@ -174,7 +179,9 @@
 (define (split-at list0 n0)
   (unless (exact-nonnegative-integer? n0)
     (raise-argument-error 'split-at "exact-nonnegative-integer?" 1 list0 n0))
-  (let loop ([list list0] [n n0] [pfx '()])
+  (let loop ([list list0]
+             [n n0]
+             [pfx '()])
     (cond
       [(zero? n) (values (reverse pfx) list)]
       [(pair? list) (loop (cdr list) (sub1 n) (cons (car list) pfx))]
@@ -200,7 +207,8 @@
 (define (splitf-at list pred)
   (unless (procedure? pred)
     (raise-argument-error 'splitf-at "procedure?" 1 list pred))
-  (let loop ([list list] [pfx '()])
+  (let loop ([list list]
+             [pfx '()])
     (if (and (pair? list) (pred (car list)))
         (loop (cdr list) (cons (car list) pfx))
         (values (reverse pfx) list))))
@@ -210,21 +218,25 @@
 (define (take-right list n)
   (unless (exact-nonnegative-integer? n)
     (raise-argument-error 'take-right "exact-nonnegative-integer?" 1 list n))
-  (let loop ([list list] [lead (or (drop* list n) (too-large 'take-right list n))])
+  (let loop ([list list]
+             [lead (or (drop* list n) (too-large 'take-right list n))])
     ;; could throw an error for non-lists, but be more like `take'
     (if (pair? lead) (loop (cdr list) (cdr lead)) list)))
 
 (define (drop-right list n)
   (unless (exact-nonnegative-integer? n)
     (raise-argument-error 'drop-right "exact-nonnegative-integer?" 1 list n))
-  (let loop ([list list] [lead (or (drop* list n) (too-large 'drop-right list n))])
+  (let loop ([list list]
+             [lead (or (drop* list n) (too-large 'drop-right list n))])
     ;; could throw an error for non-lists, but be more like `drop'
     (if (pair? lead) (cons (car list) (loop (cdr list) (cdr lead))) '())))
 
 (define (split-at-right list n)
   (unless (exact-nonnegative-integer? n)
     (raise-argument-error 'split-at-right "exact-nonnegative-integer?" 1 list n))
-  (let loop ([list list] [lead (or (drop* list n) (too-large 'split-at-right list n))] [pfx '()])
+  (let loop ([list list]
+             [lead (or (drop* list n) (too-large 'split-at-right list n))]
+             [pfx '()])
     ;; could throw an error for non-lists, but be more like `split-at'
     (if (pair? lead) (loop (cdr list) (cdr lead) (cons (car list) pfx)) (values (reverse pfx) list))))
 
@@ -246,10 +258,13 @@
 (define (count-from-right who list pred)
   (unless (procedure? pred)
     (raise-argument-error who "procedure?" 1 list pred))
-  (let loop ([list list] [rev '()] [n 0])
+  (let loop ([list list]
+             [rev '()]
+             [n 0])
     (if (pair? list)
         (loop (cdr list) (cons (car list) rev) (add1 n))
-        (let loop ([n n] [list rev])
+        (let loop ([n n]
+                   [list rev])
           (if (and (pair? list) (pred (car list))) (loop (sub1 n) (cdr list)) n)))))
 
 (define (takef-right list pred)
@@ -284,7 +299,8 @@
     (raise-argument-error name "list?" 1 as bs))
   (unless (and (procedure? same?) (procedure-arity-includes? same? 2))
     (raise-argument-error name "(any/c any/c . -> . any/c)" 2 as bs same?))
-  (let loop ([as as] [bs bs])
+  (let loop ([as as]
+             [bs bs])
     (if (and (pair? as) (pair? bs) (same? (car as) (car bs)))
         (let-values ([(prefix atail btail) (loop (cdr as) (cdr bs))])
           (values (and keep-prefix? (cons (car as) prefix)) atail btail))
@@ -312,7 +328,8 @@
     [(l . lss) (apply apply append l lss)]))
 
 (define (flatten orig-sexp)
-  (let loop ([sexp orig-sexp] [acc null])
+  (let loop ([sexp orig-sexp]
+             [acc null])
     (cond
       [(null? sexp) acc]
       [(pair? sexp) (loop (car sexp) (loop (cdr sexp) acc))]
@@ -359,7 +376,9 @@
     [splice?
      (let* ([x (reverse x)]
             ;; main loop
-            [r (let loop ([i (cadr l)] [l (cddr l)] [r '()])
+            [r (let loop ([i (cadr l)]
+                          [l (cddr l)]
+                          [r '()])
                  (if (pair? l)
                      (loop (car l) (cdr l) (cons i (append x r)))
                      (cons i (append (reverse before-last) r))))]
@@ -370,7 +389,9 @@
        r)]
     [else
      (cons (car l)
-           (reverse (let loop ([i (cadr l)] [l (cddr l)] [r '()]) ; main loop
+           (reverse (let loop ([i (cadr l)]
+                               [l (cddr l)]
+                               [r '()]) ; main loop
                       (if (pair? l)
                           (loop (car l) (cdr l) (cons i (cons x r)))
                           (cons i (cons before-last r))))))]))
@@ -399,10 +420,13 @@
        (let ([key (or key (λ (x) x))])
          (let-syntax ([loop (syntax-rules ()
                               [(_ search)
-                               (let loop ([l l] [seen null])
+                               (let loop ([l l]
+                                          [seen null])
                                  (if (null? l)
                                      l
-                                     (let* ([x (car l)] [k (key x)] [l (cdr l)])
+                                     (let* ([x (car l)]
+                                            [k (key x)]
+                                            [l (cdr l)])
                                        (if (search k seen)
                                            (loop l seen)
                                            (cons x (loop l (cons k seen)))))))])])
@@ -419,7 +443,9 @@
                              (let loop ([l l])
                                (if (null? l)
                                    l
-                                   (let* ([x (car l)] [k (getkey x)] [l (cdr l)])
+                                   (let* ([x (car l)]
+                                          [k (getkey x)]
+                                          [l (cdr l)])
                                      (if (hash-ref h k #f)
                                          (loop l)
                                          (begin
@@ -460,7 +486,8 @@
                 (loop (cdr items)))))
         (fail-k))))
 (define (check-duplicates/list items key same? fail-k)
-  (let loop ([items items] [sofar null])
+  (let loop ([items items]
+             [sofar null])
     (if (pair? items)
         (let ([key-item (key (car items))])
           (if (for/or ([prev (in-list sofar)])
@@ -499,7 +526,8 @@
   (if (pair? ls)
       (let ([len (length l)])
         (if (andmap (λ (l) (= len (length l))) ls)
-            (let loop ([l l] [ls ls])
+            (let loop ([l l]
+                       [ls ls])
               (if (null? l)
                   null
                   (let ([x (apply f (car l) (map car ls))])
@@ -514,12 +542,15 @@
   (if (pair? ls)
       (let ([len (length l)])
         (if (andmap (λ (l) (= len (length l))) ls)
-            (let loop ([l l] [ls ls] [c 0])
+            (let loop ([l l]
+                       [ls ls]
+                       [c 0])
               (if (null? l)
                   c
                   (loop (cdr l) (map cdr ls) (if (apply f (car l) (map car ls)) (add1 c) c))))
             (raise-arguments-error 'count "all lists must have same size")))
-      (let loop ([l l] [c 0])
+      (let loop ([l l]
+                 [c 0])
         (if (null? l) c (loop (cdr l) (if (f (car l)) (add1 c) c))))))
 
 ;; Originally from srfi-1 -- shares common tail with the input when possible
@@ -542,10 +573,14 @@
     (raise-argument-error 'partition "(any/c . -> . any/c)" 0 pred l))
   (unless (list? l)
     (raise-argument-error 'partition "list?" 1 pred l))
-  (let loop ([l l] [i '()] [o '()])
+  (let loop ([l l]
+             [i '()]
+             [o '()])
     (if (null? l)
         (values (reverse i) (reverse o))
-        (let ([x (car l)] [l (cdr l)]) (if (pred x) (loop l (cons x i) o) (loop l i (cons x o)))))))
+        (let ([x (car l)]
+              [l (cdr l)])
+          (if (pred x) (loop l (cons x i) o) (loop l i (cons x o)))))))
 
 ;; similar to in-range, but returns a list
 (define range-proc
@@ -609,7 +644,8 @@
     (raise-argument-error 'filter-not "list?" 1 f list))
   ;; accumulating the result and reversing it is currently slightly
   ;; faster than a plain loop
-  (let loop ([l list] [result null])
+  (let loop ([l list]
+             [result null])
     (if (null? l) (reverse result) (loop (cdr l) (if (f (car l)) result (cons (car l) result))))))
 
 ;; Fisher-Yates Shuffle
@@ -617,7 +653,8 @@
   (unless (list? l)
     (raise-argument-error 'shuffle "list?" 0 l))
   (define a (make-vector (length l)))
-  (for ([x (in-list l)] [i (in-naturals)])
+  (for ([x (in-list l)]
+        [i (in-naturals)])
     (define j (random (add1 i)))
     (unless (= j i)
       (vector-set! a i (vector-ref a j)))
@@ -688,7 +725,8 @@
                   ;; then we change it to #(3 5 6 7)
                   [index-to-change
                    (define val-to-change (add1 (vector-ref k* index-to-change)))
-                   (for ([i (in-range index-to-change k)] [v (in-naturals val-to-change)])
+                   (for ([i (in-range index-to-change k)]
+                         [v (in-naturals val-to-change)])
                      (vector-set! k* i v))]
                   ;; Otherwise, there's no incrementable index. E.g.,
                   ;; N = 10 and we have #(6 7 8 9), so we quit enumeration
@@ -725,21 +763,32 @@
   (case j
     [(0) `(,(cadr l) ,(car l) ,@(cddr l))]
     [(1)
-     (let ([a (car l)] [b (cadr l)] [c (caddr l)] [l (cdddr l)])
+     (let ([a (car l)]
+           [b (cadr l)]
+           [c (caddr l)]
+           [l (cdddr l)])
        (case i
          [(0) `(,b ,c ,a ,@l)]
          [else `(,c ,a ,b ,@l)]))]
     [(2)
-     (let ([a (car l)] [b (cadr l)] [c (caddr l)] [d (cadddr l)] [l (cddddr l)])
+     (let ([a (car l)]
+           [b (cadr l)]
+           [c (caddr l)]
+           [d (cadddr l)]
+           [l (cddddr l)])
        (case i
          [(0) `(,c ,b ,d ,a ,@l)]
          [(1) `(,c ,d ,a ,b ,@l)]
          [else `(,d ,b ,a ,c ,@l)]))]
     [else
-     (let loop ([n i] [l1 '()] [r1 l])
+     (let loop ([n i]
+                [l1 '()]
+                [r1 l])
        (if (> n 0)
            (loop (sub1 n) (cons (car r1) l1) (cdr r1))
-           (let loop ([n (- j i)] [l2 '()] [r2 (cdr r1)])
+           (let loop ([n (- j i)]
+                      [l2 '()]
+                      [r2 (cdr r1)])
              (if (> n 0)
                  (loop (sub1 n) (cons (car r2) l2) (cdr r2))
                  `(,@l2 ,(car r2) ,@l1 ,(car r1) ,@(cdr r2))))))]))
@@ -754,7 +803,8 @@
      (when (> N 254)
        (error 'permutations "input list too long: ~e" l))
      (define c (make-bytes (add1 N) 0))
-     (let loop ([i 0] [acc (list (reverse l))])
+     (let loop ([i 0]
+                [acc (list (reverse l))])
        (define ci (bytes-ref c i))
        (cond
          [(<= ci i)
@@ -802,7 +852,9 @@
   (let ([init-min-var (f (car xs))])
     (unless (real? init-min-var)
       (raise-result-error name "real?" init-min-var))
-    (let loop ([min (car xs)] [min-var init-min-var] [xs (cdr xs)])
+    (let loop ([min (car xs)]
+               [min-var init-min-var]
+               [xs (cdr xs)])
       (cond
         [(null? xs) min]
         [else
@@ -852,7 +904,9 @@
       [else (values '() alist-update)]))
 
   (define classes
-    (for/fold ([res base]) ([elt (in-list l)] [idx (in-naturals)]) ; to keep ordering stable
+    (for/fold ([res base])
+              ([elt (in-list l)]
+               [idx (in-naturals)]) ; to keep ordering stable
       (define k (key elt))
       (define v (cons idx elt))
       (update res k (lambda (o) (cons v o)) '())))
@@ -872,7 +926,8 @@
     (unless (list? l)
       (apply raise-argument-error 'cartesian-product "list?" i ls)))
   (define (cp-2 as bs)
-    (for*/list ([i (in-list as)] [j (in-list bs)])
+    (for*/list ([i (in-list as)]
+                [j (in-list bs)])
       (cons i j)))
   (foldr cp-2 (list (list)) ls))
 
@@ -901,7 +956,8 @@
     (raise-argument-error 'index-of "list?" 0 ls v))
   (unless (and (procedure? =?) (procedure-arity-includes? =? 2))
     (raise-argument-error 'index-of "(-> any/c any/c any/c)" 2 ls v =?))
-  (let loop ([ls ls] [i 0])
+  (let loop ([ls ls]
+             [i 0])
     (cond
       [(null? ls) #f]
       [(=? (car ls) v) i]
@@ -912,7 +968,8 @@
     (raise-argument-error 'index-where "list?" 0 ls f))
   (unless (and (procedure? f) (procedure-arity-includes? f 1))
     (raise-argument-error 'index-where "(-> any/c any/c)" 1 ls f))
-  (let loop ([ls ls] [i 0])
+  (let loop ([ls ls]
+             [i 0])
     (cond
       [(null? ls) #f]
       [(f (car ls)) i]
@@ -923,7 +980,8 @@
     (raise-argument-error 'indexes-of "list?" 0 ls v))
   (unless (and (procedure? =?) (procedure-arity-includes? =? 2))
     (raise-argument-error 'indexes-of "(-> any/c any/c any/c)" 2 ls v =?))
-  (let loop ([ls ls] [i 0])
+  (let loop ([ls ls]
+             [i 0])
     (cond
       [(null? ls) '()]
       [(=? (car ls) v) (cons i (loop (cdr ls) (add1 i)))]
@@ -934,7 +992,8 @@
     (raise-argument-error 'indexes-where "list?" 0 ls f))
   (unless (and (procedure? f) (procedure-arity-includes? f 1))
     (raise-argument-error 'indexes-where "(-> any/c any/c)" 1 ls f))
-  (let loop ([ls ls] [i 0])
+  (let loop ([ls ls]
+             [i 0])
     (cond
       [(null? ls) '()]
       [(f (car ls)) (cons i (loop (cdr ls) (add1 i)))]

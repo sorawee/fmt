@@ -127,7 +127,8 @@
           (let loop ([t t])
             (if (null? t)
                 null
-                (let ([pattern (car t)] [result (cadr t)])
+                (let ([pattern (car t)]
+                      [result (cadr t)])
                   (cons (cons (trans pattern) result) (loop (cddr t)))))))
 
         (define (a-regexp-match-positions re s p)
@@ -248,7 +249,9 @@
           (let loop ([l l])
             (unless (null? l)
               (loop (cddr l))
-              (let* ([pattern (car l)] [result (cadr l)] [n (bytes-ref pattern 0)])
+              (let* ([pattern (car l)]
+                     [result (cadr l)]
+                     [n (bytes-ref pattern 0)])
                 (vector-set! simple-table
                              n
                              (cons (list* pattern (bytes-length pattern) result)
@@ -367,8 +370,10 @@
               (if (eof-object? s) (apply bytes-append (reverse l)) (loop (cons s l))))))
 
         (define (tokenize)
-          (let* ([s (read-all (current-input-port))] [len (bytes-length s)])
-            (let loop ([p 0] [result null])
+          (let* ([s (read-all (current-input-port))]
+                 [len (bytes-length s)])
+            (let loop ([p 0]
+                       [result null])
               (if (= p len)
                   (cons (reverse result) p)
                   (let ([char (bytes-ref s p)])
@@ -433,7 +438,9 @@
                                       (subbytes s p (min len (+ p 100))))])]
                            [(not (car simple)) (cons (reverse result) (cdr simple))]
                            [(eq? (car simple) 'start)
-                            (let ([sf source-file] [sl source-line] [sub (loop (cdr simple) null)])
+                            (let ([sf source-file]
+                                  [sl source-line]
+                                  [sub (loop (cdr simple) null)])
                               (loop (cdr sub)
                                     (cons (make-a-seq (integer->char (bytes-ref s p)) sf sl (car sub))
                                           result)))]
@@ -461,7 +468,9 @@
           (if (eq? (system-type) 'windows)
               (lambda (s dest)
                 (let ([split
-                       (let loop ([i 0] [start 0] [quoted? #f])
+                       (let loop ([i 0]
+                                  [start 0]
+                                  [quoted? #f])
                          (cond
                            [(= i (string-length s)) (if (= i start) '() (list (substring s start i)))]
                            [(and (not quoted?) (char=? #\space (string-ref s i)))
@@ -1408,11 +1417,16 @@
         (define re:quote-or-backslash (regexp "[\\\"]"))
 
         (define (push-vars l plus comma)
-          (let loop ([l l] [n 0] [comma comma])
+          (let loop ([l l]
+                     [n 0]
+                     [comma comma])
             (unless (null? l)
               (loop
                (cdr l)
-               (let push-var ([full-name (caar l)] [vtype (cdar l)] [n n] [comma comma])
+               (let push-var ([full-name (caar l)]
+                              [vtype (cdar l)]
+                              [n n]
+                              [comma comma])
                  (cond
                    [(union-type? vtype)
                     (log-error "[UNION]: Can't push union onto mark stack: ~a." full-name)
@@ -1431,7 +1445,9 @@
                             plus)
                     (+ 3 n)]
                    [(struc-type? vtype)
-                    (let aloop ([array-index 0] [n n] [comma comma])
+                    (let aloop ([array-index 0]
+                                [n n]
+                                [comma comma])
                       ;; Push each struct in array (or only struct if not an array)
                       (let loop ([n n]
                                  [l (cdr (lookup-struct-def (struc-type-struct vtype)))]
@@ -1692,7 +1708,8 @@
                                          (eq? '|,| (tok-n (car prevs)))
                                          (acall? (cadr prevs))))])
             ;; Stmt (call or assign=call) sequence
-            (or (let loop ([prevs prevs] [semis 0])
+            (or (let loop ([prevs prevs]
+                           [semis 0])
                   (cond
                     [(and (pair? prevs) (tok? (car prevs)) (eq? semi (tok-n (car prevs))))
                      (or (positive? semis) ;; means that we already found a proc-ending semi
@@ -1871,7 +1888,8 @@
                              (not pgc?)
                              (and where
                                   (regexp-match re:h where)
-                                  (let loop ([e e] [prev #f])
+                                  (let loop ([e e]
+                                             [prev #f])
                                     (cond
                                       [(null? e) #t]
                                       [(and (eq? '|::| (tok-n (car e)))
@@ -2056,7 +2074,8 @@
         (define (function? e)
           (let ([l (length e)])
             (and (> l 2)
-                 (let* ([_n (tok-n (list-ref e (sub1 l)))] [ll (if (eq? _n semi) (- l 2) (sub1 l))])
+                 (let* ([_n (tok-n (list-ref e (sub1 l)))]
+                        [ll (if (eq? _n semi) (- l 2) (sub1 l))])
                    (let ([v (list-ref e ll)])
                      (and (braces? v)
                           (let ([v (list-ref e (sub1 ll))])
@@ -2080,7 +2099,8 @@
         (define (skip-static-line? e)
           ;; We want to skip the really-big static declaration for
           ;;  the inlined bytecodes in GRacket
-          (let loop ([e e] [l '(static unsigned char expr)])
+          (let loop ([e e]
+                     [l '(static unsigned char expr)])
             (cond
               [(null? l) #t]
               [(null? e) #f]
@@ -2112,7 +2132,8 @@
              name)))
 
         (define (parse-proto-information e k)
-          (let loop ([e e] [type null])
+          (let loop ([e e]
+                     [type null])
             (cond
               [(eq? '__declspec (tok-n (car e))) (loop (cddr e) type)]
               [(eq? '__attribute__ (tok-n (car e))) (loop (cddr e) type)]
@@ -2158,7 +2179,8 @@
         ;; a pointer. This information is computed (based on the declaration)
         ;; the first time it is needed, and then cached.
         (define (prototype-for-pointer? m)
-          (let ([name (car m)] [proto (cdr m)])
+          (let ([name (car m)]
+                [proto (cdr m)])
             (unless (prototype-pointer?-determined? proto)
               ;; We want to use `get-pointer-vars' to figure out the
               ;; answer, so invent a fake declaration and check it:
@@ -2220,7 +2242,10 @@
                                       (void))]
                                  [(lookup-non-pointer-type (tok-n (car e))) (list (tok-n (car e)))]
                                  [else #f])])
-            (let loop ([l (- (length e) 2)] [array-size #f] [pointers null] [non-pointers null])
+            (let loop ([l (- (length e) 2)]
+                       [array-size #f]
+                       [pointers null]
+                       [non-pointers null])
               (if (<= l minpos)
                   (values pointers non-pointers)
                   ;; Look back for "=" before comma:
@@ -2453,7 +2478,8 @@
                     ;; primitive class, before `gc' defn
                     e
                     ;; normal class:
-                    (let loop ([e e] [p body-pos])
+                    (let loop ([e e]
+                               [p body-pos])
                       (if (zero? p)
                           (append
                            (if (or super (eq? name 'gc))
@@ -2469,7 +2495,8 @@
                              (seq-close body-v)
                              (list->seq
                               ;; Replace constructors names with gcInit_ names
-                              (append (let loop ([e body-e] [did-one? #f])
+                              (append (let loop ([e body-e]
+                                                 [did-one? #f])
                                         (cond
                                           [(null? e)
                                            (if did-one?
@@ -2605,7 +2632,8 @@
         ;; for constructors, detected by a '|:| outside the body.
         (define (convert-function e name)
           (let*-values
-              ([(body-v len) (let* ([len (sub1 (length e))] [v (list-ref e len)])
+              ([(body-v len) (let* ([len (sub1 (length e))]
+                                    [v (list-ref e len)])
                                ;; Function may have trailing semicolon:
                                (if (eq? semi (tok-n v))
                                    (values (list-ref e (sub1 len)) (sub1 len))
@@ -2614,7 +2642,8 @@
                                              'XFORM_ASSERT_NO_CONVERSION)]
                [(body-e) (seq->list (seq-in body-v))]
                [(class-name function-name func-pos)
-                (let loop ([e e] [p 0])
+                (let loop ([e e]
+                           [p 0])
                   (cond
                     [(null? e) (values #f #f #f)]
                     [(null? (cdr e)) (values #f #f #f)]
@@ -2630,7 +2659,9 @@
                               (body->lines (append args-e (list (make-tok '|,| #f #f))) #t)])
                   (unless (null? arg-pragmas)
                     (error 'arg-decls "unexpected pragmas"))
-                  (let loop ([l arg-decls] [arg-vars null] [all-arg-vars null])
+                  (let loop ([l arg-decls]
+                             [arg-vars null]
+                             [all-arg-vars null])
                     (if (null? l)
                         (values arg-vars all-arg-vars)
                         (let-values ([(ptrs non-ptrs) (get-vars (car l) "PTRARG" #f #t)])
@@ -2643,14 +2674,17 @@
                                        (eq? function-name class-name)
                                        (eq? function-name '~))
                                    c++-class))]
-               [(initializers) (let loop ([e e] [len len])
+               [(initializers) (let loop ([e e]
+                                          [len len])
                                  (cond
                                    [(zero? len) #f]
                                    [(eq? (tok-n (car e)) '|:|) (cons (cadr e) (caddr e))]
                                    [else (loop (cdr e) (sub1 len))]))])
             (append
              ;; Build all of the function declaration up to the body:
-             (let loop ([e e] [len len] [need-void? #t])
+             (let loop ([e e]
+                        [len len]
+                        [need-void? #t])
                (cond
                  [(zero? len) null]
                  ;; skip initializers
@@ -2780,7 +2814,9 @@
                                      (car var))))
                       (append pointers non-pointers))))
                  decls))))
-          (let loop ([e body-e] [can-convert? #t] [paren-arrows? #t])
+          (let loop ([e body-e]
+                     [can-convert? #t]
+                     [paren-arrows? #t])
             (cond
               [(null? e) null]
               [(skip-static-line? e)
@@ -3097,7 +3133,8 @@
                              (values (cons e rest) live-vars))]))])
                   ;; Collect live vars and look for function calls in decl section.
                   (let ([live-vars
-                         (let loop ([decls decls] [live-vars live-vars])
+                         (let loop ([decls decls]
+                                    [live-vars live-vars])
                            (if (null? decls)
                                live-vars
                                (let dloop ([el (let-values ([(pragmas el) (body->lines (car decls)
@@ -3202,7 +3239,8 @@
                                                       (loop (cdr e)))))
                                            (loop (cdr decls)))))
                                 null
-                                (let null-var ([full-name (car var)] [vtype (cdr var)])
+                                (let null-var ([full-name (car var)]
+                                               [vtype (cdr var)])
                                   (cond
                                     [(or (union-type? vtype) (non-pointer-type? vtype)) null]
                                     [(array-type? vtype)
@@ -3605,14 +3643,19 @@
           ;; complain-not-in is ither #f [function calls are ok], a string [not ok, string describes way],
           ;;  or (list ok-exprs ...)) [in a rator position, only ok-expr calls are allowed,
           ;;  because they're blessed by the lifter]
-          (let ([e- (reverse e)] [orig-num-calls (live-var-info-num-calls live-vars)])
-            (let loop ([e- e-] [result null] [live-vars live-vars] [converted-sub? #f])
+          (let ([e- (reverse e)]
+                [orig-num-calls (live-var-info-num-calls live-vars)])
+            (let loop ([e- e-]
+                       [result null]
+                       [live-vars live-vars]
+                       [converted-sub? #f])
               (cond
                 [(null? e-) (values result live-vars)]
                 [(ignored-stuff? e-) (loop (cdr e-) (cons (car e-) result) live-vars converted-sub?)]
                 [(eq? 'return (tok-n (car e-)))
                  ;; Look forward in result to semicolon, and wrap that:
-                 (let rloop ([result result] [l null])
+                 (let rloop ([result result]
+                             [l null])
                    (cond
                      [(null? result)
                       (error 'xform "odd return at ~a:~a" (tok-file (car e-)) (tok-line (car e-)))]
@@ -3626,7 +3669,8 @@
                                   ;; All calls must be empty calls, otherwise
                                   ;; the result might not depend on the empty call
                                   ;; (e.g., f() && empty(f()) )
-                                  (let loop ([l l] [one? #f])
+                                  (let loop ([l l]
+                                             [one? #f])
                                     (cond
                                       [(null? l) one?]
                                       [(call? (car l))
@@ -3901,7 +3945,8 @@
                                   (or (non-pointer-type? special-case-type)
                                       (pointer-type? special-case-type)))
                              ;; Change to (newvar = XXX, (YYY -> ivar) = newvar)
-                             (let ([new-var (gensym '__assign)] [v (car e-)])
+                             (let ([new-var (gensym '__assign)]
+                                   [v (car e-)])
                                (loop null
                                      (list (make-parens
                                             "("
@@ -4219,7 +4264,8 @@
         ;; ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
         (define (call-graph name e)
-          (let ([body-v (let* ([len (sub1 (length e))] [v (list-ref e len)])
+          (let ([body-v (let* ([len (sub1 (length e))]
+                               [v (list-ref e len)])
                           ;; Function may have trailing semicolon:
                           (if (eq? semi (tok-n v)) (list-ref e (sub1 len)) v))])
             (call-graph/body name (seq->list (seq-in body-v)))))
@@ -4243,14 +4289,16 @@
         ;; ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
         (define (body->lines e comma-sep?)
-          (let loop ([e e] [pragmas null])
+          (let loop ([e e]
+                     [pragmas null])
             (if (or (null? e) (not (pragma? (car e))))
                 (values (reverse pragmas)
                         (reverse (foldl-statement e comma-sep? (lambda (sube l) (cons sube l)) null)))
                 (loop (cdr e) (cons (car e) pragmas)))))
 
         (define (split-decls el)
-          (let loop ([el el] [decls null])
+          (let loop ([el el]
+                     [decls null])
             (if (null? el)
                 (values (reverse decls) null)
                 (let ([e (car el)])
@@ -4285,7 +4333,10 @@
               [(null? (cddr result)) #f]
               [(null? (cdddr result)) (tok-n (car result))]
               [else (get-third (cdr result))]))
-          (let loop ([e e] [result null] [first #f] [second #f])
+          (let loop ([e e]
+                     [result null]
+                     [first #f]
+                     [second #f])
             (cond
               [(null? e) (values (reverse result) null)]
               [(pragma? (car e))
@@ -4331,7 +4382,8 @@
                      (or second (and first (tok-n (car e)))))])))
 
         (define (foldl-statement e comma-sep? f a-init)
-          (let loop ([e e] [a a-init])
+          (let loop ([e e]
+                     [a a-init])
             (cond
               [(null? e) a]
               [else
@@ -4349,7 +4401,10 @@
 
         ;; ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
-        (let* ([e e-raw] [line -inf.0] [file #f] [sysheader? #f])
+        (let* ([e e-raw]
+               [line -inf.0]
+               [file #f]
+               [sysheader? #f])
           (set! e-raw #f) ;; to allow GC
           (foldl-statement
            e
@@ -4380,7 +4435,8 @@
               [else v])))
 
         (when precompiling-header?
-          (parameterize ([current-inspector power-inspector] [print-struct #t])
+          (parameterize ([current-inspector power-inspector]
+                         [print-struct #t])
             (let ([e (list 'list
                            (list 'quote (hash-map used-symbols cons))
                            (marshall c++-classes)

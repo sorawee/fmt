@@ -185,7 +185,8 @@
 
           (void))))))
  (define (add-search-help-desk-menu-item text menu position [add-sep void])
-   (let* ([end (send text get-end-position)] [start (send text get-start-position)])
+   (let* ([end (send text get-end-position)]
+          [start (send text get-start-position)])
      (unless (= 0 (send text last-position))
        (let* ([str (if (= end start) (find-symbol text position) (send text get-text start end))]
               ;; almost the same code as "search-help-desk" in "rep.rkt"
@@ -255,7 +256,8 @@
       (send text split-snip (+ pos 1))
       (let ([snip (send text find-snip pos 'after)])
         (if (is-a? snip string-snip%)
-            (let* ([before (let loop ([i (- pos 1)] [chars null])
+            (let* ([before (let loop ([i (- pos 1)]
+                                      [chars null])
                              (if (< i 0)
                                  chars
                                  (let ([char (send text get-character i)])
@@ -513,7 +515,8 @@
            (string->symbol (regexp-replace #rx"\\.[^.]*$" (path->string name) ""))))
        (define/augment (after-save-file success?)
          (when save-file-metadata
-           (let ([modified? (is-modified?)] [locked? (is-locked?)])
+           (let ([modified? (is-modified?)]
+                 [locked? (is-locked?)])
              (when locked?
                (lock #f))
              (while-unlocked (λ () (delete 0 (string-length save-file-metadata))))
@@ -683,7 +686,8 @@
 
          ;; [Disabled] For printing, put date and filename in the top margin:
          (when (and #f before (is-printing?))
-           (let ([h (box 0)] [w (box 0)])
+           (let ([h (box 0)]
+                 [w (box 0)])
              (send (current-ps-setup) get-editor-margin w h)
              (unless ((unbox h) . < . 2)
                (let ([font (make-font #:size (inexact->exact (ceiling (* 1/2 (unbox h))))
@@ -735,7 +739,10 @@
                                     #:arrow-root-radius arrow-root-radius))
        (inherit dc-location-to-editor-location)
        (define/private (find-poss text left-pos right-pos)
-         (let ([xlb (box 0)] [ylb (box 0)] [xrb (box 0)] [yrb (box 0)])
+         (let ([xlb (box 0)]
+               [ylb (box 0)]
+               [xrb (box 0)]
+               [yrb (box 0)])
            (send text position-location left-pos xlb ylb #t)
            (send text position-location right-pos xrb yrb #f)
            (let*-values
@@ -824,7 +831,8 @@
  (define (get-pos text event)
    (let*-values ([(event-x event-y) (values (send event get-x) (send event get-y))]
                  [(x y) (send text dc-location-to-editor-location event-x event-y)])
-     (let* ([on-it? (box #f)] [pos (send text find-position x y #f on-it?)])
+     (let* ([on-it? (box #f)]
+            [pos (send text find-position x y #f on-it?)])
        (and (unbox on-it?) pos))))
  (let ([old (keymap:add-to-right-button-menu)])
    (keymap:add-to-right-button-menu
@@ -1827,7 +1835,8 @@
        (sort-toolbar-buttons-panel))
 
      (define/public (register-toolbar-buttons bs #:numbers [numbers/fs (make-list (length bs) #f)])
-       (for ([b (in-list bs)] [n (in-list numbers/fs)])
+       (for ([b (in-list bs)]
+             [n (in-list numbers/fs)])
          (add-to-toolbar-buttons 'register-toolbar-buttons b n))
        (set-toolbar-label-visibilities/check-registered)
        (sort-toolbar-buttons-panel))
@@ -2042,7 +2051,8 @@
 
      (define/private (get-defs-tab-label defs tab)
        (define tab-index
-         (for/or ([i (in-list tabs)] [n (in-naturals 1)])
+         (for/or ([i (in-list tabs)]
+                  [n (in-naturals 1)])
            (and (eq? i tab) n)))
        (define i-prefix
          (cond
@@ -2258,7 +2268,8 @@
              (send
               resizable-panel
               set-percentages
-              (let loop ([canvases orig-canvases] [percentages orig-percentages])
+              (let loop ([canvases orig-canvases]
+                         [percentages orig-percentages])
                 (cond
                   [(null? canvases) (error 'split "couldn't split; didn't find canvas")]
                   [(null? percentages)
@@ -2344,7 +2355,10 @@
      ;; get-visible-area : admin -> number number number number
      ;; returns the visible area for this admin
      (define/private (get-visible-area admin)
-       (let ([bx (box 0)] [by (box 0)] [bw (box 0)] [bh (box 0)])
+       (let ([bx (box 0)]
+             [by (box 0)]
+             [bw (box 0)]
+             [bh (box 0)])
          (send admin get-view bx by bw bh)
          (values (unbox bx) (unbox by) (unbox bw) (unbox bh))))
 
@@ -2698,7 +2712,8 @@
 
      ;; wire the definitions text to the interactions text and initialize it.
      (define/private (init-definitions-text tab)
-       (let ([defs (send tab get-defs)] [ints (send tab get-ints)])
+       (let ([defs (send tab get-defs)]
+             [ints (send tab get-ints)])
          (send defs set-interactions-text ints)
          (send defs set-tab tab)
          (send ints set-definitions-text defs)
@@ -2816,7 +2831,8 @@
               (set-text-to-search (send (car interactions-canvases) get-editor))]))))
 
      (define/pubment (on-tab-change from-tab to-tab)
-       (let ([old-enabled (send from-tab get-enabled)] [new-enabled (send to-tab get-enabled)])
+       (let ([old-enabled (send from-tab get-enabled)]
+             [new-enabled (send to-tab get-enabled)])
          (unless (eq? old-enabled new-enabled)
            (if new-enabled (enable-evaluation) (disable-evaluation))))
 
@@ -2838,7 +2854,10 @@
           tab-order))
        (begin-container-sequence)
        (define-values (new-tabs-rev new-labels-rev)
-         (for/fold ([new-tabs '()] [new-labels '()]) ([new-i (in-naturals)] [old-i tab-order])
+         (for/fold ([new-tabs '()]
+                    [new-labels '()])
+                   ([new-i (in-naturals)]
+                    [old-i tab-order])
            (define t (list-ref tabs old-i))
            (send t set-i new-i)
            (values (cons t new-tabs) (cons (send tabs-panel get-item-label old-i) new-labels))))
@@ -2932,7 +2951,8 @@
                   [regions-count (length regions)])
              (cond
                [(> canvases-count regions-count)
-                (let loop ([i (- canvases-count regions-count)] [canvases canvases])
+                (let loop ([i (- canvases-count regions-count)]
+                           [canvases canvases])
                   (unless (zero? i)
                     (if ints?
                         (collapse-interactions (car canvases))
@@ -2940,7 +2960,8 @@
                     (loop (- i 1) (cdr canvases))))]
                [(= canvases-count regions-count) (void)]
                [(< canvases-count regions-count)
-                (let loop ([i (- regions-count canvases-count)] [canvases canvases])
+                (let loop ([i (- regions-count canvases-count)]
+                           [canvases canvases])
                   (unless (zero? i)
                     (if ints? (split-interactions (car canvases)) (split-definitions (car canvases)))
                     (loop (- i 1) (cdr canvases))))]))))
@@ -3055,7 +3076,8 @@
      ;; bring the tab that edits the file named by `path' to the front
      ;; and opens a dialog asking if it should be saved.
      (define/public (offer-to-save-file path)
-       (let ([original-tab current-tab] [tab-to-save (find-matching-tab path)])
+       (let ([original-tab current-tab]
+             [tab-to-save (find-matching-tab path)])
          (when tab-to-save
            (let ([defs-to-save (send tab-to-save get-defs)])
              (when (send defs-to-save is-modified?)
@@ -4017,14 +4039,16 @@
        (new menu:can-restore-menu-item%
             (label (string-constant clear-error-highlight-menu-item-label))
             (parent language-specific-menu)
-            (callback
-             (λ (_1 _2)
-               (let* ([tab (get-current-tab)] [ints (send tab get-ints)] [defs (send tab get-defs)])
-                 (send ints reset-error-ranges)
-                 (send defs clear-test-coverage))))
+            (callback (λ (_1 _2)
+                        (let* ([tab (get-current-tab)]
+                               [ints (send tab get-ints)]
+                               [defs (send tab get-defs)])
+                          (send ints reset-error-ranges)
+                          (send defs clear-test-coverage))))
             (help-string (string-constant clear-error-highlight-item-help-string))
             (demand-callback (λ (item)
-                               (let* ([tab (get-current-tab)] [ints (send tab get-ints)])
+                               (let* ([tab (get-current-tab)]
+                                      [ints (send tab get-ints)])
                                  (send item
                                        enable
                                        (or (send ints get-error-ranges)
@@ -4036,7 +4060,8 @@
             (shortcut #\.)
             (callback (λ (_1 _2) (jump-to-next-error-loc)))
             (demand-callback (λ (item)
-                               (let* ([tab (get-current-tab)] [ints (send tab get-ints)])
+                               (let* ([tab (get-current-tab)]
+                                      [ints (send tab get-ints)])
                                  (send item enable (send ints get-error-ranges))))))
        (new menu:can-restore-menu-item%
             (label (string-constant jump-to-prev-error-highlight-menu-item-label))
@@ -4047,7 +4072,8 @@
                                  (get-default-shortcut-prefix)))
             (callback (λ (_1 _2) (jump-to-previous-error-loc)))
             (demand-callback (λ (item)
-                               (let* ([tab (get-current-tab)] [ints (send tab get-ints)])
+                               (let* ([tab (get-current-tab)]
+                                      [ints (send tab get-ints)])
                                  (send item enable (send ints get-error-ranges))))))
        (make-object separator-menu-item% language-specific-menu)
        (make-object menu:can-restore-menu-item%
@@ -4227,7 +4253,8 @@
        (define pos (send (send tab get-defs) get-start-position))
        (define ranges (or (send (send tab get-ints) get-error-ranges) '()))
        (define sorted (sort ranges < #:key srcloc-position))
-       (let loop ([before #f] [lst sorted])
+       (let loop ([before #f]
+                  [lst sorted])
          (cond
            [(null? lst) (values before #f sorted)]
            [else
@@ -4544,7 +4571,8 @@
            (send dc set-brush "yellow" 'solid)
            (send dc draw-rectangle 0 0 w h)
            (when message
-             (let* ([base normal-control-font] [face (send base get-face)])
+             (let* ([base normal-control-font]
+                    [face (send base get-face)])
                (if face
                    (send dc
                          set-font
@@ -4799,7 +4827,8 @@
    (send d show #t)
    result)
  (define (limit-length l n)
-   (let loop ([l l] [n n])
+   (let loop ([l l]
+              [n n])
      (cond
        [(or (null? l) (zero? n)) null]
        [else (cons (car l) (loop (cdr l) (- n 1)))])))
@@ -4905,7 +4934,8 @@
  ;; shorten-to : (listof X) number -> (listof X)
  ;; drops items from the end of the list to bring it back down to `n' items
  (define (shorten-to l n)
-   (let loop ([l l] [n n])
+   (let loop ([l l]
+              [n n])
      (cond
        [(zero? n) '()]
        [(null? l) '()]
@@ -5131,7 +5161,8 @@
 (define (is-lang-line? l)
   (let ([m (regexp-match #rx"^#(!|(lang ))([-+_/a-zA-Z0-9]+)(.|$)" l)])
     (and m
-         (let ([lang-name (list-ref m 3)] [last-char (list-ref m 4)])
+         (let ([lang-name (list-ref m 3)]
+               [last-char (list-ref m 4)])
            (and (not (char=? #\/ (string-ref lang-name 0)))
                 (not (char=? #\/ (string-ref lang-name (- (string-length lang-name) 1))))
                 (or (string=? "" last-char) (char-whitespace? (string-ref last-char 0))))))))
