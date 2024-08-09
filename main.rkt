@@ -4,16 +4,28 @@
 
 (define-logger fmt)
 
-(provide program-format
-         empty-formatter-map
-         compose-formatter-map
-         pretty-print*
-         pretty-format*
-         formatter-map/c
-         (all-from-out "core.rkt")
-         (all-from-out "params.rkt")
-         (all-from-out "common.rkt")
-         (all-from-out "conventions.rkt"))
+(require racket/contract/base)
+
+(provide
+ (contract-out
+  [program-format
+   (->* (string?)
+        (#:formatter-map formatter-map/c
+         #:source any/c
+         #:width (or/c exact-nonnegative-integer? +inf.0)
+         #:limit (or/c exact-nonnegative-integer? +inf.0)
+         #:max-blank-lines (or/c exact-nonnegative-integer? +inf.0)
+         #:indent exact-nonnegative-integer?)
+        (and/c string? immutable?))])
+ empty-formatter-map
+ compose-formatter-map
+ pretty-print*
+ pretty-format*
+ formatter-map/c
+ (all-from-out "core.rkt")
+ (all-from-out "params.rkt")
+ (all-from-out "common.rkt")
+ (all-from-out "conventions.rkt"))
 
 (require racket/string
          racket/contract
