@@ -22,6 +22,7 @@
          (except-in pretty-expressive flatten)
          "common.rkt"
          "params.rkt"
+         "private/memoize.rkt"
          (for-syntax racket/base syntax/parse/lib/function-header))
 
 (define (extract xs extract-configs)
@@ -46,45 +47,40 @@
 (define (pretty-comment comment d)
   (if comment (full (<s> d (text comment))) d))
 
-(define (memoize f #:backend [backend make-weak-hasheq])
-  (define table (backend))
-  (λ (x) (hash-ref! table x (λ () (f x)))))
-
 (define (big-text s)
   (reset (u-concat (add-between (map text (string-split s "\n")) hard-nl))))
 
 (define (pretty-doc xs hook)
-  (define loop
-    (memoize (λ (d)
-               (match d
-                 [(newl n) (full (v-concat (make-list n empty-doc)))]
-                 [(full-atom _ content 'string)
-                  (full (big-text content))]
-                 [(atom comment content type)
-                  (pretty-comment
-                   comment
-                   (match type
-                     ['block-comment (big-text content)]
-                     [_ (text content)]))]
-                 [(line-comment comment) (full (text comment))]
-                 [(node _ _ _ _ xs)
-                  (match (extract xs (list #f))
-                    [#f ((hook #f) d)]
-                    [(list (list (atom _ content 'symbol)) _ _) ((hook content) d)]
-                    [_ ((hook #f) d)])]
-                 [(wrapper comment tok content)
-                  (pretty-comment comment (<+> (text tok) (loop content)))]
-                 [(sexp-comment comment style tok xs)
-                  (pretty-comment comment
-                                  (match style
-                                    ['newline (apply <$> (text tok) (map loop xs))]
-                                    ['any
-                                     (define :x (loop (first xs)))
-                                     (alt (<$> (text tok) :x) (<+> (text tok) :x))]
-                                    ['disappeared (loop (first xs))]))]))))
+  (define/memoize (loop d)
+    (match d
+      [(newl n) (full (v-concat (make-list n empty-doc)))]
+      [(full-atom _ content 'string)
+       (full (big-text content))]
+      [(atom comment content type)
+       (pretty-comment
+        comment
+        (match type
+          ['block-comment (big-text content)]
+          [_ (text content)]))]
+      [(line-comment comment) (full (text comment))]
+      [(node _ _ _ _ xs)
+       (match (extract xs (list #f))
+         [#f ((hook #f) d)]
+         [(list (list (atom _ content 'symbol)) _ _) ((hook content) d)]
+         [_ ((hook #f) d)])]
+      [(wrapper comment tok content)
+       (pretty-comment comment (<+> (text tok) (loop content)))]
+      [(sexp-comment comment style tok xs)
+       (pretty-comment comment
+                       (match style
+                         ['newline (apply <$> (text tok) (map loop xs))]
+                         ['any
+                          (define :x (loop (first xs)))
+                          (alt (<$> (text tok) :x) (<+> (text tok) :x))]
+                         ['disappeared (loop (first xs))]))]))
   (set-box! current-pretty loop)
   (begin0 (v-concat (map loop xs))
-    (set-box! current-pretty #f)))
+          (set-box! current-pretty #f)))
 
 (define (pretty-node* n d #:node [the-node n] #:unfits [unfits '()] #:adjust [adjust '("(" ")")])
   (match-define (node comment opener closer prefix _) the-node)
@@ -168,7 +164,7 @@
           body ...]
          [_
           (match/extract -xs #:as unfits tail
-            . rst)]))]
+                         . rst)]))]
   [(_ xs #:as unfits tail [#:else body ...+])
    #'(let ()
        body ...)])
