@@ -142,11 +142,8 @@
 (define-syntax-parse-rule (pretty-node args ...)
   (pretty-node* doc args ...))
 
-(define spaces-table (make-hasheq))
-
-(define (spaces n)
-  (hash-ref! spaces-table n
-             (λ () (text (make-string n #\space)))))
+(define/memoize (spaces n)
+  (text (make-string n #\space)))
 
 (define (require-newline? d)
   (or (and (commentable? d) (commentable-inline-comment d)) (line-comment? d) (newl? d) (full-atom? d)))
