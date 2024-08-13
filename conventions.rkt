@@ -65,12 +65,10 @@
             [(? visible?) (loop xs (sub1 pos) (cons (format-kw-arg x) acc))]
             [_ (loop xs pos (cons (pretty x) acc))])])])))
 
-(define-pretty (format-vertical/helper #:body-formatter [format-body #f]
-                                       #:kw-arg-formatter [format-kw-arg #f]
+(define-pretty (format-vertical/helper #:body-formatter [format-body pretty]
+                                       #:kw-arg-formatter [format-kw-arg pretty]
                                        #:kw-map [kw-map default-kw-map])
   #:type list?
-  #:default [format-body pretty]
-  #:default [format-kw-arg pretty]
 
   (let loop ([xs doc])
     (define (v-append-if x xs)
@@ -106,12 +104,10 @@
       [(list x xs ...) (v-append-if (format-body x) xs)])))
 
 ;; failable
-(define-pretty (format-horizontal/helper #:body-formatter [format-body #f]
-                                         #:kw-arg-formatter [format-kw-arg #f]
+(define-pretty (format-horizontal/helper #:body-formatter [format-body pretty]
+                                         #:kw-arg-formatter [format-kw-arg pretty]
                                          #:kw-map [kw-map default-kw-map])
   #:type list?
-  #:default [format-body pretty]
-  #:default [format-kw-arg pretty]
 
   (flatten
    (let loop ([xs doc])
@@ -153,10 +149,10 @@
 
 (define-pretty format-#%app
   #:type node?
-  #:let [xs (filter-not newl? (node-content doc))]
-  #:let [doc (struct-copy node doc [content xs])]
+  (define xs (filter-not newl? (node-content doc)))
+  (define doc-without-newlines (struct-copy node doc [content xs]))
   (cond
-    [((current-app?) doc)
+    [((current-app?) doc-without-newlines)
      (match/extract xs #:as unfits tail
        ;; mostly vertical
        [([-head #f])
@@ -175,7 +171,8 @@
                                          ((format-horizontal/helper) (cons -head tail))))]
                [_
                 ;; pretty cases
-                ((format-if-like/helper #:expel-first-comment? #f #:adjust #f (λ (d) fail)) doc)]))]
+                ((format-if-like/helper #:expel-first-comment? #f #:adjust #f (λ (d) fail))
+                 doc-without-newlines)]))]
        ;; perhaps full of comments, or there's nothing at all
        [#:else (pretty-node #:adjust #f
                             (try-indent #:n 0 #:because-of xs ((format-vertical/helper) xs)))])]
@@ -189,13 +186,11 @@
                                    (flatten (as-concat (map pretty xs))))))]))
 
 (define-pretty (format-uniform-body/helper n
-                                           #:arg-formatter [format-arg #f]
-                                           #:body-formatter [format-body #f]
+                                           #:arg-formatter [format-arg pretty]
+                                           #:body-formatter [format-body pretty]
                                            #:require-body? [require-body? #t]
                                            #:kw-map [kw-map default-kw-map])
   #:type node?
-  #:default [format-arg pretty]
-  #:default [format-body pretty]
   (match (extract (node-content doc) (append (make-list n #t) (list #f)))
     ;; don't care
     [#f (format-#%app doc)]
@@ -283,9 +278,8 @@
     b)
 #;(define (foo)
     111111111111111111111111111111111)
-(define-pretty (format-define #:head-formatter [format-head #f])
+(define-pretty (format-define #:head-formatter [format-head pretty])
   #:type node?
-  #:default [format-head pretty]
   (match/extract (node-content doc) #:as unfits tail
     [([-define #t] [-head #f])
      ;; general case
@@ -315,9 +309,8 @@
 #;(define-values (xxxxxxxxxxx yyyyyyyyyyy) 1)
 #;(define-values (xxxxxxxxxxx yyyyyyyyyyy)
     11111111111111111111111111111111111111111111111111111111111111111111111)
-(define-pretty (format-define-like #:head-formatter [format-head #f])
+(define-pretty (format-define-like #:head-formatter [format-head pretty])
   #:type node?
-  #:default [format-head pretty]
   (match/extract (node-content doc) #:as unfits tail
     [([-define #t] [-head #f])
      ;; general case
