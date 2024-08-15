@@ -113,8 +113,13 @@
     [_ (<$> (v-concat (map (unbox current-pretty) unfits)) doc*)]))
 
 (define current-pretty (box #f))
-(define-syntax-parameter pretty
-  (λ (stx) (raise-syntax-error #f "use of pretty outside its context" stx)))
+
+(define (pretty d)
+  (define pretty-proc (unbox current-pretty))
+  (unless pretty-proc
+    (raise-arguments-error 'pretty "pretty can only be called during formatting"))
+  (pretty-proc d))
+
 (define-syntax-parameter doc (λ (stx) (raise-syntax-error #f "use of doc outside its context" stx)))
 
 (begin-for-syntax
@@ -125,19 +130,13 @@
 
 (define-syntax-parse-rule (define-pretty head:header
                             #:type p?
-                            {~seq #:default [from:id to]} ...
-                            {~seq #:let [a:id b]} ...
                             body ...+)
   #:with ooo (quote-syntax ...)
   (define (head d)
-    (let ([pretty-proc (unbox current-pretty)])
-      (cond
-        [(p? d)
-         (syntax-parameterize ([pretty (make-rename-transformer #'pretty-proc)]
-                               [doc (make-rename-transformer #'d)])
-           (let* ([from (or from to)] ... [a b] ...)
-             body ...))]
-        [else (raise-argument-error 'head.name (symbol->string 'p?) d)]))))
+    (unless (p? d)
+      (raise-argument-error 'head.name (symbol->string 'p?) d))
+    (syntax-parameterize ([doc (make-rename-transformer #'d)])
+      body ...)))
 
 (define-syntax-parse-rule (pretty-node args ...)
   (pretty-node* doc args ...))
