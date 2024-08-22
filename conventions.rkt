@@ -536,6 +536,31 @@
   [("for/hasheq" "for*/hasheq") (format-for-like 1)]
   [("for/hasheqv" "for*/hasheqv") (format-for-like 1)]
   [("for/vector" "for*/vector") (format-for-like 1)]
+  [("for/set"
+    "for/seteq"
+    "for/seteqv"
+    "for/setalw"
+    "for/mutable-set"
+    "for/mutable-seteq"
+    "for/mutable-seteqv"
+    "for/mutable-setalw"
+    "for/weak-set"
+    "for/weak-seteq"
+    "for/weak-seteqv"
+    "for/weak-setalw"
+    "for*/set"
+    "for*/seteq"
+    "for*/seteqv"
+    "for*/setalw"
+    "for*/mutable-set"
+    "for*/mutable-seteq"
+    "for*/mutable-seteqv"
+    "for*/mutable-setalw"
+    "for*/weak-set"
+    "for*/weak-seteq"
+    "for*/weak-seteqv"
+    "for*/weak-setalw")
+   (format-for-like 1)]
   [("for/async" "for*/async") (format-for-like 1)]
   [("for/list/concurrent" "for*/list/concurrent") (format-for-like 1)]
 
