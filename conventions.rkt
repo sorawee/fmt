@@ -311,11 +311,13 @@
     [#:else (format-#%app doc)]))
 
 ;; try to fit in one line if the body has exactly one form,
-;; else will be multiple lines
+;; else will be multiple lines. if #:force-linebreak? is true,
+;; the one line form is never allowed.
 #;(define-values (xxxxxxxxxxx yyyyyyyyyyy) 1)
 #;(define-values (xxxxxxxxxxx yyyyyyyyyyy)
     11111111111111111111111111111111111111111111111111111111111111111111111)
-(define-pretty (format-define-like #:head-formatter [format-head #f])
+(define-pretty (format-define-like #:head-formatter [format-head #f]
+                                   #:force-linebreak? [force-linebreak? #f])
   #:type node?
   #:default [format-head pretty]
   (match/extract (node-content doc) #:as unfits tail
@@ -325,18 +327,20 @@
          c
          d
          e)
-     (alt ((format-uniform-body/helper 1 #:arg-formatter format-head) doc)
-          ;; fit in one line case; only when there are either two or three things
-          #;(define a b)
-          (pretty-node
-           #:unfits unfits
-           (try-indent
-            #:because-of tail
-            (flatten
-             (match tail
-               ['() (<s> (pretty -define) (format-head -head))]
-               [(list -e) (<s> (pretty -define) (format-head -head) (pretty -e))]
-               [_ fail])))))]
+     (define general-case ((format-uniform-body/helper 1 #:arg-formatter format-head) doc))
+     ;; fit in one line case; only when there are either two or three things
+     #;(define a b)
+     (define one-line-case
+       (pretty-node
+        #:unfits unfits
+        (try-indent
+         #:because-of tail
+         (flatten
+          (match tail
+            ['() (<s> (pretty -define) (format-head -head))]
+            [(list -e) (<s> (pretty -define) (format-head -head) (pretty -e))]
+            [_ fail])))))
+     (if force-linebreak? general-case (alt general-case one-line-case))]
     [#:else (format-#%app doc)]))
 
 ;; this is similar to let*, but because the macro name is so long,
@@ -452,7 +456,7 @@
 
   [("define") (format-define)]
   [("define-for-syntax") (format-define-like)]
-  [("define-syntax-rule") (format-define-like)]
+  [("define-syntax-rule") (format-define-like #:force-linebreak? #true)]
   [("define-syntax") (format-define-like)]
   [("define-syntax-parameter") (format-define-like)]
   [("define/public" "define/private" "define/override" "define/augment") (format-define-like)]
