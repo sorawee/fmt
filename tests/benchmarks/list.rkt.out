@@ -399,7 +399,8 @@
 (define (remove-duplicates l [=? equal?] #:key [key #f])
   ;; `no-key' is used to optimize the case for long lists, it could be done for
   ;; shorter ones too, but that adds a ton of code to the result (about 2k).
-  (define-syntax-rule (no-key x) x)
+  (define-syntax-rule (no-key x)
+    x)
   (unless (list? l)
     (raise-argument-error 'remove-duplicates "list?" l))
   (let* ([len (length l)]
