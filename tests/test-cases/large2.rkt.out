@@ -465,337 +465,373 @@
                         (number-snip:remove-decimal-looking-number-snips-on-insertion-mixin
                          text:info%)))))))))))))))])
      ((get-program-editor-mixin)
-      (class*
-       definitions-super%
-       (drracket:unit:definitions-text<%>)
-       (inherit is-locked?
-                lock
-                while-unlocked
-                highlight-first-line
-                is-printing?)
-       (define interactions-text #f)
-       (define/public (set-interactions-text it) (set! interactions-text it))
-       (define tab #f)
-       (define/public (get-tab) tab)
-       (define/public (set-tab t) (set! tab t))
-       (inherit begin-edit-sequence
-                end-edit-sequence
-                delete
-                insert
-                last-position
-                paragraph-start-position
-                get-character)
-       (define save-file-metadata #f)
-       (define/pubment (begin-metadata-changes)
-         (set! ignore-edits? #t)
-         (inner (void) begin-metadata-changes))
-       (define/pubment (end-metadata-changes)
-         (set! ignore-edits? #f)
-         (inner (void) end-metadata-changes))
-       (define/augment (on-save-file filename fmt)
-         (inner (void) on-save-file filename fmt)
-         (define lang (drracket:language-configuration:language-settings-language next-settings))
-         (define settings (drracket:language-configuration:language-settings-settings next-settings))
-         (define name-mod (send lang get-reader-module))
-         (when name-mod
-           ;; the reader-module method's result is used a test of whether or
-           ;; not the get-metadata method is used for this language
-           (let ([metadata (send lang get-metadata (filename->modname filename) settings)])
-             (begin-edit-sequence #f #f)
-             (begin-metadata-changes)
-             (let ([locked? (is-locked?)])
-               (when locked?
-                 (lock #f))
-               (set! save-file-metadata metadata)
-               (while-unlocked (λ () (insert metadata 0 0)))
-               (when locked?
-                 (lock #t))))))
-       (define/private (filename->modname filename)
-         (let-values ([(base name dir) (split-path filename)])
-           (string->symbol (regexp-replace #rx"\\.[^.]*$" (path->string name) ""))))
-       (define/augment (after-save-file success?)
-         (when save-file-metadata
-           (let ([modified? (is-modified?)]
-                 [locked? (is-locked?)])
-             (when locked?
-               (lock #f))
-             (while-unlocked (λ () (delete 0 (string-length save-file-metadata))))
-             (when locked?
-               (lock #t))
-             (set! save-file-metadata #f)
-             ;; restore modification status to where it was before the metadata is removed
-             (set-modified modified?)
-             (end-metadata-changes)
-             (end-edit-sequence)))
-         (inner (void) after-save-file success?))
-       (define/augment (on-load-file filename format)
-         (inner (void) on-load-file filename format)
-         (begin-edit-sequence #f #f))
-       (define/augment (after-load-file success?)
-         (when success?
-           (let-values ([(module-language module-language-settings) (get-module-language/settings)])
-             (let-values ([(matching-language settings)
-                           (pick-new-language this
-                                              (drracket:language-configuration:get-languages)
-                                              module-language
-                                              module-language-settings)])
-               (cond
-                 [matching-language
-                  (set-next-settings
-                   (drracket:language-configuration:language-settings matching-language settings)
-                   #f)]
-                 [else
-                  (define lang
-                    (drracket:language-configuration:language-settings-language (get-next-settings)))
-                  (when (send lang get-reader-module)
-                    (set-next-settings (drracket:language-configuration:get-default-language-settings)
-                                       #f))])))
-           (set-modified #f))
+      (class* definitions-super% (drracket:unit:definitions-text<%>)
+        (inherit is-locked?
+                 lock
+                 while-unlocked
+                 highlight-first-line
+                 is-printing?)
 
-         (end-edit-sequence)
-         (inner (void) after-load-file success?))
-       (define/augment (on-lexer-valid valid?)
-         (inner (void) on-lexer-valid valid?)
-         (let ([f (get-top-level-window)])
-           (when (and f (is-a? f drracket:unit:frame<%>))
-             (send f set-color-status! valid?))))
-       (define/override (get-can-close-parent) (and tab (send tab get-frame)))
-       ;; if we use the tab to get to the top-level frame too
-       ;; soon then we use some GUI controls before they are
-       ;; initialized, so delay this until the file is
-       ;; opened in the definitions window
-       (define allow-top-level-connection #f)
-       (define/public (enable-top-level-window-connection) (set! allow-top-level-connection #t))
-       (define/override (get-top-level-window)
-         (or (super get-top-level-window) (and allow-top-level-connection tab (send tab get-frame))))
-       (inherit is-modified?
-                run-after-edit-sequence)
-       (define/override (set-modified mod?)
-         (super set-modified mod?)
-         (run-after-edit-sequence (λ ()
-                                    (let ([f (get-top-level-window)])
-                                      (when (and f (is-a? f drracket:unit:frame<%>))
-                                        (send f update-save-button))))))
-       (define/override set-filename
-         (case-lambda
-           [(fn) (set-filename fn #f)]
-           [(fn tmp?)
-            (super set-filename fn tmp?)
-            (let ([f (get-top-level-window)])
-              (when (and f (is-a? f drracket:unit:frame<%>))
-                (send
-                 (send f get-interactions-text)
-                 set-port-unsaved-name
-                 (if fn "interactions from an unsaved editor" (format "interactions from ~a" fn)))
-                (send f update-save-message)))]))
-       (field [needs-execution-state #f]
-              [already-warned-state #f]
-              [execute-settings
-               (preferences:get drracket:language-configuration:settings-preferences-symbol)]
-              [next-settings execute-settings])
-       (define/private (set-needs-execution-state! s) (set! needs-execution-state s))
-       ;; get-needs-execution-message : -> (or/c string #f)
-       ;; returns the current warning message if "Run" should be clicked (ie, if the
-       ;; state of the REPL is out of sync with drscheme).
-       (define/public (get-needs-execution-message)
-         (and (not already-warned-state)
-              (or (and (not (this-and-next-language-the-same?))
-                       (string-constant needs-execute-language-changed))
-                  needs-execution-state)))
-       (define/pubment (get-next-settings) next-settings)
-       (define/pubment (set-next-settings _next-settings [update-prefs? #t])
-         (when (or (send (drracket:language-configuration:language-settings-language _next-settings)
-                         get-reader-module)
-                   (send (drracket:language-configuration:language-settings-language next-settings)
-                         get-reader-module))
-           (set-modified #t))
-         (set! next-settings _next-settings)
-         (let ([f (get-top-level-window)])
-           (when (and f (is-a? f drracket:unit:frame<%>))
-             (send f language-changed)))
+        (define interactions-text #f)
+        (define/public (set-interactions-text it) (set! interactions-text it))
 
-         (highlight-first-line
-          (is-a? (drracket:language-configuration:language-settings-language _next-settings)
-                 drracket:module-language:module-language<%>))
+        (define tab #f)
+        (define/public (get-tab) tab)
+        (define/public (set-tab t) (set! tab t))
 
-         (let ([lang (drracket:language-configuration:language-settings-language next-settings)]
-               [sets (drracket:language-configuration:language-settings-settings next-settings)])
-           (preferences:set 'drracket:recent-language-names
-                            (limit-length (remove-duplicate-languages
-                                           (cons (cons (send lang get-language-name)
-                                                       (send lang marshall-settings sets))
-                                                 (preferences:get 'drracket:recent-language-names)))
-                                          10)))
+        (inherit begin-edit-sequence
+                 end-edit-sequence
+                 delete
+                 insert
+                 last-position
+                 paragraph-start-position
+                 get-character)
 
-         (when update-prefs?
-           (preferences:set drracket:language-configuration:settings-preferences-symbol
-                            next-settings))
+        (define save-file-metadata #f)
 
-         (remove-auto-text)
-         (insert-auto-text)
-         (after-set-next-settings _next-settings))
-       (define/pubment (after-set-next-settings s) (inner (void) after-set-next-settings s))
-       (define/public (this-and-next-language-the-same?)
-         (define execute-lang
-           (drracket:language-configuration:language-settings-language execute-settings))
-         (define next-lang (drracket:language-configuration:language-settings-language next-settings))
-         (and
-          (equal? (send execute-lang get-language-position) (send next-lang get-language-position))
-          (equal? (send execute-lang
-                        marshall-settings
-                        (drracket:language-configuration:language-settings-settings execute-settings))
-                  (send execute-lang
-                        marshall-settings
-                        (drracket:language-configuration:language-settings-settings next-settings)))))
-       (define/pubment (set-needs-execution-message msg) (set-needs-execution-state! msg))
-       (define/pubment (teachpack-changed)
-         (set-needs-execution-state! (string-constant needs-execute-teachpack-changed)))
-       (define/pubment (just-executed)
-         (set! execute-settings next-settings)
-         (set-needs-execution-state! #f)
-         (send tab clear-execution-state)
-         (set! already-warned-state #f))
-       (define/pubment (already-warned?) already-warned-state)
-       (define/pubment (already-warned) (set! already-warned-state #t))
-       ;; the really-modified? flag determines if there
-       ;; is a modification that is not the insertion of the auto-text
-       (define really-modified? #f)
-       ;; when this flag is #t, edits to the buffer do not count as
-       ;; user's edits and so the yellow warning does not appear
-       (define ignore-edits? #f)
-       (define/augment (after-insert x y)
-         (unless ignore-edits?
-           (set! really-modified? #t)
-           (set-needs-execution-state! (string-constant needs-execute-defns-edited)))
-         (inner (void) after-insert x y))
-       (define/augment (after-delete x y)
-         (unless ignore-edits?
-           (set! really-modified? #t)
-           (set-needs-execution-state! (string-constant needs-execute-defns-edited)))
-         (inner (void) after-delete x y))
-       (define/override (is-special-first-line? l)
-         (and (preferences:get 'drracket:module-language-first-line-special?) (is-lang-line? l)))
-       (inherit get-filename)
-       (inherit get-filename/untitled-name)
-       (define/private (get-date-string)
-         (string-append (date->string (seconds->date (current-seconds)))
-                        " "
-                        (get-filename/untitled-name)))
-       (define/override (on-paint before dc left top right bottom dx dy draw-caret)
-         (super on-paint before dc left top right bottom dx dy draw-caret)
+        (define/pubment (begin-metadata-changes)
+          (set! ignore-edits? #t)
+          (inner (void) begin-metadata-changes))
+        (define/pubment (end-metadata-changes)
+          (set! ignore-edits? #f)
+          (inner (void) end-metadata-changes))
 
-         ;; [Disabled] For printing, put date and filename in the top margin:
-         (when (and #f before (is-printing?))
-           (let ([h (box 0)]
-                 [w (box 0)])
-             (send (current-ps-setup) get-editor-margin w h)
-             (unless ((unbox h) . < . 2)
-               (let ([font (make-font #:size (inexact->exact (ceiling (* 1/2 (unbox h))))
-                                      #:family 'modern)]
-                     [old-font (send dc get-font)])
-                 (send dc set-font font)
-                 (send dc draw-text (get-date-string) 0 0)
-                 (send dc set-font old-font)))))
+        (define/augment (on-save-file filename fmt)
+          (inner (void) on-save-file filename fmt)
+          (define lang (drracket:language-configuration:language-settings-language next-settings))
+          (define settings (drracket:language-configuration:language-settings-settings next-settings))
+          (define name-mod (send lang get-reader-module))
+          (when name-mod
+            ;; the reader-module method's result is used a test of whether or
+            ;; not the get-metadata method is used for this language
+            (let ([metadata (send lang get-metadata (filename->modname filename) settings)])
+              (begin-edit-sequence #f #f)
+              (begin-metadata-changes)
+              (let ([locked? (is-locked?)])
+                (when locked?
+                  (lock #f))
+                (set! save-file-metadata metadata)
+                (while-unlocked (λ () (insert metadata 0 0)))
+                (when locked?
+                  (lock #t))))))
+        (define/private (filename->modname filename)
+          (let-values ([(base name dir) (split-path filename)])
+            (string->symbol (regexp-replace #rx"\\.[^.]*$" (path->string name) ""))))
 
-         ;; draw the arrows
-         (when before
-           (when error-arrows
-             (define old-pen (send dc get-pen))
-             (define old-brush (send dc get-brush))
-             (send dc set-brush "red" 'solid)
-             (define font-size-factor
-               (cond
-                 [(<= (editor:get-current-preferred-font-size) 12) 1]
-                 [else (* (editor:get-current-preferred-font-size) 1/8)]))
-             (define pen-width font-size-factor)
-             (define arrow-head-size (* 8 font-size-factor))
-             (define arrow-root-radius (* 1 font-size-factor))
-             (send dc set-pen (send the-pen-list find-or-create-pen "red" 1 'solid))
-             (let loop ([pts error-arrows])
-               (cond
-                 [(null? pts) (void)]
-                 [(null? (cdr pts)) (void)]
-                 [else
-                  (define pt1 (car pts))
-                  (define pt2 (cadr pts))
-                  (draw-arrow dc dx dy pt1 pt2 pen-width arrow-head-size arrow-root-radius)
-                  (loop (cdr pts))]))
-             (send dc set-pen old-pen)
-             (send dc set-brush old-brush))))
-       (define/private (draw-arrow dc dx dy pt1 pt2 pen-width arrow-head-size arrow-root-radius)
-         (define-values (x1 y1)
-           (find-poss (srcloc-source pt1) (- (srcloc-position pt1) 1) (srcloc-position pt1)))
-         (define-values (x2 y2)
-           (find-poss (srcloc-source pt2) (- (srcloc-position pt2) 1) (srcloc-position pt2)))
-         (drracket:arrow:draw-arrow dc
-                                    x1
-                                    y1
-                                    x2
-                                    y2
-                                    dx
-                                    dy
-                                    #:pen-width pen-width
-                                    #:arrow-head-size arrow-head-size
-                                    #:arrow-root-radius arrow-root-radius))
-       (inherit dc-location-to-editor-location)
-       (define/private (find-poss text left-pos right-pos)
-         (let ([xlb (box 0)]
-               [ylb (box 0)]
-               [xrb (box 0)]
-               [yrb (box 0)])
-           (send text position-location left-pos xlb ylb #t)
-           (send text position-location right-pos xrb yrb #f)
-           (let*-values
-               ([(xl-off yl-off) (send text editor-location-to-dc-location (unbox xlb) (unbox ylb))]
-                [(xl yl) (dc-location-to-editor-location xl-off yl-off)]
-                [(xr-off yr-off) (send text editor-location-to-dc-location (unbox xrb) (unbox yrb))]
-                [(xr yr) (dc-location-to-editor-location xr-off yr-off)])
-             (values (/ (+ xl xr) 2) (/ (+ yl yr) 2)))))
-       (define/public (still-untouched?)
-         (and (or (= (last-position) 0) (not really-modified?))
-              (not (is-modified?))
-              (not (get-filename))))
-       ;; inserts the auto-text if any
-       (define/public (insert-auto-text)
-         (define lang (drracket:language-configuration:language-settings-language next-settings))
-         (define auto-text
-           (and (not really-modified?)
-                (not (get-filename))
-                (is-a? lang drracket:module-language:module-language<%>)
-                (send lang
-                      get-auto-text
-                      (drracket:language-configuration:language-settings-settings next-settings))))
-         (when auto-text
-           (set! ignore-edits? #t)
-           (begin-edit-sequence #f #f)
-           (insert auto-text)
-           (set-modified #f)
-           (set! ignore-edits? #f)
-           (end-edit-sequence)
-           (set! really-modified? #f)))
-       (define/private (remove-auto-text)
-         (when (and (not really-modified?) (not (get-filename)) (> (last-position) 0))
-           (begin-edit-sequence #f #f)
-           (send this erase)
-           (set-modified #f)
-           (end-edit-sequence)
-           (set! really-modified? #f)))
-       (inherit invalidate-bitmap-cache)
-       (define/public (set-error-arrows arrows)
-         (unless (eq? arrows error-arrows)
-           (set! error-arrows arrows)
-           (invalidate-bitmap-cache)))
-       (define error-arrows #f)
-       (super-new [show-line-numbers? (show-line-numbers?)])
-       (highlight-first-line
-        (is-a? (drracket:language-configuration:language-settings-language next-settings)
-               drracket:module-language:module-language<%>))
-       (inherit set-max-undo-history)
-       (set-max-undo-history 'forever)
-       (inherit set-inline-overview-enabled?)
-       (set-inline-overview-enabled? (preferences:get 'drracket:inline-overview-shown?))
-       (inherit set-file-creator-and-type)
-       (set-file-creator-and-type #"DrSc" #f)))))
+        (define/augment (after-save-file success?)
+          (when save-file-metadata
+            (let ([modified? (is-modified?)]
+                  [locked? (is-locked?)])
+              (when locked?
+                (lock #f))
+              (while-unlocked (λ () (delete 0 (string-length save-file-metadata))))
+              (when locked?
+                (lock #t))
+              (set! save-file-metadata #f)
+              ;; restore modification status to where it was before the metadata is removed
+              (set-modified modified?)
+              (end-metadata-changes)
+              (end-edit-sequence)))
+          (inner (void) after-save-file success?))
+
+        (define/augment (on-load-file filename format)
+          (inner (void) on-load-file filename format)
+          (begin-edit-sequence #f #f))
+        (define/augment (after-load-file success?)
+          (when success?
+            (let-values ([(module-language module-language-settings) (get-module-language/settings)])
+              (let-values ([(matching-language settings)
+                            (pick-new-language this
+                                               (drracket:language-configuration:get-languages)
+                                               module-language
+                                               module-language-settings)])
+                (cond
+                  [matching-language
+                   (set-next-settings
+                    (drracket:language-configuration:language-settings matching-language settings)
+                    #f)]
+                  [else
+                   (define lang
+                     (drracket:language-configuration:language-settings-language (get-next-settings)))
+                   (when (send lang get-reader-module)
+                     (set-next-settings
+                      (drracket:language-configuration:get-default-language-settings)
+                      #f))])))
+            (set-modified #f))
+
+          (end-edit-sequence)
+          (inner (void) after-load-file success?))
+
+        (define/augment (on-lexer-valid valid?)
+          (inner (void) on-lexer-valid valid?)
+          (let ([f (get-top-level-window)])
+            (when (and f (is-a? f drracket:unit:frame<%>))
+              (send f set-color-status! valid?))))
+
+        (define/override (get-can-close-parent) (and tab (send tab get-frame)))
+
+        ;; if we use the tab to get to the top-level frame too
+        ;; soon then we use some GUI controls before they are
+        ;; initialized, so delay this until the file is
+        ;; opened in the definitions window
+        (define allow-top-level-connection #f)
+        (define/public (enable-top-level-window-connection) (set! allow-top-level-connection #t))
+        (define/override (get-top-level-window)
+          (or (super get-top-level-window) (and allow-top-level-connection tab (send tab get-frame))))
+
+        (inherit is-modified?
+                 run-after-edit-sequence)
+        (define/override (set-modified mod?)
+          (super set-modified mod?)
+          (run-after-edit-sequence (λ ()
+                                     (let ([f (get-top-level-window)])
+                                       (when (and f (is-a? f drracket:unit:frame<%>))
+                                         (send f update-save-button))))))
+        (define/override set-filename
+          (case-lambda
+            [(fn) (set-filename fn #f)]
+            [(fn tmp?)
+             (super set-filename fn tmp?)
+             (let ([f (get-top-level-window)])
+               (when (and f (is-a? f drracket:unit:frame<%>))
+                 (send
+                  (send f get-interactions-text)
+                  set-port-unsaved-name
+                  (if fn "interactions from an unsaved editor" (format "interactions from ~a" fn)))
+                 (send f update-save-message)))]))
+
+        (field [needs-execution-state #f]
+               [already-warned-state #f]
+               [execute-settings
+                (preferences:get drracket:language-configuration:settings-preferences-symbol)]
+               [next-settings execute-settings])
+
+        (define/private (set-needs-execution-state! s) (set! needs-execution-state s))
+
+        ;; get-needs-execution-message : -> (or/c string #f)
+        ;; returns the current warning message if "Run" should be clicked (ie, if the
+        ;; state of the REPL is out of sync with drscheme).
+        (define/public (get-needs-execution-message)
+          (and (not already-warned-state)
+               (or (and (not (this-and-next-language-the-same?))
+                        (string-constant needs-execute-language-changed))
+                   needs-execution-state)))
+
+        (define/pubment (get-next-settings) next-settings)
+        (define/pubment (set-next-settings _next-settings [update-prefs? #t])
+          (when (or (send (drracket:language-configuration:language-settings-language _next-settings)
+                          get-reader-module)
+                    (send (drracket:language-configuration:language-settings-language next-settings)
+                          get-reader-module))
+            (set-modified #t))
+          (set! next-settings _next-settings)
+          (let ([f (get-top-level-window)])
+            (when (and f (is-a? f drracket:unit:frame<%>))
+              (send f language-changed)))
+
+          (highlight-first-line
+           (is-a? (drracket:language-configuration:language-settings-language _next-settings)
+                  drracket:module-language:module-language<%>))
+
+          (let ([lang (drracket:language-configuration:language-settings-language next-settings)]
+                [sets (drracket:language-configuration:language-settings-settings next-settings)])
+            (preferences:set 'drracket:recent-language-names
+                             (limit-length (remove-duplicate-languages
+                                            (cons (cons (send lang get-language-name)
+                                                        (send lang marshall-settings sets))
+                                                  (preferences:get 'drracket:recent-language-names)))
+                                           10)))
+
+          (when update-prefs?
+            (preferences:set drracket:language-configuration:settings-preferences-symbol
+                             next-settings))
+
+          (remove-auto-text)
+          (insert-auto-text)
+          (after-set-next-settings _next-settings))
+
+        (define/pubment (after-set-next-settings s) (inner (void) after-set-next-settings s))
+
+        (define/public (this-and-next-language-the-same?)
+          (define execute-lang
+            (drracket:language-configuration:language-settings-language execute-settings))
+          (define next-lang
+            (drracket:language-configuration:language-settings-language next-settings))
+          (and (equal? (send execute-lang get-language-position)
+                       (send next-lang get-language-position))
+               (equal?
+                (send execute-lang
+                      marshall-settings
+                      (drracket:language-configuration:language-settings-settings execute-settings))
+                (send execute-lang
+                      marshall-settings
+                      (drracket:language-configuration:language-settings-settings next-settings)))))
+
+        (define/pubment (set-needs-execution-message msg) (set-needs-execution-state! msg))
+        (define/pubment (teachpack-changed)
+          (set-needs-execution-state! (string-constant needs-execute-teachpack-changed)))
+        (define/pubment (just-executed)
+          (set! execute-settings next-settings)
+          (set-needs-execution-state! #f)
+          (send tab clear-execution-state)
+          (set! already-warned-state #f))
+        (define/pubment (already-warned?) already-warned-state)
+        (define/pubment (already-warned) (set! already-warned-state #t))
+
+        ;; the really-modified? flag determines if there
+        ;; is a modification that is not the insertion of the auto-text
+        (define really-modified? #f)
+
+        ;; when this flag is #t, edits to the buffer do not count as
+        ;; user's edits and so the yellow warning does not appear
+        (define ignore-edits? #f)
+
+        (define/augment (after-insert x y)
+          (unless ignore-edits?
+            (set! really-modified? #t)
+            (set-needs-execution-state! (string-constant needs-execute-defns-edited)))
+          (inner (void) after-insert x y))
+        (define/augment (after-delete x y)
+          (unless ignore-edits?
+            (set! really-modified? #t)
+            (set-needs-execution-state! (string-constant needs-execute-defns-edited)))
+          (inner (void) after-delete x y))
+
+        (define/override (is-special-first-line? l)
+          (and (preferences:get 'drracket:module-language-first-line-special?) (is-lang-line? l)))
+
+        (inherit get-filename)
+
+        (inherit get-filename/untitled-name)
+        (define/private (get-date-string)
+          (string-append (date->string (seconds->date (current-seconds)))
+                         " "
+                         (get-filename/untitled-name)))
+
+        (define/override (on-paint before dc left top right bottom dx dy draw-caret)
+          (super on-paint before dc left top right bottom dx dy draw-caret)
+
+          ;; [Disabled] For printing, put date and filename in the top margin:
+          (when (and #f before (is-printing?))
+            (let ([h (box 0)]
+                  [w (box 0)])
+              (send (current-ps-setup) get-editor-margin w h)
+              (unless ((unbox h) . < . 2)
+                (let ([font (make-font #:size (inexact->exact (ceiling (* 1/2 (unbox h))))
+                                       #:family 'modern)]
+                      [old-font (send dc get-font)])
+                  (send dc set-font font)
+                  (send dc draw-text (get-date-string) 0 0)
+                  (send dc set-font old-font)))))
+
+          ;; draw the arrows
+          (when before
+            (when error-arrows
+              (define old-pen (send dc get-pen))
+              (define old-brush (send dc get-brush))
+              (send dc set-brush "red" 'solid)
+              (define font-size-factor
+                (cond
+                  [(<= (editor:get-current-preferred-font-size) 12) 1]
+                  [else (* (editor:get-current-preferred-font-size) 1/8)]))
+              (define pen-width font-size-factor)
+              (define arrow-head-size (* 8 font-size-factor))
+              (define arrow-root-radius (* 1 font-size-factor))
+              (send dc set-pen (send the-pen-list find-or-create-pen "red" 1 'solid))
+              (let loop ([pts error-arrows])
+                (cond
+                  [(null? pts) (void)]
+                  [(null? (cdr pts)) (void)]
+                  [else
+                   (define pt1 (car pts))
+                   (define pt2 (cadr pts))
+                   (draw-arrow dc dx dy pt1 pt2 pen-width arrow-head-size arrow-root-radius)
+                   (loop (cdr pts))]))
+              (send dc set-pen old-pen)
+              (send dc set-brush old-brush))))
+
+        (define/private (draw-arrow dc dx dy pt1 pt2 pen-width arrow-head-size arrow-root-radius)
+          (define-values (x1 y1)
+            (find-poss (srcloc-source pt1) (- (srcloc-position pt1) 1) (srcloc-position pt1)))
+          (define-values (x2 y2)
+            (find-poss (srcloc-source pt2) (- (srcloc-position pt2) 1) (srcloc-position pt2)))
+          (drracket:arrow:draw-arrow dc
+                                     x1
+                                     y1
+                                     x2
+                                     y2
+                                     dx
+                                     dy
+                                     #:pen-width pen-width
+                                     #:arrow-head-size arrow-head-size
+                                     #:arrow-root-radius arrow-root-radius))
+
+        (inherit dc-location-to-editor-location)
+        (define/private (find-poss text left-pos right-pos)
+          (let ([xlb (box 0)]
+                [ylb (box 0)]
+                [xrb (box 0)]
+                [yrb (box 0)])
+            (send text position-location left-pos xlb ylb #t)
+            (send text position-location right-pos xrb yrb #f)
+            (let*-values
+                ([(xl-off yl-off) (send text editor-location-to-dc-location (unbox xlb) (unbox ylb))]
+                 [(xl yl) (dc-location-to-editor-location xl-off yl-off)]
+                 [(xr-off yr-off) (send text editor-location-to-dc-location (unbox xrb) (unbox yrb))]
+                 [(xr yr) (dc-location-to-editor-location xr-off yr-off)])
+              (values (/ (+ xl xr) 2) (/ (+ yl yr) 2)))))
+
+        (define/public (still-untouched?)
+          (and (or (= (last-position) 0) (not really-modified?))
+               (not (is-modified?))
+               (not (get-filename))))
+        ;; inserts the auto-text if any
+        (define/public (insert-auto-text)
+          (define lang (drracket:language-configuration:language-settings-language next-settings))
+          (define auto-text
+            (and (not really-modified?)
+                 (not (get-filename))
+                 (is-a? lang drracket:module-language:module-language<%>)
+                 (send lang
+                       get-auto-text
+                       (drracket:language-configuration:language-settings-settings next-settings))))
+          (when auto-text
+            (set! ignore-edits? #t)
+            (begin-edit-sequence #f #f)
+            (insert auto-text)
+            (set-modified #f)
+            (set! ignore-edits? #f)
+            (end-edit-sequence)
+            (set! really-modified? #f)))
+        (define/private (remove-auto-text)
+          (when (and (not really-modified?) (not (get-filename)) (> (last-position) 0))
+            (begin-edit-sequence #f #f)
+            (send this erase)
+            (set-modified #f)
+            (end-edit-sequence)
+            (set! really-modified? #f)))
+
+        (inherit invalidate-bitmap-cache)
+        (define/public (set-error-arrows arrows)
+          (unless (eq? arrows error-arrows)
+            (set! error-arrows arrows)
+            (invalidate-bitmap-cache)))
+
+        (define error-arrows #f)
+
+        (super-new [show-line-numbers? (show-line-numbers?)])
+
+        (highlight-first-line
+         (is-a? (drracket:language-configuration:language-settings-language next-settings)
+                drracket:module-language:module-language<%>))
+        (inherit set-max-undo-history)
+        (set-max-undo-history 'forever)
+
+        (inherit set-inline-overview-enabled?)
+        (set-inline-overview-enabled? (preferences:get 'drracket:inline-overview-shown?))
+
+        (inherit set-file-creator-and-type)
+        (set-file-creator-and-type #"DrSc" #f)))))
  (define (get-module-language/settings)
    (let* ([module-language
            (and (preferences:get 'drracket:switch-to-module-language-automatically?)
@@ -1039,154 +1075,171 @@
  (define vertical-dragable/def-int% (dragable/def-int-mixin panel:vertical-dragable%))
  (define horizontal-dragable/def-int% (dragable/def-int-mixin panel:horizontal-dragable%))
  (define tab%
-   (class*
-    object%
-    (drracket:rep:context<%> drracket:unit:tab<%>)
-    (init-field frame defs i defs-shown? ints-shown?)
-    (define enabled? #t)
-    (field [ints #f]
-           [visible-defs #f]
-           [visible-ints #f]
-           [focus-d/i 'defs])
-    ;; only called to initialize this tab.
-    ;; the interactions editor should be invariant.
-    (define/public (set-ints i) (set! ints i))
-    (define/public-final (get-frame) frame)
-    (define/public-final (get-defs) defs)
-    (define/public-final (get-ints) ints)
-    (define/public-final (get-visible-defs) (values visible-defs defs-shown?))
-    (define/public-final (set-visible-defs vd ds?)
-      (set! visible-defs vd)
-      (set! defs-shown? ds?))
-    (define/public-final (get-visible-ints) (values visible-ints ints-shown?))
-    (define/public-final (set-visible-ints vi is?)
-      (set! visible-ints vi)
-      (set! ints-shown? is?))
-    (define/public-final (set-focus-d/i di) (set! focus-d/i di))
-    (define/public-final (get-focus-d/i) focus-d/i)
-    (define/public-final (get-i) i)
-    (define/public-final (set-i _i) (set! i _i))
-    (define/public (disable-evaluation)
-      (set! enabled? #f)
-      (send ints lock #t)
-      (send frame disable-evaluation-in-tab this))
-    (define/public (enable-evaluation)
-      (set! enabled? #t)
-      (send ints lock #f)
-      (send frame enable-evaluation-in-tab this))
-    (define/public (get-enabled) enabled?)
-    (define last-touched (current-inexact-milliseconds))
-    (define/public-final (touched) (set! last-touched (current-inexact-milliseconds)))
-    (define/public-final (get-last-touched) last-touched)
-    (define panel-percentages #f)
-    (define panel-orientation #f)
-    (define/public (set-panel-percentages-and-orientation p o)
-      (set! panel-percentages p)
-      (set! panel-orientation o))
-    (define/public (get-panel-percentages-and-orientation)
-      (values panel-percentages panel-orientation))
-    ;; current-execute-warning is a snapshot of the needs-execution-message
-    ;; that is taken each time repl submission happens, and it gets reset
-    ;; when "Run" is clicked.
-    (define current-execute-warning #f)
-    (define/pubment (repl-submit-happened)
-      (set! current-execute-warning (send defs get-needs-execution-message))
-      (update-execute-warning-gui))
-    (define/public (get-current-execute-warning) current-execute-warning)
-    (define/public (clear-execution-state)
-      (set! current-execute-warning #f)
-      (update-execute-warning-gui)
-      (send defs already-warned))
-    (define/public (update-execute-warning-gui)
-      (when (is-current-tab?)
-        (send frame
-              show/hide-warning-message
-              (get-current-execute-warning)
-              (λ ()
-                ;; this callback might be run with a different tab ...
-                (send (send frame get-current-tab) clear-execution-state)))))
-    (define/public (get-directory)
-      (define bx (box #f))
-      (define filename (send defs get-filename bx))
-      (get-init-dir (and (not (unbox bx)) filename)))
-    (define/pubment (can-close?)
-      (and (send defs can-close?) (send ints can-close?) (inner #t can-close?)))
-    (define/pubment (on-close)
-      (send defs on-close)
-      (send ints on-close)
-      (inner (void) on-close))
-    ;; this should really do something local to the tab, but
-    ;; for now it doesn't.
-    (define/public (ensure-rep-shown rep) (send frame ensure-rep-shown rep))
-    (field [thread-to-break-box (make-weak-box #f)]
-           [custodian-to-kill-box (make-weak-box #f)]
-           [do-kill? #f])
-    (define/public (does-break-kill?) do-kill?)
-    ;; break-callback : -> void
-    (define/public (break-callback)
-      (let ([thread-to-break (weak-box-value thread-to-break-box)]
-            [custodian-to-kill (weak-box-value custodian-to-kill-box)])
-        (cond
-          [(or (not thread-to-break) (not custodian-to-kill)) (bell)]
-          [do-kill?
-           (when custodian-to-kill
-             (custodian-shutdown-all custodian-to-kill))
-           (set! do-kill? #f)
-           (send (get-frame) update-kill-button-label)]
-          [else
-           (when thread-to-break
-             (break-thread thread-to-break))
-           ;; only offer a kill the next time if
-           ;; something got broken.
-           (set! do-kill? #t)
-           (send (get-frame) update-kill-button-label)])))
-    ;; reset-offer-kill
-    (define/public (reset-offer-kill)
-      (set! do-kill? #f)
-      (send (get-frame) update-kill-button-label))
-    ;; get-breakables : -> (union #f thread) (union #f cust) -> void
-    (define/public (get-breakables)
-      (values (weak-box-value thread-to-break-box) (weak-box-value custodian-to-kill-box)))
-    ;; set-breakables : (union #f thread) (union #f cust) -> void
-    (define/public (set-breakables thd cust)
-      (set! thread-to-break-box (make-weak-box thd))
-      (set! custodian-to-kill-box (make-weak-box cust)))
-    (define/pubment (clear-annotations)
-      (inner (void) clear-annotations)
-      (send ints reset-highlighting))
-    (define running? #f)
-    (define/public-final (is-running?) running?)
-    (define/public (update-running b?)
-      (set! running? b?)
-      (send frame update-running b?))
-    (define/public-final (is-current-tab?) (eq? this (send frame get-current-tab)))
-    (define log-visible? #f)
-    (define/public-final (toggle-log)
-      (set! log-visible? (not log-visible?))
-      (send frame show/hide-log log-visible?)
-      (send (get-ints) enable/disable-capture-log log-visible?))
-    (define/public-final (hide-log)
-      (when log-visible?
-        (toggle-log)))
-    (define/public-final (update-log)
-      (send frame show/hide-log log-visible?)
-      (send frame set-logger-text-field-value (send (get-ints) get-user-log-receiver-args-str)))
-    (define/public-final (update-logger-window command)
-      (when (is-current-tab?)
-        (send frame update-logger-window command)))
-    (define current-planet-status #f)
-    (define/public-final (new-planet-status a b)
-      (set! current-planet-status (cons a b))
-      (update-planet-status))
-    (define/public-final (clear-planet-status)
-      (set! current-planet-status #f)
-      (update-planet-status))
-    (define/public-final (update-planet-status)
-      (send frame
-            show-planet-status
-            (and current-planet-status (car current-planet-status))
-            (and current-planet-status (cdr current-planet-status))))
-    (super-new)))
+   (class* object% (drracket:rep:context<%> drracket:unit:tab<%>)
+     (init-field frame defs i defs-shown? ints-shown?)
+     (define enabled? #t)
+     (field [ints #f]
+            [visible-defs #f]
+            [visible-ints #f]
+            [focus-d/i 'defs])
+
+     ;; only called to initialize this tab.
+     ;; the interactions editor should be invariant.
+     (define/public (set-ints i) (set! ints i))
+
+     (define/public-final (get-frame) frame)
+     (define/public-final (get-defs) defs)
+     (define/public-final (get-ints) ints)
+     (define/public-final (get-visible-defs) (values visible-defs defs-shown?))
+     (define/public-final (set-visible-defs vd ds?)
+       (set! visible-defs vd)
+       (set! defs-shown? ds?))
+     (define/public-final (get-visible-ints) (values visible-ints ints-shown?))
+     (define/public-final (set-visible-ints vi is?)
+       (set! visible-ints vi)
+       (set! ints-shown? is?))
+     (define/public-final (set-focus-d/i di) (set! focus-d/i di))
+     (define/public-final (get-focus-d/i) focus-d/i)
+     (define/public-final (get-i) i)
+     (define/public-final (set-i _i) (set! i _i))
+     (define/public (disable-evaluation)
+       (set! enabled? #f)
+       (send ints lock #t)
+       (send frame disable-evaluation-in-tab this))
+     (define/public (enable-evaluation)
+       (set! enabled? #t)
+       (send ints lock #f)
+       (send frame enable-evaluation-in-tab this))
+     (define/public (get-enabled) enabled?)
+
+     (define last-touched (current-inexact-milliseconds))
+     (define/public-final (touched) (set! last-touched (current-inexact-milliseconds)))
+     (define/public-final (get-last-touched) last-touched)
+
+     (define panel-percentages #f)
+     (define panel-orientation #f)
+     (define/public (set-panel-percentages-and-orientation p o)
+       (set! panel-percentages p)
+       (set! panel-orientation o))
+     (define/public (get-panel-percentages-and-orientation)
+       (values panel-percentages panel-orientation))
+
+     ;; current-execute-warning is a snapshot of the needs-execution-message
+     ;; that is taken each time repl submission happens, and it gets reset
+     ;; when "Run" is clicked.
+     (define current-execute-warning #f)
+     (define/pubment (repl-submit-happened)
+       (set! current-execute-warning (send defs get-needs-execution-message))
+       (update-execute-warning-gui))
+     (define/public (get-current-execute-warning) current-execute-warning)
+     (define/public (clear-execution-state)
+       (set! current-execute-warning #f)
+       (update-execute-warning-gui)
+       (send defs already-warned))
+     (define/public (update-execute-warning-gui)
+       (when (is-current-tab?)
+         (send frame
+               show/hide-warning-message
+               (get-current-execute-warning)
+               (λ ()
+                 ;; this callback might be run with a different tab ...
+                 (send (send frame get-current-tab) clear-execution-state)))))
+
+     (define/public (get-directory)
+       (define bx (box #f))
+       (define filename (send defs get-filename bx))
+       (get-init-dir (and (not (unbox bx)) filename)))
+
+     (define/pubment (can-close?)
+       (and (send defs can-close?) (send ints can-close?) (inner #t can-close?)))
+     (define/pubment (on-close)
+       (send defs on-close)
+       (send ints on-close)
+       (inner (void) on-close))
+
+     ;; this should really do something local to the tab, but
+     ;; for now it doesn't.
+     (define/public (ensure-rep-shown rep) (send frame ensure-rep-shown rep))
+
+     (field [thread-to-break-box (make-weak-box #f)]
+            [custodian-to-kill-box (make-weak-box #f)]
+            [do-kill? #f])
+
+     (define/public (does-break-kill?) do-kill?)
+     ;; break-callback : -> void
+     (define/public (break-callback)
+       (let ([thread-to-break (weak-box-value thread-to-break-box)]
+             [custodian-to-kill (weak-box-value custodian-to-kill-box)])
+         (cond
+           [(or (not thread-to-break) (not custodian-to-kill)) (bell)]
+           [do-kill?
+            (when custodian-to-kill
+              (custodian-shutdown-all custodian-to-kill))
+            (set! do-kill? #f)
+            (send (get-frame) update-kill-button-label)]
+           [else
+            (when thread-to-break
+              (break-thread thread-to-break))
+            ;; only offer a kill the next time if
+            ;; something got broken.
+            (set! do-kill? #t)
+            (send (get-frame) update-kill-button-label)])))
+
+     ;; reset-offer-kill
+     (define/public (reset-offer-kill)
+       (set! do-kill? #f)
+       (send (get-frame) update-kill-button-label))
+
+     ;; get-breakables : -> (union #f thread) (union #f cust) -> void
+     (define/public (get-breakables)
+       (values (weak-box-value thread-to-break-box) (weak-box-value custodian-to-kill-box)))
+
+     ;; set-breakables : (union #f thread) (union #f cust) -> void
+     (define/public (set-breakables thd cust)
+       (set! thread-to-break-box (make-weak-box thd))
+       (set! custodian-to-kill-box (make-weak-box cust)))
+
+     (define/pubment (clear-annotations)
+       (inner (void) clear-annotations)
+       (send ints reset-highlighting))
+
+     (define running? #f)
+     (define/public-final (is-running?) running?)
+     (define/public (update-running b?)
+       (set! running? b?)
+       (send frame update-running b?))
+
+     (define/public-final (is-current-tab?) (eq? this (send frame get-current-tab)))
+
+     (define log-visible? #f)
+     (define/public-final (toggle-log)
+       (set! log-visible? (not log-visible?))
+       (send frame show/hide-log log-visible?)
+       (send (get-ints) enable/disable-capture-log log-visible?))
+     (define/public-final (hide-log)
+       (when log-visible?
+         (toggle-log)))
+     (define/public-final (update-log)
+       (send frame show/hide-log log-visible?)
+       (send frame set-logger-text-field-value (send (get-ints) get-user-log-receiver-args-str)))
+     (define/public-final (update-logger-window command)
+       (when (is-current-tab?)
+         (send frame update-logger-window command)))
+
+     (define current-planet-status #f)
+     (define/public-final (new-planet-status a b)
+       (set! current-planet-status (cons a b))
+       (update-planet-status))
+     (define/public-final (clear-planet-status)
+       (set! current-planet-status #f)
+       (update-planet-status))
+     (define/public-final (update-planet-status)
+       (send frame
+             show-planet-status
+             (and current-planet-status (car current-planet-status))
+             (and current-planet-status (cdr current-planet-status))))
+
+     (super-new)))
  ;; should only be called by the tab% object (and the class itself)
  (define-local-member-name disable-evaluation-in-tab
                            enable-evaluation-in-tab

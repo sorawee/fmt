@@ -493,9 +493,8 @@
   [("module+") (format-uniform-body/helper 1)]
   [("test-case" "test-suite") (format-uniform-body/helper 1)]
   [("define-syntax-class" "define-match-expander") (format-uniform-body/helper 1)]
-  [("class") (format-uniform-body/helper 1 #:require-body? #f)]
-  [("interface") (format-uniform-body/helper 1 #:require-body? #f)]
-  [("interface*") (format-uniform-body/helper 2 #:require-body? #f)]
+  [("class" "interface") (format-uniform-body/helper 1 #:require-body? #f)]
+  [("class*" "interface*") (format-uniform-body/helper 2 #:require-body? #f)]
   [("module" "module*") (format-uniform-body/helper 2)]
 
   [("cond" "case-lambda" "match-lambda" "match-lambda*" "match-lambda**")
