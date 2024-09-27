@@ -450,7 +450,16 @@
 
 (define/record standard-formatter-map #:record all-kws
   [("if") format-if]
-  [("provide" "require" "import" "export" "link" "rename") format-require]
+  [("provide"
+    "require"
+    "import"
+    "export"
+    "link"
+    "rename"
+    "for-syntax"
+    "for-template"
+    "for-label")
+   format-require]
   [("public" "private" "override" "augment" "inherit" "field" "init") format-require]
   [("pubment" "public-final" "overment" "override-final" "augride" "augment-final") format-require]
 
