@@ -136,24 +136,24 @@
   #:type node?
   (match/extract (node-content doc) #:as unfits tail
     [([-if expel-first-comment?] [-conditional #f])
-     (pretty-node
-      #:unfits unfits
-      #:adjust adjust
-      (<+s> (flatten (pretty -if))
-            (try-indent #:n 0
-                        #:because-of (cons -conditional tail)
-                        (match tail
-                          [(list (? node?)) ((format-vertical/helper) (cons -conditional tail))]
-                          [_
-                           ;; multiple lines
-                           #;(if aaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
-                                 bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb
-                                 ccccccccccccccccccccccccccccccccc)
-                           (alt ((format-vertical/helper) (cons -conditional tail))
-                                ;; or one line
-                                #;(if a b c)
-                                (flatten (as-concat (map pretty
-                                                         (cons -conditional tail)))))]))))]
+     (pretty-node #:unfits unfits
+                  #:adjust adjust
+                  (<+s> (flatten (pretty -if))
+                        (try-indent #:n 0
+                                    #:because-of (cons -conditional tail)
+                                    (if (ormap node?
+                                               (cons -conditional tail))
+                                        ((format-vertical/helper) (cons -conditional tail))
+                                        ;; multiple lines
+                                        #;(if aaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+                                              bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb
+                                              ccccccccccccccccccccccccccccccccc)
+                                        (alt ((format-vertical/helper) (cons -conditional tail))
+                                             ;; or one line
+                                             #;(if a b c)
+                                             (flatten (as-concat (map pretty
+                                                                      (cons -conditional
+                                                                            tail)))))))))]
     [#:else (format-else doc)]))
 
 (define-pretty format-#%app
