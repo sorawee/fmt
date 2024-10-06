@@ -225,7 +225,8 @@
        (define-syntax (internal-id stx) (do-class-keyword stx 'id)) ...
        (provide id ...))]))
 
-(provide-naming-class-keyword [inspect -inspect] [init-rest -init-rest])
+(provide-naming-class-keyword [inspect -inspect]
+                              [init-rest -init-rest])
 
 ;; Going ahead and doing this in a generic fashion, in case we later realize that
 ;; we need more class contract-specific keywords.
@@ -342,7 +343,9 @@
   (let* ([old-ref (unsafe-vector-ref fi 0)]
          [old-set! (unsafe-vector-ref fi 1)])
     (vector (λ (o) (ppos (old-ref o) neg-party))
-            (λ (o v) (old-set! o (pneg v neg-party)))
+            (λ (o v)
+              (old-set! o
+                        (pneg v neg-party)))
             (unsafe-vector-ref fi 2)
             (unsafe-vector-ref fi 3))))
 
@@ -352,7 +355,9 @@
     (vector (unsafe-vector-ref fi 0)
             (unsafe-vector-ref fi 1)
             (λ (o) (ppos (old-ref o) neg-party))
-            (λ (o v) (old-set! o (pneg v neg-party))))))
+            (λ (o v)
+              (old-set! o
+                        (pneg v neg-party))))))
 
 (define (field-info-internal-ref fi)
   (unsafe-vector-ref fi 0))
@@ -423,9 +428,11 @@
                                define-values)
                   [(begin
                      . _)
-                   (loop (append (flatten-begin e) (cdr l)))]
+                   (loop (append (flatten-begin e)
+                                 (cdr l)))]
                   [(define-syntaxes (id ...) rhs)
-                   (andmap identifier? (syntax->list #'(id ...)))
+                   (andmap identifier?
+                           (syntax->list #'(id ...)))
                    (begin
                      (with-syntax ([rhs (local-transformer-expand #'rhs 'expression null)])
                        (with-syntax ([(id ...) (syntax-local-bind-syntaxes (syntax->list #'(id ...))
@@ -438,12 +445,16 @@
                                           'disappeared-binding)
                                (loop (cdr l))))))]
                   [(define-values (id ...) rhs)
-                   (andmap identifier? (syntax->list #'(id ...)))
-                   (let ([ids (map bind-local-id (syntax->list #'(id ...)))])
+                   (andmap identifier?
+                           (syntax->list #'(id ...)))
+                   (let ([ids (map bind-local-id
+                                   (syntax->list #'(id ...)))])
                      (with-syntax ([(id ...) ids])
                        (cons (datum->syntax e (list #'define-values #'(id ...) #'rhs) e e)
                              (loop (cdr l)))))]
-                  [_else (cons e (loop (cdr l)))]))))))
+                  [_else
+                   (cons e
+                         (loop (cdr l)))]))))))
 
     ;; returns two lists: expressions that start with an identifier in
     ;; `kws', and expressions that don't
@@ -455,9 +466,12 @@
               (cond
                 [(and (stx-pair? (car l))
                       (let ([id (stx-car (car l))])
-                        (and (identifier? id) (ormap (lambda (k) (free-identifier=? k id)) kws))))
+                        (and (identifier? id)
+                             (ormap (lambda (k) (free-identifier=? k id)) kws))))
                  (values (cons (car l) in) out)]
-                [else (values in (out-cons (car l) out))])))))
+                [else
+                 (values in
+                         (out-cons (car l) out))])))))
 
     (define (extract* kws l)
       (let-values ([(in out) (extract kws l void)])
@@ -490,7 +504,12 @@
       ;; Put i in ((iid eid) optional-expr) form
       (cond
         [(identifier? i) (list (list i i))]
-        [else (let ([a (stx-car i)]) (if (identifier? a) (cons (list a a) (stx-cdr i)) i))]))
+        [else
+         (let ([a (stx-car i)])
+           (if (identifier? a)
+               (cons (list a a)
+                     (stx-cdr i))
+               i))]))
 
     (define ((norm-init/field-iid/def-ctx def-ctx) norm)
       (syntax-local-identifier-as-binding (stx-car (stx-car norm)) def-ctx))
@@ -527,7 +546,8 @@
                                                (identifier? (stx-car a))
                                                (stx-pair? (stx-cdr a))
                                                (stx-null? (stx-cdr (stx-cdr a))))))])
-                   (or (and (opt-arg-ok? a) (kw-vars-ok? (stx-cdr vars)))
+                   (or (and (opt-arg-ok? a)
+                            (kw-vars-ok? (stx-cdr vars)))
                        (and (keyword? (syntax-e a))
                             (stx-pair? (stx-cdr vars))
                             (opt-arg-ok? (stx-car (stx-cdr vars)))
@@ -547,8 +567,10 @@
                  [locals null])
         (syntax-case (disarm stx) (#%plain-lambda lambda λ case-lambda letrec-values let-values)
           [(lam vars body1 body ...)
-           (or (and (free-identifier=? #'lam #'#%plain-lambda) (vars-ok? (syntax vars)))
-               (and (or (free-identifier=? #'lam #'lambda) (free-identifier=? #'lam #'λ))
+           (or (and (free-identifier=? #'lam #'#%plain-lambda)
+                    (vars-ok? (syntax vars)))
+               (and (or (free-identifier=? #'lam #'lambda)
+                        (free-identifier=? #'lam #'λ))
                     (kw-vars-ok? (syntax vars))))
            (if xform?
                (with-syntax ([the-obj the-obj]
@@ -556,7 +578,8 @@
                              [name (mk-name name)])
                  (with-syntax
                      ([vars
-                       (if (or (free-identifier=? #'lam #'lambda) (free-identifier=? #'lam #'λ))
+                       (if (or (free-identifier=? #'lam #'lambda)
+                               (free-identifier=? #'lam #'λ))
                            (let loop ([vars #'vars])
                              (cond
                                [(identifier? vars) vars]
@@ -564,7 +587,8 @@
                                [(pair? vars)
                                 (syntax-case (car vars) ()
                                   [(id expr)
-                                   (and (identifier? #'id) (not (immediate-default? #'expr)))
+                                   (and (identifier? #'id)
+                                        (not (immediate-default? #'expr)))
                                    ;; optional argument; need to wrap arg expression
                                    (cons (with-syntax ([expr (syntax/loc #'expr
                                                                (syntax-parameterize ([the-finder
@@ -574,7 +598,9 @@
                                            (syntax/loc (car vars)
                                              (id expr)))
                                          (loop (cdr vars)))]
-                                  [_ (cons (car vars) (loop (cdr vars)))])]
+                                  [_
+                                   (cons (car vars)
+                                         (loop (cdr vars)))])]
                                [else vars]))
                            #'vars)])
                    (let ([l (syntax/loc stx
@@ -593,7 +619,8 @@
           [(λ . _) (bad "ill-formed lambda expression for method" stx)]
           [(case-lam [vars body1 body ...] ...)
            (and (free-identifier=? #'case-lam #'case-lambda)
-                (andmap vars-ok? (syntax->list (syntax (vars ...)))))
+                (andmap vars-ok?
+                        (syntax->list (syntax (vars ...)))))
            (if xform?
                (with-syntax ([the-obj the-obj]
                              [the-finder the-finder]
@@ -614,13 +641,21 @@
              . _)
            (bad "ill-formed case-lambda expression for method" stx)]
           [(let- ([(id) expr] ...) let-body)
-           (and (or (free-identifier=? (syntax let-) (quote-syntax let-values))
-                    (free-identifier=? (syntax let-) (quote-syntax letrec-values)))
-                (andmap identifier? (syntax->list (syntax (id ...)))))
-           (let* ([letrec? (free-identifier=? (syntax let-) (quote-syntax letrec-values))]
+           (and (or (free-identifier=? (syntax let-)
+                                       (quote-syntax let-values))
+                    (free-identifier=? (syntax let-)
+                                       (quote-syntax letrec-values)))
+                (andmap identifier?
+                        (syntax->list (syntax (id ...)))))
+           (let* ([letrec? (free-identifier=? (syntax let-)
+                                              (quote-syntax letrec-values))]
                   [ids (syntax->list (syntax (id ...)))]
-                  [new-ids
-                   (if xform? (map (lambda (id) (datum->syntax #f (gensym (syntax-e id)))) ids) ids)]
+                  [new-ids (if xform?
+                               (map (lambda (id)
+                                      (datum->syntax #f
+                                                     (gensym (syntax-e id))))
+                                    ids)
+                               ids)]
                   [body-locals (append ids locals)]
                   [exprs (map (lambda (expr id) (loop expr #t id (if letrec? body-locals locals)))
                               (syntax->list (syntax (expr ...)))
@@ -668,8 +703,10 @@
                                     stx
                                     (syntax-local-introduce #'let-))))]
           [(-#%app -chaperone-procedure expr . rst)
-           (and (free-identifier=? (syntax -#%app) (quote-syntax #%plain-app))
-                (free-identifier=? (syntax -chaperone-procedure) (quote-syntax chaperone-procedure)))
+           (and (free-identifier=? (syntax -#%app)
+                                   (quote-syntax #%plain-app))
+                (free-identifier=? (syntax -chaperone-procedure)
+                                   (quote-syntax chaperone-procedure)))
            (with-syntax ([expr (loop #'expr #t name locals)])
              (syntax-track-origin (rearm (syntax/loc stx
                                            (-#%app -chaperone-procedure expr . rst))
@@ -698,8 +735,10 @@
 
     (define (main stx super-expr deserialize-id-expr name-id interface-exprs defn-and-exprs)
       (let-values ([(this-id) #'this-id]
-                   [(the-obj) (datum->syntax (quote-syntax here) (gensym 'self))]
-                   [(the-finder) (datum->syntax #f (gensym 'find-self))])
+                   [(the-obj) (datum->syntax (quote-syntax here)
+                                             (gensym 'self))]
+                   [(the-finder) (datum->syntax #f
+                                                (gensym 'find-self))])
 
         (let* ([def-ctx (syntax-local-make-definition-context)]
                [norm-init/field-iid (norm-init/field-iid/def-ctx def-ctx)]
@@ -762,8 +801,10 @@
                                    -inspect)
                  [(form orig idp ...)
                   (and (identifier? (syntax form))
-                       (or (free-identifier=? (syntax form) (quote-syntax -init))
-                           (free-identifier=? (syntax form) (quote-syntax -init-field))))
+                       (or (free-identifier=? (syntax form)
+                                              (quote-syntax -init))
+                           (free-identifier=? (syntax form)
+                                              (quote-syntax -init-field))))
 
                   (let ([form (syntax-e (stx-car (syntax orig)))])
                     (for-each
@@ -773,13 +814,15 @@
                           (identifier? (syntax id))
                           'ok]
                          [((iid eid))
-                          (and (identifier? (syntax iid)) (identifier? (syntax eid)))
+                          (and (identifier? (syntax iid))
+                               (identifier? (syntax eid)))
                           'ok]
                          [(id expr)
                           (identifier? (syntax id))
                           'ok]
                          [((iid eid) expr)
-                          (and (identifier? (syntax iid)) (identifier? (syntax eid)))
+                          (and (identifier? (syntax iid))
+                               (identifier? (syntax eid)))
                           'ok]
                          [else
                           (bad
@@ -805,7 +848,8 @@
                         (identifier? (syntax id))
                         'ok]
                        [((iid eid) expr)
-                        (and (identifier? (syntax iid)) (identifier? (syntax eid)))
+                        (and (identifier? (syntax iid))
+                             (identifier? (syntax eid)))
                         'ok]
                        [else
                         (bad "field element is not an optionally renamed identifier-expression pair"
@@ -847,7 +891,8 @@
                           (identifier? (syntax id))
                           'ok]
                          [(iid eid)
-                          (and (identifier? (syntax iid)) (identifier? (syntax eid)))
+                          (and (identifier? (syntax iid))
+                               (identifier? (syntax eid)))
                           'ok]
                          [else
                           (bad (format "~a element is not an identifier or pair of identifiers" form)
@@ -873,7 +918,8 @@
                   (for-each (lambda (idp)
                               (syntax-case idp ()
                                 [(iid eid)
-                                 (and (identifier? (syntax iid)) (identifier? (syntax eid)))
+                                 (and (identifier? (syntax iid))
+                                      (identifier? (syntax eid)))
                                  'ok]
                                 [else
                                  (bad (format "~a element is not a pair of identifiers"
@@ -906,48 +952,67 @@
                                          defn-and-exprs
                                          cons)]
                  [(inspect-decls exprs) (extract (list (quote-syntax -inspect)) exprs cons)]
-                 [(plain-inits)
-                  ;; Normalize after, but keep un-normal for error reporting
-                  (flatten #f (extract* (syntax-e (quote-syntax (-init -init-rest))) exprs))]
+                 ;; Normalize after, but keep un-normal for error reporting
+                 [(plain-inits) (flatten #f
+                                         (extract* (syntax-e (quote-syntax (-init -init-rest)))
+                                                   exprs))]
                  [(normal-plain-inits) (map normalize-init/field plain-inits)]
                  [(init-rest-decls _) (extract (list (quote-syntax -init-rest)) exprs void)]
-                 [(inits) (flatten #f (extract* (syntax-e (quote-syntax (-init -init-field))) exprs))]
+                 [(inits) (flatten #f
+                                   (extract* (syntax-e (quote-syntax (-init -init-field))) exprs))]
                  [(normal-inits) (map normalize-init/field inits)]
-                 [(plain-fields) (flatten #f (extract* (list (quote-syntax -field)) exprs))]
+                 [(plain-fields) (flatten #f
+                                          (extract* (list (quote-syntax -field)) exprs))]
                  [(normal-plain-fields) (map normalize-init/field plain-fields)]
-                 [(plain-init-fields) (flatten #f (extract* (list (quote-syntax -init-field)) exprs))]
+                 [(plain-init-fields) (flatten #f
+                                               (extract* (list (quote-syntax -init-field)) exprs))]
                  [(normal-plain-init-fields) (map normalize-init/field plain-init-fields)]
                  [(inherit-fields) (flatten pair
                                             (extract* (list (quote-syntax -inherit-field)) decls))]
-                 [(privates) (flatten pair (extract* (list (quote-syntax -private)) decls))]
-                 [(publics) (flatten pair (extract* (list (quote-syntax -public)) decls))]
-                 [(overrides) (flatten pair (extract* (list (quote-syntax -override)) decls))]
-                 [(augrides) (flatten pair (extract* (list (quote-syntax -augride)) decls))]
-                 [(public-finals) (flatten pair (extract* (list (quote-syntax -public-final)) decls))]
+                 [(privates) (flatten pair
+                                      (extract* (list (quote-syntax -private)) decls))]
+                 [(publics) (flatten pair
+                                     (extract* (list (quote-syntax -public)) decls))]
+                 [(overrides) (flatten pair
+                                       (extract* (list (quote-syntax -override)) decls))]
+                 [(augrides) (flatten pair
+                                      (extract* (list (quote-syntax -augride)) decls))]
+                 [(public-finals) (flatten pair
+                                           (extract* (list (quote-syntax -public-final)) decls))]
                  [(override-finals) (flatten pair
                                              (extract* (list (quote-syntax -override-final)) decls))]
-                 [(pubments) (flatten pair (extract* (list (quote-syntax -pubment)) decls))]
-                 [(overments) (flatten pair (extract* (list (quote-syntax -overment)) decls))]
-                 [(augments) (flatten pair (extract* (list (quote-syntax -augment)) decls))]
+                 [(pubments) (flatten pair
+                                      (extract* (list (quote-syntax -pubment)) decls))]
+                 [(overments) (flatten pair
+                                       (extract* (list (quote-syntax -overment)) decls))]
+                 [(augments) (flatten pair
+                                      (extract* (list (quote-syntax -augment)) decls))]
                  [(augment-finals) (flatten pair
                                             (extract* (list (quote-syntax -augment-final)) decls))]
-                 [(rename-supers) (flatten pair (extract* (list (quote-syntax -rename-super)) decls))]
-                 [(inherits) (flatten pair (extract* (list (quote-syntax -inherit)) decls))]
+                 [(rename-supers) (flatten pair
+                                           (extract* (list (quote-syntax -rename-super)) decls))]
+                 [(inherits) (flatten pair
+                                      (extract* (list (quote-syntax -inherit)) decls))]
                  [(inherit/supers) (flatten pair
                                             (extract* (list (quote-syntax -inherit/super)) decls))]
                  [(inherit/inners) (flatten pair
                                             (extract* (list (quote-syntax -inherit/inner)) decls))]
-                 [(abstracts) (flatten pair (extract* (list (quote-syntax -abstract)) decls))]
+                 [(abstracts) (flatten pair
+                                       (extract* (list (quote-syntax -abstract)) decls))]
                  [(rename-inners) (flatten pair
                                            (extract* (list (quote-syntax -rename-inner)) decls))])
 
               ;; At most one inspect:
-              (unless (or (null? inspect-decls) (null? (cdr inspect-decls)))
-                (bad "multiple inspect clauses" (cadr inspect-decls)))
+              (unless (or (null? inspect-decls)
+                          (null? (cdr inspect-decls)))
+                (bad "multiple inspect clauses"
+                     (cadr inspect-decls)))
 
               ;; At most one init-rest:
-              (unless (or (null? init-rest-decls) (null? (cdr init-rest-decls)))
-                (bad "multiple init-rest clauses" (cadr init-rest-decls)))
+              (unless (or (null? init-rest-decls)
+                          (null? (cdr init-rest-decls)))
+                (bad "multiple init-rest clauses"
+                     (cadr init-rest-decls)))
 
               ;; Make sure init-rest is last
               (unless (null? init-rest-decls)
@@ -955,13 +1020,15 @@
                            [saw-rest? #f])
                   (unless (null? l)
                     (cond
-                      [(and (stx-pair? (car l)) (identifier? (stx-car (car l))))
+                      [(and (stx-pair? (car l))
+                            (identifier? (stx-car (car l))))
                        (let ([form (stx-car (car l))])
                          (cond
                            [(free-identifier=? #'-init-rest form) (loop (cdr l) #t)]
                            [(not saw-rest?) (loop (cdr l) #f)]
                            [(free-identifier=? #'-init form)
-                            (bad "init clause follows init-rest clause" (stx-car (stx-cdr (car l))))]
+                            (bad "init clause follows init-rest clause"
+                                 (stx-car (stx-cdr (car l))))]
                            [(free-identifier=? #'-init-field form)
                             (bad "init-field clause follows init-rest clause"
                                  (stx-car (stx-cdr (car l))))]
@@ -973,14 +1040,16 @@
                          [normal-inits normal-inits])
                 (unless (null? normal-inits)
                   (if (stx-null? (stx-cdr (car normal-inits)))
-                      (loop (cdr inits) (cdr normal-inits))
+                      (loop (cdr inits)
+                            (cdr normal-inits))
                       (let loop ([inits (cdr inits)]
                                  [normal-inits (cdr normal-inits)])
                         (unless (null? inits)
                           (if (stx-null? (stx-cdr (car normal-inits)))
                               (bad "initializer without default follows an initializer with default"
                                    (car inits))
-                              (loop (cdr inits) (cdr normal-inits))))))))
+                              (loop (cdr inits)
+                                    (cdr normal-inits))))))))
 
               ;; ----- Extract method definitions; check that they look like procs -----
               ;;  Optionally transform them, can expand even if not transforming.
@@ -1003,7 +1072,8 @@
                                                               override-finals
                                                               augment-finals
                                                               abstracts))]
-                     [local-public-names (append (map car (append pubments public-finals))
+                     [local-public-names (append (map car
+                                                      (append pubments public-finals))
                                                  local-public-dynamic-names)]
                      [local-method-names (append (map car privates) local-public-names)]
                      [expand-stop-names (append local-method-names
@@ -1062,7 +1132,8 @@
                                                                         (syntax-local-introduce
                                                                          #'d-v))]
                                              [public? (ormap (lambda (i)
-                                                               (bound-identifier=? i (car ids)))
+                                                               (bound-identifier=? i
+                                                                                   (car ids)))
                                                              local-public-names)])
                                          (loop (cdr exprs)
                                                (if public? (cons (cons (car ids) expr) ms) ms)
@@ -1071,20 +1142,32 @@
                                                sd)))
                                      ;; Non-method defn:
                                      (loop (cdr exprs) ms pms (cons (car exprs) es) sd)))]
-                              [(define-values . _) (bad "ill-formed definition" (car exprs))]
+                              [(define-values . _)
+                               (bad "ill-formed definition"
+                                    (car exprs))]
                               [(define-syntaxes (id ...) expr)
                                (let ([ids (syntax->list (syntax (id ...)))])
                                  (for-each (lambda (id)
                                              (unless (identifier? id)
                                                (bad "syntax name is not an identifier" id)))
                                            ids)
-                                 (loop (cdr exprs) ms pms es (cons (cons ids (car exprs)) sd)))]
-                              [(define-syntaxes . _) (bad "ill-formed syntax definition" (car exprs))]
+                                 (loop (cdr exprs)
+                                       ms
+                                       pms
+                                       es
+                                       (cons (cons ids
+                                                   (car exprs))
+                                             sd)))]
+                              [(define-syntaxes . _)
+                               (bad "ill-formed syntax definition"
+                                    (car exprs))]
                               [_else (loop (cdr exprs) ms pms (cons (car exprs) es) sd)])))])
 
                   ;; ---- Extract all defined names, including field accessors and mutators ---
-                  (let ([defined-syntax-names (apply append (map car stx-defines))]
-                        [defined-method-names (append (map car methods) (map car private-methods))]
+                  (let ([defined-syntax-names (apply append
+                                                     (map car stx-defines))]
+                        [defined-method-names (append (map car methods)
+                                                      (map car private-methods))]
                         [private-field-names (let loop ([l exprs])
                                                (if (null? l)
                                                    null
@@ -1148,7 +1231,9 @@
                                               override-finals
                                               augment-finals)))
                       ;; inits
-                      (check-dup "init" (map norm-init/field-eid (append normal-inits)))
+                      (check-dup "init"
+                                 (map norm-init/field-eid
+                                      (append normal-inits)))
                       ;; fields
                       (check-dup "field"
                                  (map norm-init/field-eid
@@ -1205,10 +1290,12 @@
                             (lambda (e)
                               (syntax-case e ()
                                 [(d-v (id ...) expr)
-                                 (and (identifier? #'d-v) (free-identifier=? #'d-v #'define-values))
+                                 (and (identifier? #'d-v)
+                                      (free-identifier=? #'d-v #'define-values))
                                  (let* ([ids (syntax->list #'(id ...))]
                                         [assignment
-                                         (if (= 1 (length ids))
+                                         (if (= 1
+                                                (length ids))
                                              ;; Special-case single variable in case the RHS
                                              ;; uses the name:
                                              (syntax/loc e
@@ -1217,12 +1304,15 @@
                                              (with-syntax ([(temp ...) (generate-temporaries ids)])
                                                (syntax/loc e
                                                  (let-values ([(temp ...) expr])
-                                                   (set! id (field-initialization-value temp)) ...
+                                                   (set! id
+                                                         (field-initialization-value temp)) ...
                                                    (void)))))])
                                    (syntax-track-origin assignment e #'d-v))]
                                 [(_init orig idp ...)
                                  (and (identifier? (syntax _init))
-                                      (ormap (lambda (it) (free-identifier=? it (syntax _init)))
+                                      (ormap (lambda (it)
+                                               (free-identifier=? it
+                                                                  (syntax _init)))
                                              (syntax-e (quote-syntax (-init -init-field)))))
                                  (let* ([norms (map normalize-init/field
                                                     (syntax->list (syntax (idp ...))))]
@@ -1252,29 +1342,34 @@
                                       e
                                       #'_init)))]
                                 [(-fld orig idp ...)
-                                 (and (identifier? #'-fld) (free-identifier=? #'-fld #'-field))
+                                 (and (identifier? #'-fld)
+                                      (free-identifier=? #'-fld #'-field))
                                  (with-syntax ([(((iid eid) expr) ...)
                                                 (map normalize-init/field
                                                      (syntax->list #'(idp ...)))])
-                                   (syntax-track-origin
-                                    (syntax/loc e
-                                      (begin
-                                        (set! iid (field-initialization-value expr)) ...))
-                                    e
-                                    #'-fld))]
+                                   (syntax-track-origin (syntax/loc e
+                                                          (begin
+                                                            (set! iid
+                                                                  (field-initialization-value expr))
+                                                            ...))
+                                                        e
+                                                        #'-fld))]
                                 [(-i-r id/rename)
-                                 (and (identifier? #'-i-r) (free-identifier=? #'-i-r #'-init-rest))
+                                 (and (identifier? #'-i-r)
+                                      (free-identifier=? #'-i-r #'-init-rest))
                                  (with-syntax
                                      ([n (+ (length plain-inits) (length plain-init-fields) -1)]
                                       [id (if (identifier? #'id/rename)
                                               #'id/rename
                                               (stx-car #'id/rename))])
                                    (syntax-track-origin (syntax/loc e
-                                                          (set! id (extract-rest-args n init-args)))
+                                                          (set! id
+                                                                (extract-rest-args n init-args)))
                                                         e
                                                         #'-i-r))]
                                 [(-i-r)
-                                 (and (identifier? #'-i-r) (free-identifier=? #'-i-r #'-init-rest))
+                                 (and (identifier? #'-i-r)
+                                      (free-identifier=? #'-i-r #'-init-rest))
                                  (syntax-track-origin (syntax (void)) e #'-i-r)]
                                 [_else e]))
                             exprs)]
@@ -1310,15 +1405,20 @@
                            [(rename-inner-extra-temp ...)
                             (generate-temporaries (map car rename-inner-extras))]
                            [(private-name ...) (map car privates)]
-                           [(private-name-localized ...) (map lookup-localize (map car privates))]
-                           [(private-temp ...) (map mk-method-temp (map car privates))]
+                           [(private-name-localized ...) (map lookup-localize
+                                                              (map car privates))]
+                           [(private-temp ...) (map mk-method-temp
+                                                    (map car privates))]
                            [(pubment-name ...) (map car pubments)]
-                           [(pubment-name-localized ...) (map lookup-localize (map car pubments))]
-                           [(pubment-temp ...) (map mk-method-temp (map car pubments))]
+                           [(pubment-name-localized ...) (map lookup-localize
+                                                              (map car pubments))]
+                           [(pubment-temp ...) (map mk-method-temp
+                                                    (map car pubments))]
                            [(public-final-name ...) (map car public-finals)]
                            [(public-final-name-localized ...) (map lookup-localize
                                                                    (map car public-finals))]
-                           [(public-final-temp ...) (map mk-method-temp (map car public-finals))]
+                           [(public-final-temp ...) (map mk-method-temp
+                                                         (map car public-finals))]
                            [(method-name ...) (append local-public-dynamic-names
                                                       (map car all-inherits))]
                            [(method-name-localized ...) (map lookup-localize
@@ -1328,22 +1428,31 @@
                             (generate-temporaries (append local-public-dynamic-names
                                                           (map car all-inherits)))]
                            [(inherit-field-accessor ...)
-                            (generate-temporaries (map (lambda (id) (format "get-~a" (syntax-e id)))
+                            (generate-temporaries (map (lambda (id)
+                                                         (format "get-~a"
+                                                                 (syntax-e id)))
                                                        inherit-field-names))]
                            [(inherit-field-mutator ...)
-                            (generate-temporaries (map (lambda (id) (format "set-~a!" (syntax-e id)))
+                            (generate-temporaries (map (lambda (id)
+                                                         (format "set-~a!"
+                                                                 (syntax-e id)))
                                                        inherit-field-names))]
                            [(inherit-name ...) (definify (map car all-inherits))]
                            [(inherit-field-name ...) (definify inherit-field-names)]
                            [(inherit-field-name-localized ...) (map lookup-localize
                                                                     inherit-field-names)]
                            [(local-field ...) (definify (append field-names private-field-names))]
-                           [(local-field-localized ...)
-                            (map lookup-localize (append field-names private-field-names))]
-                           [(local-field-pos ...)
-                            (let loop ([pos 0]
-                                       [l (append field-names private-field-names)])
-                              (if (null? l) null (cons pos (loop (add1 pos) (cdr l)))))]
+                           [(local-field-localized ...) (map lookup-localize
+                                                             (append field-names
+                                                                     private-field-names))]
+                           [(local-field-pos ...) (let loop ([pos 0]
+                                                             [l (append field-names
+                                                                        private-field-names)])
+                                                    (if (null? l)
+                                                        null
+                                                        (cons pos
+                                                              (loop (add1 pos)
+                                                                    (cdr l)))))]
                            [(local-field-accessor ...)
                             (generate-temporaries (append field-names private-field-names))]
                            [(local-field-mutator ...)
@@ -1469,21 +1578,26 @@
                                  [field-names
                                   (map (lambda (norm) (lookup-localize (norm-init/field-eid norm)))
                                        (append normal-plain-fields normal-plain-init-fields))]
-                                 [inherit-field-names (map lookup-localize (map cdr inherit-fields))]
+                                 [inherit-field-names (map lookup-localize
+                                                           (map cdr inherit-fields))]
                                  [init-names (map (lambda (norm)
                                                     (lookup-localize (norm-init/field-eid norm)))
                                                   normal-inits)]
                                  [init-mode init-mode]
                                  [(private-method ...) (map (find-method private-methods)
                                                             (map car privates))]
-                                 [public-methods (map (find-method methods) (map car publics))]
+                                 [public-methods (map (find-method methods)
+                                                      (map car publics))]
                                  [override-methods
                                   (map (find-method methods)
-                                       (map car (append overments override-finals overrides)))]
+                                       (map car
+                                            (append overments override-finals overrides)))]
                                  [augride-methods
                                   (map (find-method methods)
-                                       (map car (append augments augment-finals augrides)))]
-                                 [(pubment-method ...) (map (find-method methods) (map car pubments))]
+                                       (map car
+                                            (append augments augment-finals augrides)))]
+                                 [(pubment-method ...) (map (find-method methods)
+                                                            (map car pubments))]
                                  [(public-final-method ...) (map (find-method methods)
                                                                  (map car public-finals))]
                                  ;; store a dummy method body that should never be called for abstracts
@@ -1671,13 +1785,15 @@
                                                                                 (the-obj si_c
                                                                                          si_inited?
                                                                                          si_leftovers)
-                                                                                (list arg (... ...))
+                                                                                (list arg
+                                                                                      (... ...))
                                                                                 (kw kwarg)
                                                                                 (... ...)))))]))]
                                                              [super-new-param
                                                               (lambda (stx)
                                                                 (syntax-case stx ()
-                                                                  [(_ (kw kwarg) (... ...))
+                                                                  [(_ (kw kwarg)
+                                                                      (... ...))
                                                                    (with-syntax ([stx stx])
                                                                      (syntax (begin
                                                                                `(declare-super-new)
@@ -1770,7 +1886,8 @@
                                                  (string->symbol (format "deserialize-info:~a"
                                                                          (syntax-e #'name)))
                                                  #'name)])
-       (unless (memq (syntax-local-context) '(top-level module))
+       (unless (memq (syntax-local-context)
+                     '(top-level module))
          (raise-syntax-error #f
                              "allowed only at the top level or within a module top level"
                              #'orig-stx))
@@ -1827,7 +1944,8 @@
                                    (syntax-case binding ()
                                      [(name expr)
                                       (identifier? (syntax name))
-                                      (cons (syntax name) (syntax expr))]
+                                      (cons (syntax name)
+                                            (syntax expr))]
                                      [_else
                                       (identifier? (syntax name))
                                       (raise-syntax-error #f
@@ -1841,16 +1959,26 @@
                          (class-syntax-protect (syntax (begin
                                                          (decl-form name ...)
                                                          (define name expr) ...))))))])))])
-    (values (mk 'private* (syntax private))
-            (mk 'public* (syntax public))
-            (mk 'pubment* (syntax pubment))
-            (mk 'override* (syntax override))
-            (mk 'overment* (syntax overment))
-            (mk 'augride* (syntax augride))
-            (mk 'augment* (syntax augment))
-            (mk 'public-final* (syntax public-final))
-            (mk 'override-final* (syntax override-final))
-            (mk 'augment-final* (syntax augment)))))
+    (values (mk 'private*
+                (syntax private))
+            (mk 'public*
+                (syntax public))
+            (mk 'pubment*
+                (syntax pubment))
+            (mk 'override*
+                (syntax override))
+            (mk 'overment*
+                (syntax overment))
+            (mk 'augride*
+                (syntax augride))
+            (mk 'augment*
+                (syntax augment))
+            (mk 'public-final*
+                (syntax public-final))
+            (mk 'override-final*
+                (syntax override-final))
+            (mk 'augment-final*
+                (syntax augment)))))
 
 (define-syntaxes (define/private
                   define/public
@@ -1965,8 +2093,10 @@
   (make-member-key (generate-local-member-name (gensym 'member))))
 
 (define (member-name-key=? a b)
-  (if (and (member-name-key? a) (member-name-key? b))
-      (eq? (member-key-id a) (member-key-id b))
+  (if (and (member-name-key? a)
+           (member-name-key? b))
+      (eq? (member-key-id a)
+           (member-key-id b))
       (eq? a b)))
 
 (define (member-name-key-hash-code a)
@@ -2039,7 +2169,9 @@
                 no-super-init?) ; #t => no super-init needed
   #:inspector insp
   #:property prop:equal+hash
-  (list (λ (cls-a cls-b recur) (eq? (class-orig-cls cls-a) (class-orig-cls cls-b)))
+  (list (λ (cls-a cls-b recur)
+          (eq? (class-orig-cls cls-a)
+               (class-orig-cls cls-b)))
         (λ (cls recur) (eq-hash-code (class-orig-cls cls)))
         (λ (cls recur) (eq-hash-code (class-orig-cls cls)))))
 
@@ -2265,9 +2397,11 @@ last few projections.
                                    (as-write id)
                                    #:class-name name))))
                     ids))]
-            [method-width (+ (class-method-width super) (length public-names))]
+            [method-width (+ (class-method-width super)
+                             (length public-names))]
             [field-width (+ (class-field-width super) num-fields)]
-            [field-pub-width (+ (class-field-pub-width super) (length public-field-names))])
+            [field-pub-width (+ (class-field-pub-width super)
+                                (length public-field-names))])
         (let ([inherit-indices (get-indices super-method-ht "inherit" inherit-names)]
               [replace-augonly-indices (get-indices super-method-ht "overment" overment-names)]
               [replace-final-indices
@@ -2298,7 +2432,8 @@ last few projections.
                                 (interface-public-ids intf)))
                     interfaces)
           (let ([c (get-implement-requirement interfaces 'class* #:class-name name)])
-            (when (and c (not (subclass? super c)))
+            (when (and c
+                       (not (subclass? super c)))
               (obj-error 'class*
                          "interface-required implementation not satisfied"
                          (and name "class name")
@@ -2354,7 +2489,8 @@ last few projections.
                   (if no-method-changes? (class-meth-flags super) (make-vector method-width))]
                  [c (class-make name
                                 (add1 (class-pos super))
-                                (list->vector (append (vector->list (class-supers super)) (list #f)))
+                                (list->vector (append (vector->list (class-supers super))
+                                                      (list #f)))
                                 i
                                 (let-values ([(struct: make- ? -ref -set)
                                               (make-struct-type 'insp #f 0 0 #f null inspector)])
@@ -2392,7 +2528,8 @@ last few projections.
                                 #f
                                 #f
                                 #f ; serializer is set later
-                                (or check-undef? (class-check-undef? super))
+                                (or check-undef?
+                                    (class-check-undef? super))
                                 (and make-struct:prim #t))]
                  [obj-name (if name (string->symbol (format "object:~a" name)) 'object)]
                  ;; Used only for prim classes
@@ -2445,20 +2582,21 @@ last few projections.
                        num-fields
                        unsafe-undefined
                        ;; Map object property to class:
-                       (append
-                        (list (cons prop:object c))
-                        (if (class-check-undef? c)
-                            (list (cons prop:chaperone-unsafe-undefined (class-all-field-ids c)))
-                            null)
-                        (if deserialize-id
-                            (list (cons prop:serializable
-                                        ;; Serialization:
-                                        (make-serialize-info
-                                         (lambda (obj) ((class-serializer c) obj))
-                                         deserialize-id
-                                         (not (interface-extension? i externalizable<%>))
-                                         (or (current-load-relative-directory) (current-directory)))))
-                            null))
+                       (append (list (cons prop:object c))
+                               (if (class-check-undef? c)
+                                   (list (cons prop:chaperone-unsafe-undefined
+                                               (class-all-field-ids c)))
+                                   null)
+                               (if deserialize-id
+                                   (list (cons prop:serializable
+                                               ;; Serialization:
+                                               (make-serialize-info
+                                                (lambda (obj) ((class-serializer c) obj))
+                                                deserialize-id
+                                                (not (interface-extension? i externalizable<%>))
+                                                (or (current-load-relative-directory)
+                                                    (current-directory)))))
+                                   null))
                        inspector))])
               (set-class-struct:object! c struct:object)
               (set-class-object?! c object?)
@@ -2493,7 +2631,8 @@ last few projections.
                           ;; vector of the superclass.
                           (let ([vec (vector-ref (class-beta-methods super) index)])
                             (when (and (positive? (vector-length vec))
-                                       (not (vector-ref vec (sub1 (vector-length vec)))))
+                                       (not (vector-ref vec
+                                                        (sub1 (vector-length vec)))))
                               (obj-error 'class*
                                          (string-append
                                           "superclass method for override, overment, inherit/super, "
@@ -2624,7 +2763,8 @@ last few projections.
                                   new-abstract-indices))
                       ;; Override old methods:
                       (for-each (lambda (index method id)
-                                  (when (eq? 'final (vector-ref meth-flags index))
+                                  (when (eq? 'final
+                                             (vector-ref meth-flags index))
                                     (obj-error 'class*
                                                "cannot override or augment final method"
                                                "method name"
@@ -2719,7 +2859,9 @@ last few projections.
                          [(interface-extension? i externalizable<%>)
                           (let ([index (car (get-indices method-ht "???" '(externalize)))])
                             (lambda (obj) (vector ((vector-ref methods index) obj))))]
-                         [(and (or deserialize-id (not inspector)) (class-serializer super))
+                         [(and (or deserialize-id
+                                   (not inspector))
+                               (class-serializer super))
                           =>
                           (lambda (ss)
                             (lambda (obj)
@@ -2736,12 +2878,14 @@ last few projections.
                                         (lambda (o args)
                                           (if (pair? args)
                                               (begin
-                                                ((class-fixup super) o (vector-ref (car args) 0))
+                                                ((class-fixup super) o
+                                                                     (vector-ref (car args) 0))
                                                 (let loop ([i 0]
                                                            [args (cdr args)])
                                                   (unless (= i num-fields)
                                                     (object-field-set! o i (car args))
-                                                    (loop (add1 i) (cdr args)))))
+                                                    (loop (add1 i)
+                                                          (cdr args)))))
                                               (begin
                                                 ((class-fixup super) o args)
                                                 (let loop ([i 0])
@@ -2765,7 +2909,8 @@ last few projections.
                                   (define pr (car proj-pairs))
                                   (if (member (list-ref pr 0) init-args)
                                       (loop (cdr proj-pairs))
-                                      (cons pr (loop (cdr proj-pairs))))])))
+                                      (cons pr
+                                            (loop (cdr proj-pairs))))])))
                            (define super-init-proj-pairs (wrapped-class-info-init-proj-pairs info))
 
                            ;; use an init that checks the super contracts on a super call
@@ -2825,7 +2970,8 @@ last few projections.
                                            (send o internalize args)
                                            o))
                                        (lambda (args)
-                                         (let ([o (make-object-uninitialized c `(class ,name))])
+                                         (let ([o (make-object-uninitialized c
+                                                                             `(class ,name))])
                                            ((class-fixup c) o args)
                                            o)))
                                    (if (interface-extension? i externalizable<%>)
@@ -2835,7 +2981,8 @@ last few projections.
                                                     #:class-name name))
                                        (lambda ()
                                          (let ([o (object-make)])
-                                           (values o (lambda (o2) ((class-fixup c) o o2))))))))
+                                           (values o
+                                                   (lambda (o2) ((class-fixup c) o o2))))))))
                           (copy-seals super c+ctc)))))))))))))
 
 ;; (listof interface?) -> (listof symbol?)
@@ -2843,7 +2990,9 @@ last few projections.
 (define (interfaces->contracted-methods loi)
   (define immediate-methods (map (λ (ifc) (hash-keys (interface-contracts ifc))) loi))
   (define super-methods (map (λ (ifc) (interfaces->contracted-methods (interface-supers ifc))) loi))
-  (remove-duplicates (apply append (append immediate-methods super-methods)) eq?))
+  (remove-duplicates (apply append
+                            (append immediate-methods super-methods))
+                     eq?))
 
 #|
 An example
@@ -2890,15 +3039,20 @@ An example
 (define (get-interface-contract-info ifc meth)
   ;; recur on hierarchy
   (define super-infos
-    (apply append (map (λ (ifc) (get-interface-contract-info ifc meth)) (interface-supers ifc))))
+    (apply append
+           (map (λ (ifc) (get-interface-contract-info ifc meth))
+                (interface-supers ifc))))
   ;; deduplicate the infos we get
   (define dedup-infos
     (let loop ([infos super-infos])
       (if (null? infos)
           '()
-          (cons
-           (car infos)
-           (loop (remove* (list (car infos)) (cdr infos) (λ (i1 i2) (eq? (car i1) (car i2)))))))))
+          (cons (car infos)
+                (loop (remove* (list (car infos))
+                               (cdr infos)
+                               (λ (i1 i2)
+                                 (eq? (car i1)
+                                      (car i2)))))))))
   (define our-ctc (hash-ref (interface-contracts ifc) meth #f))
   (define our-ctcs (hash-keys (interface-contracts ifc)))
   (define our-name `(interface ,(interface-name ifc)))
@@ -2945,7 +3099,10 @@ An example
                     (for-each (lambda (p) (hash-set! ht (vector-ref p 0) p))
                               (interface-properties i)))
                   intfs)
-        (hash-map ht (lambda (k v) (cons (vector-ref v 1) (vector-ref v 2)))))
+        (hash-map ht
+                  (lambda (k v)
+                    (cons (vector-ref v 1)
+                          (vector-ref v 2)))))
       ;; No properties to add:
       null))
 
@@ -2961,7 +3118,8 @@ An example
 
 (define-values (prop:object _object? object-ref) (make-struct-type-property 'object 'can-impersonate))
 (define (object? o)
-  (or (_object? o) (wrapped-object? o)))
+  (or (_object? o)
+      (wrapped-object? o)))
 (define (object-ref/unwrap o)
   (cond
     [(_object? o) (object-ref o)]
@@ -2990,7 +3148,8 @@ An example
   (unless (symbol? seal-sym)
     (raise-argument-error 'class-seal "symbol?" seal-sym))
   (define (check-unsealed-names val)
-    (unless (and (list? val) (andmap symbol? val))
+    (unless (and (list? val)
+                 (andmap symbol? val))
       (raise-argument-error 'class-seal "(listof symbol?)" val)))
   (check-unsealed-names inits)
   (check-unsealed-names fields)
@@ -3006,7 +3165,11 @@ An example
           (make-seal-checker member-proc cls inits)
           (make-seal-checker member-proc cls fields)
           (make-seal-checker member-proc cls methods)))
-  (define seals (cons new-seal (or (and (has-seals? cls) (get-seals cls)) null)))
+  (define seals
+    (cons new-seal
+          (or (and (has-seals? cls)
+                   (get-seals cls))
+              null)))
   ;; impersonate to avoid the cost of creating a class wrapper
   (impersonate-struct cls
                       class-object?
@@ -3031,14 +3194,22 @@ An example
   (unless (symbol? sym)
     (raise-argument-error 'class-seal "symbol?" seal-sym))
 
-  (define old-seals (and (has-seals? cls) (get-seals cls)))
+  (define old-seals
+    (and (has-seals? cls)
+         (get-seals cls)))
   (define has-seal-with-sym?
     (and old-seals
          (for/or ([old-seal (in-list old-seals)])
-           (eq? sym (seal-sym old-seal)))))
+           (eq? sym
+                (seal-sym old-seal)))))
   (unless has-seal-with-sym?
     (wrong-key-proc cls))
-  (define new-seals (remove sym (get-seals cls) (λ (sym sl) (eq? sym (seal-sym sl)))))
+  (define new-seals
+    (remove sym
+            (get-seals cls)
+            (λ (sym sl)
+              (eq? sym
+                   (seal-sym sl)))))
   (impersonate-struct cls class-object? #f set-class-object?! #f prop:seals new-seals))
 
 ;; copy-seals : class? class? -> class?
@@ -3066,17 +3237,20 @@ An example
              (syntax-case v ()
                [id
                 (identifier? #'id)
-                (values (cons #'id vars) (cons #f ctcs))]
+                (values (cons #'id vars)
+                        (cons #f ctcs))]
                [(id ctc)
                 (identifier? #'id)
-                (values (cons #'id vars) (cons #'ctc ctcs))]
+                (values (cons #'id vars)
+                        (cons #'ctc ctcs))]
                [_ (raise-syntax-error #f "not an identifier or identifier-contract pair" stx v)])))
          (let ([dup (check-duplicate-identifier vars)])
            (when dup
              (raise-syntax-error #f "duplicate name" stx dup)))
          (with-syntax ([name (datum->syntax #f name #f)]
                        [(var ...) (map localize vars)]
-                       [((v c) ...) (filter (λ (p) (cadr p)) (map list vars ctcs))])
+                       [((v c) ...) (filter (λ (p) (cadr p))
+                                            (map list vars ctcs))])
            (class-syntax-protect (syntax/loc stx
                                    (compose-interface 'name
                                                       (list interface-expr ...)
@@ -3087,12 +3261,15 @@ An example
 
 (define-syntax (_interface stx)
   (syntax-case stx ()
-    [(_ (interface-expr ...) var ...) (do-interface stx #'((interface-expr ...) () var ...))]))
+    [(_ (interface-expr ...) var ...)
+     (do-interface stx
+                   #'((interface-expr ...) () var ...))]))
 
 (define-syntax (interface* stx)
   (syntax-case stx ()
     [(_ (interface-expr ...) ([prop prop-val] ...) var ...)
-     (do-interface stx #'((interface-expr ...) ([prop prop-val] ...) var ...))]
+     (do-interface stx
+                   #'((interface-expr ...) ([prop prop-val] ...) var ...))]
     [(_ (interface-expr ...) (prop+val ...) var ...)
      (for-each (lambda (p+v)
                  (syntax-case p+v ()
@@ -3136,7 +3313,8 @@ An example
     ;; Check that vars don't already exist in supers:
     (for-each (lambda (super)
                 (for-each (lambda (var)
-                            (when (and (hash-ref ht var #f) (not (hash-ref ctcs var #f)))
+                            (when (and (hash-ref ht var #f)
+                                       (not (hash-ref ctcs var #f)))
                               (obj-error 'interface
                                          "variable already in superinterface"
                                          "variable name"
@@ -3161,18 +3339,22 @@ An example
              (if name (make-naming-constructor struct:interface name "interface") make-interface)])
         ;; Add supervars to table:
         (for-each (lambda (super)
-                    (for-each (lambda (var) (hash-set! ht var #t)) (interface-public-ids super)))
+                    (for-each (lambda (var) (hash-set! ht var #t))
+                              (interface-public-ids super)))
                   supers)
         ;; Done
         (let* ([new-ctcs (for/hash ([(k v) (in-hash ctcs)])
-                           (values k (coerce-contract 'interface v)))]
+                           (values k
+                                   (coerce-contract 'interface v)))]
                [i (interface-make name
                                   supers
                                   #f
-                                  (hash-map ht (lambda (k v) k))
+                                  (hash-map ht
+                                            (lambda (k v) k))
                                   new-ctcs
                                   class
-                                  (hash-map prop-ht (lambda (k v) v)))])
+                                  (hash-map prop-ht
+                                            (lambda (k v) v)))])
           (setup-all-implemented! i)
           i)))))
 
@@ -3182,7 +3364,8 @@ An example
   (let ([ht (make-hasheq)])
     (hash-set! ht i #t)
     (for-each (lambda (si)
-                (hash-for-each (interface-all-implemented si) (lambda (k v) (hash-set! ht k #t))))
+                (hash-for-each (interface-all-implemented si)
+                               (lambda (k v) (hash-set! ht k #t))))
               (interface-supers i))
     (set-interface-all-implemented! i ht)))
 
@@ -3237,7 +3420,8 @@ An example
 ; other. Therefore, we need to emulate what the behavior of equal? would have been if class contracts
 ; didn’t create new struct types. (This can go away if class/c is ever rewritten to use chaperones.)
 (define (object-equal? obj-a obj-b recur)
-  (and (equal? (object-ref obj-a) (object-ref obj-b))
+  (and (equal? (object-ref obj-a)
+               (object-ref obj-b))
        (let ([vec-a (inspectable-struct->vector obj-a)])
          (and vec-a
               (let ([vec-b (inspectable-struct->vector obj-b)])
@@ -3327,7 +3511,8 @@ An example
 (define-syntax (new stx)
   (syntax-case stx ()
     [(_ cls (id arg) ...)
-     (andmap identifier? (syntax->list (syntax (id ...))))
+     (andmap identifier?
+             (syntax->list (syntax (id ...))))
      (class-syntax-protect (quasisyntax/loc stx
                              (instantiate cls ()
                                [id arg] ...)))]
@@ -3373,8 +3558,10 @@ An example
   (lambda (stx)
     (syntax-case stx ()
       [(_ do-make-object orig-stx first? (maker-arg ...) args (kw arg) ...)
-       (andmap identifier? (syntax->list (syntax (kw ...))))
-       (with-syntax ([(kw ...) (map localize (syntax->list (syntax (kw ...))))]
+       (andmap identifier?
+               (syntax->list (syntax (kw ...))))
+       (with-syntax ([(kw ...) (map localize
+                                    (syntax->list (syntax (kw ...))))]
                      [(blame ...) (if (syntax-e #'first?) #'((current-contract-region)) null)])
          (class-syntax-protect
           (syntax/loc stx
@@ -3396,14 +3583,18 @@ An example
         (syntax->list (syntax (kwarg ...))))])))
 
 (define (alist->sexp alist)
-  (map (lambda (pair) (list (car pair) (cdr pair))) alist))
+  (map (lambda (pair)
+         (list (car pair)
+               (cdr pair)))
+       alist))
 
 ;; class blame -> class
 ;; takes a class and concretize interface ctc methods
 (define (fetch-concrete-class cls blame)
   (cond
     [(null? (class-method-ictcs cls)) cls]
-    [(and (class-ictc-classes cls) (hash-ref (class-ictc-classes cls) blame #f))
+    [(and (class-ictc-classes cls)
+          (hash-ref (class-ictc-classes cls) blame #f))
      =>
      values]
     [else
@@ -3489,7 +3680,8 @@ An example
 
        ;; initialize if not yet initialized
        (unless (class-ictc-classes cls)
-         (set-class-ictc-classes! cls (make-weak-hasheq)))
+         (set-class-ictc-classes! cls
+                                  (make-weak-hasheq)))
 
        ;; cache the concrete class
        (hash-set! (class-ictc-classes cls) blame c)
@@ -3564,7 +3756,10 @@ An example
   o)
 
 (define (get-field-alist obj)
-  (map (lambda (id) (cons id (get-field/proc id obj))) (field-names obj)))
+  (map (lambda (id)
+         (cons id
+               (get-field/proc id obj)))
+       (field-names obj)))
 
 (define (continue-make-object o
                               c
@@ -3577,13 +3772,15 @@ An example
   (let ([by-pos-only? (not (class-init-args c))])
     ;; When a superclass has #f for init-args (meaning "by-pos args with no names"),
     ;; some propagated named args may have #f keys; move them to by-position args.
-    (let-values ([(by-pos-args named-args)
-                  (if by-pos-only?
-                      (let ([l (filter (lambda (x) (not (car x))) named-args)])
-                        (if (pair? l)
-                            (values (append by-pos-args (map cdr l)) (filter car named-args))
-                            (values by-pos-args named-args)))
-                      (values by-pos-args named-args))])
+    (let-values ([(by-pos-args named-args) (if by-pos-only?
+                                               (let ([l (filter (lambda (x) (not (car x)))
+                                                                named-args)])
+                                                 (if (pair? l)
+                                                     (values (append by-pos-args
+                                                                     (map cdr l))
+                                                             (filter car named-args))
+                                                     (values by-pos-args named-args)))
+                                               (values by-pos-args named-args))])
       ;; Primitive class with by-pos arguments?
       (when by-pos-only?
         (unless (null? named-args)
@@ -3601,12 +3798,19 @@ An example
                              (do-merge by-pos-args (class-init-args c) c named-args by-pos-args c)
                              ;; Non-merge for by-position initializers
                              by-pos-args)]
-             [leftovers (if (not by-pos-only?) (get-leftovers named-args (class-init-args c)) null)])
+             [leftovers (if (not by-pos-only?)
+                            (get-leftovers named-args
+                                           (class-init-args c))
+                            null)])
         ;; In 'list mode, make sure no by-name arguments are left over
-        (when (eq? 'list (class-init-mode c))
-          (unless (or (null? leftovers) (not (ormap car leftovers)))
-            (unused-args-error o (filter car leftovers))))
-        (unless (and (eq? c object%) (null? named-args))
+        (when (eq? 'list
+                   (class-init-mode c))
+          (unless (or (null? leftovers)
+                      (not (ormap car leftovers)))
+            (unused-args-error o
+                               (filter car leftovers))))
+        (unless (and (eq? c object%)
+                     (null? named-args))
           (let ([named-args
                  (check-arg-contracts wrapped-blame wrapped-neg-party c init-proj-pairs named-args)])
             (let ([inited? (box (class-no-super-init? c))])
@@ -3628,13 +3832,15 @@ An example
                "superclass already initialized by class initialization"
                #:class-name (class-name c)))
   (set-box! inited? #t)
-  (let ([named-args (if (eq? 'list (class-init-mode c))
+  (let ([named-args (if (eq? 'list
+                             (class-init-mode c))
                         ;; all old args must have been used up
                         new-named-args
                         ;; Normal mode: merge leftover keyword-based args with new ones
                         (append new-named-args leftovers))])
     (continue-make-object o
-                          (vector-ref (class-supers c) (sub1 (class-pos c)))
+                          (vector-ref (class-supers c)
+                                      (sub1 (class-pos c)))
                           by-pos-args
                           named-args
                           (pair? new-named-args)
@@ -3647,16 +3853,19 @@ An example
     [(null? al) named-args]
     [(null? nl)
      ;; continue mapping with superclass init args, if allowed
-     (let ([super (and (eq? 'normal (class-init-mode ic))
+     (let ([super (and (eq? 'normal
+                            (class-init-mode ic))
                        (positive? (class-pos ic))
-                       (vector-ref (class-supers ic) (sub1 (class-pos ic))))])
+                       (vector-ref (class-supers ic)
+                                   (sub1 (class-pos ic))))])
        (cond
          [super
           (if (class-init-args super)
               (do-merge al (class-init-args super) super named-args by-pos-args c)
               ;; Like 'list mode:
               (append (map (lambda (x) (cons #f x)) al) named-args))]
-         [(eq? 'list (class-init-mode ic))
+         [(eq? 'list
+               (class-init-mode ic))
           ;; All unconsumed named-args must have #f
           ;;  "name"s, otherwise an error is raised in
           ;;  the leftovers checking.
@@ -3667,13 +3876,20 @@ An example
                      "arguments"
                      (as-lines (make-pos-arg-string by-pos-args))
                      #:class-name (class-name c))]))]
-    [else (cons (cons (car nl) (car al)) (do-merge (cdr al) (cdr nl) ic named-args by-pos-args c))]))
+    [else
+     (cons (cons (car nl)
+                 (car al))
+           (do-merge (cdr al) (cdr nl) ic named-args by-pos-args c))]))
 
 (define (get-leftovers l names)
   (cond
     [(null? l) null]
-    [(memq (caar l) names) (get-leftovers (cdr l) (remq (caar l) names))]
-    [else (cons (car l) (get-leftovers (cdr l) names))]))
+    [(memq (caar l) names)
+     (get-leftovers (cdr l)
+                    (remq (caar l) names))]
+    [else
+     (cons (car l)
+           (get-leftovers (cdr l) names))]))
 
 (define (extract-arg class-name name arguments default)
   (if (symbol? name)
@@ -3685,15 +3901,23 @@ An example
           [else (missing-argument-error class-name name)]))
       ;; By-position mode
       (cond
-        [(< name (length arguments)) (cdr (list-ref arguments name))]
+        [(< name
+            (length arguments))
+         (cdr (list-ref arguments name))]
         [default (default)]
         [else (obj-error 'instantiate "too few initialization arguments")])))
 
 (define (extract-rest-args skip arguments)
-  (if (< skip (length arguments)) (map cdr (list-tail arguments skip)) null))
+  (if (< skip
+         (length arguments))
+      (map cdr
+           (list-tail arguments skip))
+      null))
 
 (define (make-pos-arg-string args)
-  (let ([len (length args)]) (apply string-append (map (lambda (a) (format " ~e" a)) args))))
+  (let ([len (length args)])
+    (apply string-append
+           (map (lambda (a) (format " ~e" a)) args))))
 
 (define (make-named-arg-string args)
   (apply string-append
@@ -3703,7 +3927,8 @@ An example
              [(null? args) null]
              [(= count 3) '("\n   ...")]
              [else
-              (let ([rest (loop (cdr args) (add1 count))])
+              (let ([rest (loop (cdr args)
+                                (add1 count))])
                 (cons (format "\n   [~a ~e]" (caar args) (cdar args)) rest))]))))
 
 (define (unused-args-error this args)
@@ -3733,18 +3958,26 @@ An example
     (define (do-method stx form obj name args rest-arg? kw-args)
       (with-syntax ([(sym method receiver) (generate-temporaries (syntax (1 2 3)))]
                     [(kw-arg-tmp) (generate-temporaries '(kw-vals-x))])
-        (define kw-args/var (and kw-args (list (car kw-args) #'kw-arg-tmp)))
+        (define kw-args/var
+          (and kw-args
+               (list (car kw-args) #'kw-arg-tmp)))
         (define arg-list '())
         (define let-bindings '())
         (for ([x (in-list (if (list? args) args (syntax->list args)))])
           (cond
-            [(keyword? (syntax-e x)) (set! arg-list (cons x arg-list))]
+            [(keyword? (syntax-e x))
+             (set! arg-list
+                   (cons x arg-list))]
             [else
              (define var (car (generate-temporaries '(send-arg))))
-             (set! arg-list (cons var arg-list))
-             (set! let-bindings (cons #`[#,var #,x] let-bindings))]))
-        (set! arg-list (reverse arg-list))
-        (set! let-bindings (reverse let-bindings))
+             (set! arg-list
+                   (cons var arg-list))
+             (set! let-bindings
+                   (cons #`[#,var #,x] let-bindings))]))
+        (set! arg-list
+              (reverse arg-list))
+        (set! let-bindings
+              (reverse let-bindings))
 
         (class-syntax-protect
          (syntax-property (quasisyntax/loc stx
@@ -3779,7 +4012,10 @@ An example
                           #'name
                           (if kws? (cddr (syntax->list #'args)) #'args)
                           apply?
-                          (and kws? (let ([l (syntax->list #'args)]) (list (car l) (cadr l)))))
+                          (and kws?
+                               (let ([l (syntax->list #'args)])
+                                 (list (car l)
+                                       (cadr l)))))
                (if apply?
                    ;; (send/apply obj name arg ... . rest)
                    (raise-syntax-error #f "bad syntax (illegal use of `.')" stx)
@@ -3950,7 +4186,8 @@ An example
 (define make-generic/proc
   (let ([make-generic
          (lambda (class name)
-           (unless (or (class? class) (interface? class))
+           (unless (or (class? class)
+                       (interface? class))
              (raise-argument-error 'make-generic "(or/c class? interface?)" class))
            (unless (symbol? name)
              (raise-argument-error 'make-generic "symbol?" name))
@@ -3994,7 +4231,8 @@ An example
                              (vector-ref (wrapped-object-neg-extra-arg-vec obj) pos)]
                             [(instance? obj) (vector-ref (class-methods (object-ref obj)) pos)]
                             [else (fail obj)]))])
-                  (if (eq? 'final (vector-ref (class-meth-flags class) pos))
+                  (if (eq? 'final
+                           (vector-ref (class-meth-flags class) pos))
                       (let ([method (vector-ref (class-methods class) pos)])
                         (lambda (obj)
                           (unless (instance? obj)
@@ -4075,7 +4313,8 @@ An example
           (cond
             [(pair? projs+set!)
              (define the-proj (car projs+set!))
-             (loop (cdr projs+set!) ((the-proj val) np))]
+             (loop (cdr projs+set!)
+                   ((the-proj val) np))]
             [else (projs+set! (wrapped-object-object obj) val)]))]
        [else (do-field-get/raw-object who id (wrapped-object-object obj))])]
     [else (raise-argument-error who "object?" obj)]))
@@ -4171,7 +4410,9 @@ An example
   (let loop ([obj obj])
     (let* ([cls (object-ref/unwrap obj)]
            [field-ht (class-field-ht cls)]
-           [flds (filter interned? (hash-map field-ht (lambda (x y) x)))])
+           [flds (filter interned?
+                         (hash-map field-ht
+                                   (lambda (x y) x)))])
       flds)))
 
 (define-syntax (with-method stx)
@@ -4208,7 +4449,8 @@ An example
         (lambda (clause)
           (syntax-case clause ()
             [(id (obj-expr name))
-             (and (identifier? (syntax id)) (identifier? (syntax name)))
+             (and (identifier? (syntax id))
+                  (identifier? (syntax name)))
              'ok]
             [_else
              (raise-syntax-error
@@ -4229,8 +4471,12 @@ An example
 
 (define (is-a? v c)
   (cond
-    [(class? c) (and (object? v) ((class-object? (class-orig-cls c)) (unwrap-object v)))]
-    [(interface? c) (and (object? v) (implementation? (object-ref/unwrap v) c))]
+    [(class? c)
+     (and (object? v)
+          ((class-object? (class-orig-cls c)) (unwrap-object v)))]
+    [(interface? c)
+     (and (object? v)
+          (implementation? (object-ref/unwrap v) c))]
     [else (raise-argument-error 'is-a? "(or/c class? interface?)" 1 v c)]))
 
 (define (subclass? v c)
@@ -4240,7 +4486,10 @@ An example
        (let* ([c (class-orig-cls c)]
               [v (class-orig-cls v)]
               [p (class-pos c)])
-         (and (<= p (class-pos v)) (eq? c (vector-ref (class-supers v) p))))))
+         (and (<= p
+                  (class-pos v))
+              (eq? c
+                   (vector-ref (class-supers v) p))))))
 
 (define (object-interface o)
   (unless (object? o)
@@ -4257,25 +4506,31 @@ An example
   (define c (object-ref/unwrap o))
   (define pos (hash-ref (class-method-ht c) name #f))
   (cond
-    [pos (procedure-arity-includes? (vector-ref (class-methods c) pos) (add1 cnt))]
+    [pos
+     (procedure-arity-includes? (vector-ref (class-methods c) pos)
+                                (add1 cnt))]
     [else #f]))
 
 (define (implementation? v i)
   (unless (interface? i)
     (raise-argument-error 'implementation? "interface?" 1 v i))
-  (and (class? v) (interface-extension? (class-self-interface v) i)))
+  (and (class? v)
+       (interface-extension? (class-self-interface v) i)))
 
 (define (interface-extension? v i)
   (unless (interface? i)
     (raise-argument-error 'interface-extension? "interface?" 1 v i))
-  (and (interface? i) (hash-ref (interface-all-implemented v) i #f)))
+  (and (interface? i)
+       (hash-ref (interface-all-implemented v) i #f)))
 
 (define (method-in-interface? s i)
   (unless (symbol? s)
     (raise-argument-error 'method-in-interface? "symbol?" 0 s i))
   (unless (interface? i)
     (raise-argument-error 'method-in-interface? "interface?" 1 s i))
-  (and (memq s (interface-public-ids i)) #t))
+  (and (memq s
+             (interface-public-ids i))
+       #t))
 
 (define (class->interface c)
   (unless (class? c)
@@ -4283,12 +4538,14 @@ An example
   (class-self-interface c))
 
 (define (interned? sym)
-  (eq? sym (string->symbol (symbol->string sym))))
+  (eq? sym
+       (string->symbol (symbol->string sym))))
 
 (define (interface->method-names i)
   (unless (interface? i)
     (raise-argument-error 'interface->method-names "interface?" i))
-  (filter interned? (interface-public-ids i)))
+  (filter interned?
+          (interface-public-ids i)))
 
 (define (object-info o)
   (unless (object? o)
@@ -4301,7 +4558,9 @@ An example
           (values c skipped?)
           (if (zero? (class-pos c))
               (values #f #t)
-              (loop (vector-ref (class-supers c) (sub1 (class-pos c))) #t))))))
+              (loop (vector-ref (class-supers c)
+                                (sub1 (class-pos c)))
+                    #t))))))
 
 (define (to-sym s)
   (if (string? s) (string->symbol s) s))
@@ -4310,20 +4569,26 @@ An example
   (unless (class? c)
     (raise-argument-error 'class-info "class?" c))
   (if (struct? ((class-insp-mk c)))
-      (let ([super (vector-ref (class-supers c) (sub1 (class-pos c)))])
+      (let ([super (vector-ref (class-supers c)
+                               (sub1 (class-pos c)))])
         (let loop ([next super]
                    [skipped? #f])
-          (if (or (not next) (struct? ((class-insp-mk next))))
+          (if (or (not next)
+                  (struct? ((class-insp-mk next))))
               (values (to-sym (class-name c))
-                      (- (class-field-width c) (class-field-width super))
-                      (filter interned? (class-field-ids c))
+                      (- (class-field-width c)
+                         (class-field-width super))
+                      (filter interned?
+                              (class-field-ids c))
                       (class-field-ref c)
                       (class-field-set! c)
                       next
                       skipped?)
               (if (zero? (class-pos next))
                   (loop #f #t)
-                  (loop (vector-ref (class-supers next) (sub1 (class-pos next))) #t)))))
+                  (loop (vector-ref (class-supers next)
+                                    (sub1 (class-pos next)))
+                        #t)))))
       (raise-arguments-error 'class-info "current inspector cannot inspect class" "class" c)))
 
 (define object->vector
@@ -4332,38 +4597,49 @@ An example
       (raise-argument-error 'object->vector "object?" in-o))
     (let ([o in-o])
       (list->vector
-       (cons
-        (string->symbol (format "object:~a" (class-name (object-ref/unwrap o))))
-        (reverse
-         (let-values ([(c skipped?) (object-info o)])
-           (let loop ([c c]
-                      [skipped? skipped?])
-             (cond
-               [(not c) (if skipped? (list opaque-v) null)]
-               [else
-                (let-values ([(name num-fields field-ids field-ref field-set next next-skipped?)
-                              (class-info c)])
-                  (let ([rest (loop next next-skipped?)]
-                        [here (let loop ([n num-fields])
-                                (if (zero? n) null (cons (field-ref o (sub1 n)) (loop (sub1 n)))))])
-                    (append (if skipped? (list opaque-v) null) here rest)))])))))))))
+       (cons (string->symbol (format "object:~a"
+                                     (class-name (object-ref/unwrap o))))
+             (reverse
+              (let-values ([(c skipped?) (object-info o)])
+                (let loop ([c c]
+                           [skipped? skipped?])
+                  (cond
+                    [(not c) (if skipped? (list opaque-v) null)]
+                    [else
+                     (let-values ([(name num-fields field-ids field-ref field-set next next-skipped?)
+                                   (class-info c)])
+                       (let ([rest (loop next next-skipped?)]
+                             [here (let loop ([n num-fields])
+                                     (if (zero? n)
+                                         null
+                                         (cons (field-ref o
+                                                          (sub1 n))
+                                               (loop (sub1 n)))))])
+                         (append (if skipped? (list opaque-v) null) here rest)))])))))))))
 
 (define (object=? o1 o2)
   (cond
     [(not (object? o1)) (raise-argument-error 'object=? "object?" 0 o1 o2)]
     [(not (object? o2)) (raise-argument-error 'object=? "object?" 1 o1 o2)]
-    [else (or (eq? o1 o2) (-object=? o1 o2))]))
+    [else
+     (or (eq? o1 o2)
+         (-object=? o1 o2))]))
 
 (define (object-or-false=? o1 o2)
   (cond
-    [(and o1 (not (object? o1)))
+    [(and o1
+          (not (object? o1)))
      (raise-argument-error 'object-or-false=? "(or/c object? #f)" 0 o1 o2)]
-    [(and o2 (not (object? o2)))
+    [(and o2
+          (not (object? o2)))
      (raise-argument-error 'object-or-false=? "(or/c object? #f)" 1 o1 o2)]
-    [else (or (eq? o1 o2) (and o1 o2 (-object=? o1 o2)))]))
+    [else
+     (or (eq? o1 o2)
+         (and o1 o2 (-object=? o1 o2)))]))
 
 (define (-object=? o1 o2)
-  (eq? (object=-original-object o1) (object=-original-object o2)))
+  (eq? (object=-original-object o1)
+       (object=-original-object o2)))
 
 (define (object=-original-object o)
   (define orig-o (if (has-original-object? o) (original-object o) o))
@@ -4437,7 +4713,8 @@ An example
    ; #f => init args by position only
    ; sym => required arg
    ; sym--value list => optional arg
-   (and init-arg-names (map (lambda (s) (if (symbol? s) s (car s))) init-arg-names))
+   (and init-arg-names
+        (map (lambda (s) (if (symbol? s) s (car s))) init-arg-names))
    'stop
    (lambda ignored
      (values
@@ -4465,9 +4742,14 @@ An example
               [id (if (symbol? name) name (car name))])
          (let ([arg (assq id args)])
            (cond
-             [arg (cons (cdr arg) (loop (cdr names) (remq arg args)))]
+             [arg
+              (cons (cdr arg)
+                    (loop (cdr names)
+                          (remq arg args)))]
              [(symbol? name) (missing-argument-error class-name name)]
-             [else (cons (cadr name) (loop (cdr names) args))])))])))
+             [else
+              (cons (cadr name)
+                    (loop (cdr names) args))])))])))
 
 ;;--------------------------------------------------------------------
 ;;  wrapper for contracts
@@ -4478,7 +4760,9 @@ An example
 
 (define (check-arg-contracts wrapped-blame wrapped-neg-party val init-proj-pairs orig-named-args)
   ;; blame will be #f only when init-ctc-pairs is '()
-  (define arg-blame (and wrapped-blame (blame-swap wrapped-blame)))
+  (define arg-blame
+    (and wrapped-blame
+         (blame-swap wrapped-blame)))
 
   (define (missing-one init-ctc-pair)
     (raise-blame-error arg-blame
@@ -4494,7 +4778,10 @@ An example
                          [(2)
                           "init args named~a"
                           (apply string-append
-                                 (map (λ (x) (format " ~a" (car x))) orig-named-args))])))
+                                 (map (λ (x)
+                                        (format " ~a"
+                                                (car x)))
+                                      orig-named-args))])))
   ;; this loop optimizes for the case where the init-ctc-pairs
   ;; and the named-args are in the same order, making extra
   ;; passes over the named-args when they aren't.
@@ -4504,7 +4791,9 @@ An example
              [progress? #f])
     (cond
       [(null? init-proj-pairs) (append named-args named-skipped-args)]
-      [(and (null? named-args) (null? named-skipped-args)) '()]
+      [(and (null? named-args)
+            (null? named-skipped-args))
+       '()]
       [(null? named-args)
        (if progress?
            (loop init-proj-pairs named-skipped-args '() #f)
@@ -4513,12 +4802,14 @@ An example
        (define proj-pair (car init-proj-pairs))
        (define named-arg (car named-args))
        (cond
-         [(equal? (list-ref proj-pair 0) (list-ref named-arg 0))
+         [(equal? (list-ref proj-pair 0)
+                  (list-ref named-arg 0))
           (define value-with-contracts-added
             (for/fold ([val (cdr named-arg)]) ([proj (in-list (cdr proj-pair))])
               ((proj val) wrapped-neg-party)))
           (define new-ele (cons (car named-arg) value-with-contracts-added))
-          (cons new-ele (loop (cdr init-proj-pairs) (cdr named-args) named-skipped-args #t))]
+          (cons new-ele
+                (loop (cdr init-proj-pairs) (cdr named-args) named-skipped-args #t))]
          [else
           (loop init-proj-pairs
                 (cdr named-args)
@@ -4545,8 +4836,14 @@ An example
                    . fields)
   (define all-fields
     (append fields
-            (if class-name (list (string-append which-class "class name") (as-write class-name)) null)
-            (if intf-name (list "interface name" (as-write intf-name)) null)))
+            (if class-name
+                (list (string-append which-class "class name")
+                      (as-write class-name))
+                null)
+            (if intf-name
+                (list "interface name"
+                      (as-write intf-name))
+                null)))
   (raise
    (make-exn:fail:object
     (format "~a: ~a~a"
@@ -4561,15 +4858,21 @@ An example
                         (define val (cadr fields))
                         (list* "\n  "
                                field
-                               (if (or (as-write-list? val) (as-lines? val)) ":" ": ")
+                               (if (or (as-write-list? val)
+                                       (as-lines? val))
+                                   ":"
+                                   ": ")
                                (cond
-                                 [(or (as-write-list? val) (as-value-list? val))
+                                 [(or (as-write-list? val)
+                                      (as-value-list? val))
                                   (apply string-append
                                          (for/list ([v (in-list (if (as-write-list? val)
                                                                     (as-write-list-content val)
                                                                     (as-value-list-content val)))])
                                            (format (if (as-write-list? val) "\n   ~s" "\n   ~e") v)))]
-                                 [(as-write? val) (format "~s" (as-write-content val))]
+                                 [(as-write? val)
+                                  (format "~s"
+                                          (as-write-content val))]
                                  [(as-lines? val) (as-lines-content val)]
                                  [else (format "~e" val)])
                                (loop (cddr fields)))]))))
@@ -4714,8 +5017,9 @@ An example
            [else null]))
        (with-syntax ([(from-ids ...) (generate-temporaries (syntax (from ...)))]
                      [(to-ids ...) (generate-temporaries (syntax (to ...)))]
-                     [(super-vars ...)
-                      (apply append (map get-super-names (syntax->list (syntax (clauses ...)))))]
+                     [(super-vars ...) (apply append
+                                              (map get-super-names
+                                                   (syntax->list (syntax (clauses ...)))))]
                      [mixin-name (or (with-syntax ([tmp (syntax-local-name)])
                                        (syntax (quote tmp)))
                                      (syntax (quote mixin)))])
