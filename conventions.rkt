@@ -272,7 +272,22 @@
             ((format-horizontal/helper) xs))))]
     [_ (pretty doc)]))
 
-(define format-if (format-if-like/helper format-#%app))
+
+(define-pretty format-if
+  #:type node?
+  (match/extract (node-content doc) #:as unfits tail
+    [([-if #t] [-conditional #f] [-true-branch #t] [-false-branch #t])
+     (define args-list (list -conditional -true-branch -false-branch))
+     (define multi-line-args ((format-vertical/helper) args-list))
+     (define single-line-args (flatten (as-concat (map pretty args-list))))
+     (define args-doc
+       (if (or (node? -true-branch) (node? -false-branch))
+           multi-line-args
+           (alt multi-line-args single-line-args)))
+     (pretty-node #:unfits unfits
+                  #:adjust '("(" ")")
+                  (<+s> (flatten (pretty -if)) (try-indent #:n 0 #:because-of args-list args-doc)))]
+    [#:else (format-#%app doc)]))
 
 ;; try to fit in one line if the body has exactly one form,
 ;; else will be multiple lines
