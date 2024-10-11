@@ -276,12 +276,12 @@
 (define-pretty format-if
   #:type node?
   (match/extract (node-content doc) #:as unfits tail
-    [([-if #t] [-conditional #f] [-true-branch #t] [-false-branch #t])
-     (define args-list (list -conditional -true-branch -false-branch))
+    [([-if #t] [-conditional #f])
+     (define args-list (cons -conditional tail))
      (define multi-line-args ((format-vertical/helper) args-list))
      (define single-line-args (flatten (as-concat (map pretty args-list))))
      (define args-doc
-       (if (or (node? -true-branch) (node? -false-branch))
+       (if (ormap node? tail)
            multi-line-args
            (alt multi-line-args single-line-args)))
      (pretty-node #:unfits unfits

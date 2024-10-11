@@ -21,7 +21,20 @@
     (if (boolean? mred-launcher) (if mred-launcher 'mred 'mzscheme) #t))
 
 (define if7
-  (if ; condition
+  (if (< 10 20)
+      ; true branch
+      (* 4 10)
+      ; false branch
+      (+ 2 4)))
+
+(define if8
+  (if ; check if ten is less than twenty
+      (< 10 20)
+      (* 4 10)
+      (+ 2 4)))
+
+(define if9
+  (if ; check if ten is less than twenty
       (< 10 20)
       ; true branch
       (* 4 10)

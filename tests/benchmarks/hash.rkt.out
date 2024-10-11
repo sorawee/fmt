@@ -6,12 +6,17 @@
 
 (define (merge one two combine/key)
   (for/fold ([one one]) ([(k v) (in-hash two)])
-    (hash-set one k (if (hash-has-key? one k) (combine/key k (hash-ref one k) v) v))))
+    (hash-set one
+              k
+              (if (hash-has-key? one k)
+                  (combine/key k (hash-ref one k) v)
+                  v))))
 
 (define (hash-union #:combine [combine #f]
-                    #:combine/key
-                    [combine/key
-                     (if combine (lambda (_ x y) (combine x y)) (hash-duplicate-error 'hash-union))]
+                    #:combine/key [combine/key
+                                   (if combine
+                                       (lambda (_ x y) (combine x y))
+                                       (hash-duplicate-error 'hash-union))]
                     one
                     . rest)
   (define one-empty (hash-clear one))
@@ -24,21 +29,27 @@
       [else (merge one two combine/key)])))
 
 (define (hash-union! #:combine [combine #f]
-                     #:combine/key
-                     [combine/key
-                      (if combine (lambda (_ x y) (combine x y)) (hash-duplicate-error 'hash-union!))]
+                     #:combine/key [combine/key
+                                    (if combine
+                                        (lambda (_ x y) (combine x y))
+                                        (hash-duplicate-error 'hash-union!))]
                      one
                      . rest)
   (for* ([two (in-list rest)]
          [(k v) (in-hash two)])
-    (hash-set! one k (if (hash-has-key? one k) (combine/key k (hash-ref one k) v) v))))
+    (hash-set! one
+               k
+               (if (hash-has-key? one k)
+                   (combine/key k (hash-ref one k) v)
+                   v))))
 
-(define (hash-intersect
-         #:combine [combine #f]
-         #:combine/key
-         [combine/key (if combine (λ (_ x y) (combine x y)) (hash-duplicate-error 'hash-intersect))]
-         one
-         . rest)
+(define (hash-intersect #:combine [combine #f]
+                        #:combine/key [combine/key
+                                       (if combine
+                                           (λ (_ x y) (combine x y))
+                                           (hash-duplicate-error 'hash-intersect))]
+                        one
+                        . rest)
   (define hashes (cons one rest))
   (define empty-h (hash-clear one)) ;; empty hash of same type as one
   (define (argmin f lst) ;; avoid racket/list to improve loading time
@@ -47,7 +58,9 @@
                #:result best)
               ([x (in-list lst)])
       (define fx (f x))
-      (if (< fx fbest) (values x fx) (values best fbest))))
+      (if (< fx fbest)
+          (values x fx)
+          (values best fbest))))
   (for/fold ([res empty-h]) ([k (in-hash-keys (argmin hash-count hashes))])
     (if (for/and ([h (in-list hashes)])
           (hash-has-key? h k))

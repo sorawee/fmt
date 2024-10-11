@@ -188,7 +188,9 @@
    (let* ([end (send text get-end-position)]
           [start (send text get-start-position)])
      (unless (= 0 (send text last-position))
-       (let* ([str (if (= end start) (find-symbol text position) (send text get-text start end))]
+       (let* ([str (if (= end start)
+                       (find-symbol text position)
+                       (send text get-text start end))]
               ;; almost the same code as "search-help-desk" in "rep.rkt"
               [l (send text get-canvas)]
               [l (and l (send l get-top-level-window))]
@@ -201,9 +203,10 @@
            (add-sep)
            (let ([short-str (shorten-str str 50)])
              (make-object menu-item%
-                          (gui-utils:format-literal-label
-                           (string-constant search-help-desk-for)
-                           (if (equal? short-str str) str (string-append short-str "...")))
+                          (gui-utils:format-literal-label (string-constant search-help-desk-for)
+                                                          (if (equal? short-str str)
+                                                              str
+                                                              (string-append short-str "...")))
                           menu
                           (λ x (help-desk:help-desk str (list ctxt name))))
              (void)))))))
@@ -261,11 +264,15 @@
                              (if (< i 0)
                                  chars
                                  (let ([char (send text get-character i)])
-                                   (if (non-letter? char) chars (loop (- i 1) (cons char chars))))))]
+                                   (if (non-letter? char)
+                                       chars
+                                       (loop (- i 1) (cons char chars))))))]
                    [after (let loop ([i pos])
                             (if (< i (send text last-position))
                                 (let ([char (send text get-character i)])
-                                  (if (non-letter? char) null (cons char (loop (+ i 1)))))
+                                  (if (non-letter? char)
+                                      null
+                                      (cons char (loop (+ i 1)))))
                                 null))])
               (apply string (append before after)))
             ""))]))
@@ -275,7 +282,9 @@
  (define (non-letter? x)
    (or (char-whitespace? x) (memq x '(#\` #\' #\, #\; #\" #\{ #\( #\[ #\] #\) #\}))))
  (define (shorten-str str len)
-   (if ((string-length str) . <= . len) str (substring str 0 len)))
+   (if ((string-length str) . <= . len)
+       str
+       (substring str 0 len)))
  ;
  ;
  ;
@@ -310,14 +319,19 @@
      (define num-s (string->number (send num get-value)))
      (define den-s (string->number (send den get-value)))
      (define whole-s
-       (if (string=? (send whole get-value) "") 0 (string->number (send whole get-value))))
+       (if (string=? (send whole get-value) "")
+           0
+           (string->number (send whole get-value))))
      (cond
        [(or (not whole-s) (not (integer? whole-s))) (string-constant insert-number/bad-whole-part)]
        [(or (not num-s) (not (integer? num-s)) (< num-s 0))
         (string-constant insert-number/bad-numerator)]
        [(or (not den-s) (not (integer? den-s)) (<= den-s 0))
         (string-constant insert-number/bad-denominator)]
-       [else (if (< whole-s 0) (- whole-s (/ num-s den-s)) (+ whole-s (/ num-s den-s)))]))
+       [else
+        (if (< whole-s 0)
+            (- whole-s (/ num-s den-s))
+            (+ whole-s (/ num-s den-s)))]))
    (define (ok-callback)
      (define v (validate-number))
      (cond
@@ -594,10 +608,11 @@
              (super set-filename fn tmp?)
              (let ([f (get-top-level-window)])
                (when (and f (is-a? f drracket:unit:frame<%>))
-                 (send
-                  (send f get-interactions-text)
-                  set-port-unsaved-name
-                  (if fn "interactions from an unsaved editor" (format "interactions from ~a" fn)))
+                 (send (send f get-interactions-text)
+                       set-port-unsaved-name
+                       (if fn
+                           "interactions from an unsaved editor"
+                           (format "interactions from ~a" fn)))
                  (send f update-save-message)))]))
 
         (field [needs-execution-state #f]
@@ -920,12 +935,16 @@
 
      (define sort-by-name? (preferences:get 'drracket:defns-popup-sort-by-name?))
      (define sorting-name
-       (if sort-by-name? (string-constant sort-by-position) (string-constant sort-by-name)))
+       (if sort-by-name?
+           (string-constant sort-by-position)
+           (string-constant sort-by-name)))
      (define/private (change-sorting-order)
        (set! sort-by-name? (not sort-by-name?))
        (preferences:set 'drracket:defns-popup-sort-by-name? sort-by-name?)
        (set! sorting-name
-             (if sort-by-name? (string-constant sort-by-position) (string-constant sort-by-name))))
+             (if sort-by-name?
+                 (string-constant sort-by-position)
+                 (string-constant sort-by-name))))
 
      (define define-popup-capability-info
        (get-define-popup-info (drracket:language:get-capability-default 'drscheme:define-popup)))
@@ -1507,7 +1526,10 @@
                    ;; just flush and redraw everything if there is one (or zero) logger messages
                    (pair? (cdr logger-messages)))
               (define msg (cdr command))
-              (define scroll? (if (object? logger-checkbox) (send logger-checkbox get-value) #t))
+              (define scroll?
+                (if (object? logger-checkbox)
+                    (send logger-checkbox get-value)
+                    #t))
               (send logger-gui-text begin-edit-sequence)
               (send logger-gui-text lock #f)
               (define start (send logger-gui-text last-position))
@@ -1701,30 +1723,31 @@
      ;;   if they say no, return #f.
      (define/private (ensure-empty transcript-directory)
        (let ([dir-list (directory-list transcript-directory)])
-         (or
-          (null? dir-list)
-          (let ([query (message-box
-                        (string-constant drscheme)
-                        (gui-utils:format-literal-label (string-constant erase-log-directory-contents)
-                                                        transcript-directory)
-                        this
-                        '(yes-no)
-                        #:dialog-mixin frame:focus-table-mixin)])
-            (cond
-              [(equal? query 'no) #f]
-              [(equal? query 'yes)
-               (with-handlers ([exn:fail:filesystem?
-                                (λ (exn)
-                                  (message-box
-                                   (string-constant drscheme)
-                                   (gui-utils:format-literal-label
-                                    (string-constant error-erasing-log-directory)
-                                    (if (exn? exn) (format "~a" (exn-message exn)) (format "~s" exn)))
-                                   this
-                                   #:dialog-mixin frame:focus-table-mixin)
-                                  #f)])
-                 (for-each (λ (file) (delete-file (build-path transcript-directory file))) dir-list)
-                 #t)])))))
+         (or (null? dir-list)
+             (let ([query (message-box (string-constant drscheme)
+                                       (gui-utils:format-literal-label
+                                        (string-constant erase-log-directory-contents)
+                                        transcript-directory)
+                                       this
+                                       '(yes-no)
+                                       #:dialog-mixin frame:focus-table-mixin)])
+               (cond
+                 [(equal? query 'no) #f]
+                 [(equal? query 'yes)
+                  (with-handlers ([exn:fail:filesystem?
+                                   (λ (exn)
+                                     (message-box (string-constant drscheme)
+                                                  (gui-utils:format-literal-label
+                                                   (string-constant error-erasing-log-directory)
+                                                   (if (exn? exn)
+                                                       (format "~a" (exn-message exn))
+                                                       (format "~s" exn)))
+                                                  this
+                                                  #:dialog-mixin frame:focus-table-mixin)
+                                     #f)])
+                    (for-each (λ (file) (delete-file (build-path transcript-directory file)))
+                              dir-list)
+                    #t)])))))
 
      (define/override (make-root-area-container cls parent)
        (let* ([_module-browser-parent-panel
@@ -1895,7 +1918,11 @@
        (sort-toolbar-buttons-panel))
 
      (define/private (add-to-toolbar-buttons who button number/f)
-       (define number (or number/f (if smallest (- smallest 1) 100)))
+       (define number
+         (or number/f
+             (if smallest
+                 (- smallest 1)
+                 100)))
        (define prev (hash-ref toolbar-buttons button #f))
        (when (and prev (not (= prev number)))
          (error who
@@ -1945,7 +1972,10 @@
                        [(is-a? item area-container<%>) (hash-ref sub-panel-nums item missing-num)]
                        [else (hash-ref toolbar-buttons item missing-num)]))
                    (define ans (sort l (cmp panel) #:key key))
-                   (set! min (if (null? ans) #f (key (car ans))))
+                   (set! min
+                         (if (null? ans)
+                             #f
+                             (key (car ans))))
                    ans))
            min)
          (void)))
@@ -2087,7 +2117,10 @@
              (λ (l)
                (cond
                  [(= (send tabs-panel get-number) 1) (remq tabs-panel l)]
-                 [else (if (memq tabs-panel l) l (cons tabs-panel l))]))))
+                 [else
+                  (if (memq tabs-panel l)
+                      l
+                      (cons tabs-panel l))]))))
 
      (define/private (update-tab-label tab)
        (let ([label (gui-utils:trim-string (get-defs-tab-label (send tab get-defs) tab) 200)])
@@ -2117,7 +2150,9 @@
 
      (define/private (get-defs-tab-filename defs)
        (let ([fn (send defs get-filename)])
-         (if fn (get-tab-label-from-filename fn) (send defs get-filename/untitled-name))))
+         (if fn
+             (get-tab-label-from-filename fn)
+             (send defs get-filename/untitled-name))))
 
      ;; tab-label-cache-valid : (listof path)
      ;; If the current set of filenames in the tabs is the
@@ -2150,7 +2185,10 @@
 
      (define/private (add-modified-flag text string)
        (if (send text is-modified?)
-           (let ([prefix (get-save-diamond-prefix)]) (if prefix (string-append prefix string) string))
+           (let ([prefix (get-save-diamond-prefix)])
+             (if prefix
+                 (string-append prefix string)
+                 string))
            string))
 
      (define/private (get-save-diamond-prefix)
@@ -2179,7 +2217,9 @@
          (let loop ([tabs tabs])
            (unless (null? tabs)
              (let ([tab (car tabs)])
-               (if (eq? (send tab get-ints) rep) (change-to-tab tab) (loop (cdr tabs)))))))
+               (if (eq? (send tab get-ints) rep)
+                   (change-to-tab tab)
+                   (loop (cdr tabs)))))))
        (unless interactions-shown?
          (toggle-show/hide-interactions)
          (update-shown)))
@@ -2512,14 +2552,18 @@
        (define (immediate child)
          (let loop ([child child])
            (define immediate-parent (send child get-parent))
-           (if (and immediate-parent (eq? immediate-parent parent)) child (loop immediate-parent))))
+           (if (and immediate-parent (eq? immediate-parent parent))
+               child
+               (loop immediate-parent))))
        (for/list ([child children])
          (immediate child)))
 
      (define/override (update-shown)
        (super update-shown)
        (let ([new-children (foldl (λ (shown? children sofar)
-                                    (if shown? (append children sofar) sofar))
+                                    (if shown?
+                                        (append children sofar)
+                                        sofar))
                                   null
                                   (list interactions-shown? definitions-shown?)
                                   (list interactions-canvases definitions-canvases))]
@@ -2559,7 +2603,9 @@
                                 [(null? children) (void)]
                                 [else
                                  (let ([child (car children)])
-                                   (if (is-a? child editor-canvas%) child (loop (cdr children))))]))]
+                                   (if (is-a? child editor-canvas%)
+                                       child
+                                       (loop (cdr children))))]))]
                  [old-focus (ormap (λ (x) (and (is-a? x editor-canvas%) (send x has-focus?) x))
                                    old-children)])
 
@@ -2723,22 +2769,23 @@
 
      (define/private (does-user-want-to-save-all-unsaved-files? save-candidates)
        (define-values (message-box-result checked?)
-         (message+check-box/custom
-          (string-constant drracket)
-          (if (= (length save-candidates) 1)
-              (format (string-constant one-file-not-saved-do-the-save?)
-                      (get-tab-filename (car save-candidates)))
-              (apply string-append
-                     (string-constant many-files-not-saved-do-the-save?)
-                     (for/list ([tab (in-list save-candidates)])
-                       (~a "\n" (get-tab-filename tab)))))
-          (string-constant save-after-switching-tabs)
-          (string-constant save-all-files)
-          (string-constant dont-save)
-          #f
-          this ; parent
-          (append (if (preferences:get 'drracket:save-files-on-tab-switch?) '(checked) '())
-                  '(default=1))))
+         (message+check-box/custom (string-constant drracket)
+                                   (if (= (length save-candidates) 1)
+                                       (format (string-constant one-file-not-saved-do-the-save?)
+                                               (get-tab-filename (car save-candidates)))
+                                       (apply string-append
+                                              (string-constant many-files-not-saved-do-the-save?)
+                                              (for/list ([tab (in-list save-candidates)])
+                                                (~a "\n" (get-tab-filename tab)))))
+                                   (string-constant save-after-switching-tabs)
+                                   (string-constant save-all-files)
+                                   (string-constant dont-save)
+                                   #f
+                                   this ; parent
+                                   (append (if (preferences:get 'drracket:save-files-on-tab-switch?)
+                                               '(checked)
+                                               '())
+                                           '(default=1))))
        (preferences:set 'drracket:save-files-on-tab-switch? checked?)
        (case message-box-result
          [(1) (values #f #t)] ;; clicked save-all -> save (and run)
@@ -2807,9 +2854,10 @@
            (set! tabs (append tabs (list new-tab)))
            (send tabs-panel
                  append
-                 (gui-utils:trim-string
-                  (if filename (get-tab-label-from-filename filename) (get-defs-tab-label defs #f))
-                  200))
+                 (gui-utils:trim-string (if filename
+                                            (get-tab-label-from-filename filename)
+                                            (get-defs-tab-label defs #f))
+                                        200))
            (init-definitions-text new-tab)
            (when filename
              (send defs load-file filename))
@@ -2887,7 +2935,9 @@
        (let ([old-enabled (send from-tab get-enabled)]
              [new-enabled (send to-tab get-enabled)])
          (unless (eq? old-enabled new-enabled)
-           (if new-enabled (enable-evaluation) (disable-evaluation))))
+           (if new-enabled
+               (enable-evaluation)
+               (disable-evaluation))))
 
        (inner (void) on-tab-change from-tab to-tab))
 
@@ -3016,7 +3066,9 @@
                 (let loop ([i (- regions-count canvases-count)]
                            [canvases canvases])
                   (unless (zero? i)
-                    (if ints? (split-interactions (car canvases)) (split-definitions (car canvases)))
+                    (if ints?
+                        (split-interactions (car canvases))
+                        (split-definitions (car canvases)))
                     (loop (- i 1) (cdr canvases))))]))))
 
        (define (set-visible-regions txt regions)
@@ -3059,7 +3111,10 @@
            (change-to-tab tab))))
 
      (define/public (find-matching-tab filename)
-       (define fn-path (if (string? filename) (string->path filename) filename))
+       (define fn-path
+         (if (string? filename)
+             (string->path filename)
+             filename))
        (for/or ([tab (in-list tabs)])
          (define tab-filename (send (send tab get-defs) get-filename))
          (and tab-filename (pathname-equal? fn-path tab-filename) tab)))
@@ -3099,7 +3154,9 @@
        (define just-one? (and (pair? tabs) (null? (cdr tabs))))
        (send item
              set-label
-             (if just-one? (string-constant close-tab) (string-constant close-tab-amp)))
+             (if just-one?
+                 (string-constant close-tab)
+                 (string-constant close-tab-amp)))
        (when (preferences:get 'framework:menu-bindings)
          (send item set-shortcut (if just-one? #f #\w))))
 
@@ -3108,10 +3165,11 @@
          [(equal? (system-type) 'unix) (send item set-label (string-constant close-menu-item))]
          [else
           (define just-one? (and (pair? tabs) (null? (cdr tabs))))
-          (send
-           item
-           set-label
-           (if just-one? (string-constant close-window-menu-item) (string-constant close-window)))
+          (send item
+                set-label
+                (if just-one?
+                    (string-constant close-window-menu-item)
+                    (string-constant close-window)))
           (when (preferences:get 'framework:menu-bindings)
             (send item
                   set-shortcut-prefix
@@ -3238,9 +3296,10 @@
                              (string-constant hide-module-browser)
                              (string-constant show-module-browser)))
                   (parent (get-show-menu))
-                  (callback
-                   (λ (menu evt)
-                     (if module-browser-shown? (hide-module-browser) (show-module-browser))))))
+                  (callback (λ (menu evt)
+                              (if module-browser-shown?
+                                  (hide-module-browser)
+                                  (show-module-browser))))))
        (set-show-menu-sort-key module-browser-menu-item 401)
 
        (set! toolbar-menu (new menu% [parent show-menu] [label (string-constant toolbar)]))
@@ -3651,7 +3710,10 @@
                (make-object menu:can-restore-menu-item%
                             (string-constant log-definitions-and-interactions)
                             file-menu
-                            (λ (x y) (if transcript (stop-transcript) (start-transcript)))))
+                            (λ (x y)
+                              (if transcript
+                                  (stop-transcript)
+                                  (start-transcript)))))
          (make-object separator-menu-item% file-menu)
          (super file-menu:between-save-as-and-print file-menu)))
 
@@ -3731,34 +3793,37 @@
                (send item enable on?))]
             [callback
              (λ (item evt)
-               (aspell-callback
-                (λ (problem?)
-                  (unless problem?
-                    (define ed (get-edit-target-object))
-                    (define orig-pos (send ed get-start-position))
+               (aspell-callback (λ (problem?)
+                                  (unless problem?
+                                    (define ed (get-edit-target-object))
+                                    (define orig-pos (send ed get-start-position))
 
-                    (define (search start end mispelled?)
-                      (let loop ([p start])
-                        (cond
-                          [(< p end)
-                           (define sp (send ed get-spell-suggestions p))
-                           (define found-something? (if mispelled? (list? sp) (not (list? sp))))
-                           (cond
-                             [found-something? p]
-                             [else (loop (+ p 1))])]
-                          [else #f])))
+                                    (define (search start end mispelled?)
+                                      (let loop ([p start])
+                                        (cond
+                                          [(< p end)
+                                           (define sp (send ed get-spell-suggestions p))
+                                           (define found-something?
+                                             (if mispelled?
+                                                 (list? sp)
+                                                 (not (list? sp))))
+                                           (cond
+                                             [found-something? p]
+                                             [else (loop (+ p 1))])]
+                                          [else #f])))
 
-                    (define first-well-spelled
-                      (or (search orig-pos (send ed last-position) #f) (search 0 orig-pos #f)))
-                    (cond
-                      [first-well-spelled
-                       (define mispelled
-                         (or (search first-well-spelled (send ed last-position) #t)
-                             (search 0 first-well-spelled #t)))
-                       (cond
-                         [mispelled (send ed set-position mispelled)]
-                         [else (bell)])]
-                      [else (bell)])))))])
+                                    (define first-well-spelled
+                                      (or (search orig-pos (send ed last-position) #f)
+                                          (search 0 orig-pos #f)))
+                                    (cond
+                                      [first-well-spelled
+                                       (define mispelled
+                                         (or (search first-well-spelled (send ed last-position) #t)
+                                             (search 0 first-well-spelled #t)))
+                                       (cond
+                                         [mispelled (send ed set-position mispelled)]
+                                         [else (bell)])]
+                                      [else (bell)])))))])
 
        (new menu:can-restore-menu-item%
             [label (string-constant spell-suggest-corrections)]
@@ -4314,7 +4379,11 @@
             (define fst (car lst))
             (cond
               [(= pos (- (srcloc-position fst) 1))
-               (values before (if (null? (cdr lst)) #f (cadr lst)) sorted)]
+               (values before
+                       (if (null? (cdr lst))
+                           #f
+                           (cadr lst))
+                       sorted)]
               [(< pos (- (srcloc-position fst) 1)) (values before fst sorted)]
               [else (loop (car lst) (cdr lst))])])))
 
@@ -4533,7 +4602,10 @@
          (send btn set-label-visible #f)
          (send info-panel change-children (λ (l) (cons btn (remq* (list btn) l))))
          btn))
-     (define/private (set-bug-label v) (if (null? v) (send bug-icon show #f) (send bug-icon show #t)))
+     (define/private (set-bug-label v)
+       (if (null? v)
+           (send bug-icon show #f)
+           (send bug-icon show #t)))
      (set-bug-label (preferences:get 'drracket:saved-bug-reports))
      (define remove-bug-icon-callback
        (preferences:add-callback 'drracket:saved-bug-reports (λ (p v) (set-bug-label v))))
@@ -4605,8 +4677,13 @@
         (for/list ([info (in-list infos)]
                    #:unless (member (define-popup-info-long-name info) hidden-prefixes))
           info))
-      (define the-info (if (null? visible-infos) (car infos) (car visible-infos)))
-      (if vertical? (define-popup-info-short-name the-info) (define-popup-info-long-name the-info))]
+      (define the-info
+        (if (null? visible-infos)
+            (car infos)
+            (car visible-infos)))
+      (if vertical?
+          (define-popup-info-short-name the-info)
+          (define-popup-info-long-name the-info))]
      [else #f]))
  (define execute-warning-canvas%
    (class canvas%
@@ -4808,21 +4885,23 @@
      (update-ok-button-state))
 
    (define tb
-     (keymap:call/text-keymap-initializer
-      (λ ()
-        (new text-field%
-             [label #f]
-             [parent top-hp]
-             [init-value (if current-limit (format "~a" current-limit) "128")]
-             [stretchable-width #f]
-             [min-width 100]
-             [callback
-              (λ (tf e)
-                (let ([ed (send tf get-editor)])
-                  (cond
-                    [(is-valid-number? ed) (background clear-sd)]
-                    [else (background yellow-sd)]))
-                (update-ok-button-state))]))))
+     (keymap:call/text-keymap-initializer (λ ()
+                                            (new text-field%
+                                                 [label #f]
+                                                 [parent top-hp]
+                                                 [init-value
+                                                  (if current-limit
+                                                      (format "~a" current-limit)
+                                                      "128")]
+                                                 [stretchable-width #f]
+                                                 [min-width 100]
+                                                 [callback
+                                                  (λ (tf e)
+                                                    (let ([ed (send tf get-editor)])
+                                                      (cond
+                                                        [(is-valid-number? ed) (background clear-sd)]
+                                                        [else (background yellow-sd)]))
+                                                    (update-ok-button-state))]))))
 
    (define (update-ok-button-state)
      (cond
@@ -5032,7 +5111,11 @@
           (let loop ([item item])
             (cond
               [(null? item) default]
-              [else (let ([rib (car item)]) (if (eq? (car rib) k) (cdr rib) (loop (cdr item))))])))
+              [else
+               (let ([rib (car item)])
+                 (if (eq? (car rib) k)
+                     (cdr rib)
+                     (loop (cdr item))))])))
         (define vp
           (new-vertical-panel% [style '(border)]
                                [parent saved-bug-reports-panel]
@@ -5053,7 +5136,10 @@
                [stretchable-width #t]
                [label
                 (string-append (lookup 'component "<<unknown component>>")
-                               (let ([v (lookup 'version #f)]) (if v (string-append " " v) "")))]
+                               (let ([v (lookup 'version #f)])
+                                 (if v
+                                     (string-append " " v)
+                                     "")))]
                [parent hp]))
         (define forget
           (new button%
