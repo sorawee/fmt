@@ -71,9 +71,13 @@
         ;; For very long lists, it's worth the effort to use a vector instead
         ;;   of a list to save space:
         (define (seq->list s)
-          (if (vector? s) (vector->list s) s))
+          (if (vector? s)
+              (vector->list s)
+              s))
         (define (list->seq s)
-          (if (or (null? s) (null? (cdr s)) (null? (cddr s))) s (list->vector s)))
+          (if (or (null? s) (null? (cdr s)) (null? (cddr s)))
+              s
+              (list->vector s)))
         (define seqce vector)
 
         ;; A cheap way of getting rid of unneeded prototypes:
@@ -96,7 +100,9 @@
             (hash-set! used-symbols v (add1 (hash-ref used-symbols v (lambda () 0)))))
           (when (and src output-depends-info?)
             (hash-set! depends-files src #t))
-          (if sysheader? (make-sysheader-tok v line src) (make-tok v line src)))
+          (if sysheader?
+              (make-sysheader-tok v line src)
+              (make-tok v line src)))
 
         (define (make-a-seq opener src line body)
           ((case opener
@@ -161,7 +167,9 @@
         (define (line-comment s p)
           (let loop ([p (add1 p)])
             (let ([c (bytes-ref s p)])
-              (if (or (equal? c 10) (equal? c 13)) (add1 p) (loop (add1 p))))))
+              (if (or (equal? c 10) (equal? c 13))
+                  (add1 p)
+                  (loop (add1 p))))))
 
         (define re:line #rx#"^#[^\n\r]* ([0-9]+) \"([^\"]*)\"([^\r\n]*)")
         (define re:pragma #rx#"^#pragma ([^\r\n]*)")
@@ -367,7 +375,9 @@
         (define (read-all p)
           (let loop ([l null])
             (let ([s (read-bytes 4096 p)])
-              (if (eof-object? s) (apply bytes-append (reverse l)) (loop (cons s l))))))
+              (if (eof-object? s)
+                  (apply bytes-append (reverse l))
+                  (loop (cons s l))))))
 
         (define (tokenize)
           (let* ([s (read-all (current-input-port))]
@@ -383,7 +393,9 @@
                       [(char-whitespace? (integer->char char)) (loop (add1 p) result)]
                       [(eq? char (char->integer #\#)) ;; We assume only #-based preprocessor left
                        (let-values ([(pragma p) (do-cpp s p)])
-                         (if pragma (loop p (cons pragma result)) (loop p result)))]
+                         (if pragma
+                             (loop p (cons pragma result))
+                             (loop p result)))]
                       [else
                        (let ([simple
                               (let ([sl (vector-ref simple-table char)])
@@ -472,7 +484,10 @@
                                   [start 0]
                                   [quoted? #f])
                          (cond
-                           [(= i (string-length s)) (if (= i start) '() (list (substring s start i)))]
+                           [(= i (string-length s))
+                            (if (= i start)
+                                '()
+                                (list (substring s start i)))]
                            [(and (not quoted?) (char=? #\space (string-ref s i)))
                             (if (= i start)
                                 (loop (+ i 1) (+ i 1) #f)
@@ -516,16 +531,21 @@
 
         (define cpp-process
           (if (string? cpp)
-              (process2
-               (format "~a~a~a"
-                       cpp
-                       (if pgc? (if pgc-really? " -DMZ_XFORM -DMZ_PRECISE_GC" " -DMZ_XFORM") "")
-                       (if callee-restore? " -DGC_STACK_CALLEE_RESTORE" ""))
-               file-in)
+              (process2 (format "~a~a~a"
+                                cpp
+                                (if pgc?
+                                    (if pgc-really? " -DMZ_XFORM -DMZ_PRECISE_GC" " -DMZ_XFORM")
+                                    "")
+                                (if callee-restore? " -DGC_STACK_CALLEE_RESTORE" ""))
+                        file-in)
               (apply (verbose process*)
                      (append cpp
-                             (if pgc-really? '("-DMZ_XFORM" "-DMZ_PRECISE_GC") '("-DMZ_XFORM"))
-                             (if callee-restore? '("-DGC_STACK_CALLEE_RESTORE") null)
+                             (if pgc-really?
+                                 '("-DMZ_XFORM" "-DMZ_PRECISE_GC")
+                                 '("-DMZ_XFORM"))
+                             (if callee-restore?
+                                 '("-DGC_STACK_CALLEE_RESTORE")
+                                 null)
                              (list file-in)))))
         (close-output-port (cadr cpp-process))
 
@@ -647,7 +667,10 @@
 
         (define log-warning log-error)
 
-        (define map-port (if palm-out (open-output-file palm-out #:exists 'truncate) #f))
+        (define map-port
+          (if palm-out
+              (open-output-file palm-out #:exists 'truncate)
+              #f))
 
         ;; ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
         ;; Output common defns
@@ -1504,10 +1527,16 @@
                 (values old-line old-file old-sysheader?)
                 (let* ([v (car e)]
                        [sv (extract-src-tok v)]
-                       [line (if keep-lines? (or (and sv (tok-line sv)) old-line) old-line)]
-                       [file (if keep-lines? (or (and sv (tok-file sv)) old-file) old-file)]
+                       [line (if keep-lines?
+                                 (or (and sv (tok-line sv)) old-line)
+                                 old-line)]
+                       [file (if keep-lines?
+                                 (or (and sv (tok-file sv)) old-file)
+                                 old-file)]
                        [sysheader? (if keep-lines?
-                                       (if (and sv (tok-file sv)) (sysheader-tok? sv) old-sysheader?)
+                                       (if (and sv (tok-file sv))
+                                           (sysheader-tok? sv)
+                                           old-sysheader?)
                                        old-sysheader?)]
                        [inc-line! (lambda () (set! line (add1 line)))])
                   (when keep-lines?
@@ -1538,7 +1567,10 @@
                                    (parens? (car l))
                                    (let ([l (seq->list (seq-in (car l)))])
                                      (not (ormap (lambda (i) (eq? '= (tok-n i))) l)))))))
-                     (display/indent v (if skip-parens? "" (tok-n v)))
+                     (display/indent v
+                                     (if skip-parens?
+                                         ""
+                                         (tok-n v)))
                      (let ([subindent (if (braces? v)
                                           (begin
                                             (newline/indent (+ indent 2))
@@ -1620,7 +1652,9 @@
                                          (format "+~a_COUNT" (block-push-super-tag v))
                                          "")]
                            [tag (block-push-tag v)]
-                           [tabbing (if (zero? indent) "" (make-string (sub1 indent) #\space))])
+                           [tabbing (if (zero? indent)
+                                        ""
+                                        (make-string (sub1 indent) #\space))])
                        (unless (zero? size)
                          (display/indent v
                                          (format "BLOCK_SETUP~a(("
@@ -1640,7 +1674,9 @@
                        (newline/indent indent)
                        (inc-line!))]
                     [(nested-setup? v)
-                     (let ([tabbing (if (zero? indent) "" (make-string (sub1 indent) #\space))])
+                     (let ([tabbing (if (zero? indent)
+                                        ""
+                                        (make-string (sub1 indent) #\space))])
                        (case (tok-n v)
                          [(nested)
                           (printf "#~adefine BLOCK_SETUP(x) BLOCK_SETUP_each(x)\n" tabbing)
@@ -1845,7 +1881,9 @@
                (if (or precompiling-header?
                        (> (hash-ref used-symbols name) 1)
                        (ormap (lambda (v) (eq? (tok-n v) 'virtual)) e)) ; can't drop virtual methods!
-                   (if palm? (add-segment-label name e) (clean-proto e))
+                   (if palm?
+                       (add-segment-label name e)
+                       (clean-proto e))
                    null))]
             [(struct-decl? e)
              (let ([e (skip-declspec-align e)])
@@ -2033,7 +2071,9 @@
           (let ([once (lambda (s)
                         (and (not precompiling-header?) (= 1 (hash-ref used-symbols (tok-n s)))))]
                 [seps (list '|,| '* semi)])
-            (let ([e (if (eq? '__extension__ (car e)) (cdr e) e)])
+            (let ([e (if (eq? '__extension__ (car e))
+                         (cdr e)
+                         e)])
               (and
                (eq? (tok-n (cadr e)) 'struct)
                (symbol? (tok-n (caddr e)))
@@ -2061,7 +2101,9 @@
                 e)))
 
         (define (skip-compiler-pragmas e)
-          (if (compiler-pragma? e) (skip-compiler-pragmas (cddr e)) e))
+          (if (compiler-pragma? e)
+              (skip-compiler-pragmas (cddr e))
+              e))
 
         (define (struct-decl? e)
           (let ([e (skip-declspec-align e)])
@@ -2075,7 +2117,9 @@
           (let ([l (length e)])
             (and (> l 2)
                  (let* ([_n (tok-n (list-ref e (sub1 l)))]
-                        [ll (if (eq? _n semi) (- l 2) (sub1 l))])
+                        [ll (if (eq? _n semi)
+                                (- l 2)
+                                (sub1 l))])
                    (let ([v (list-ref e ll)])
                      (and (braces? v)
                           (let ([v (list-ref e (sub1 ll))])
@@ -2139,7 +2183,9 @@
               [(eq? '__attribute__ (tok-n (car e))) (loop (cddr e) type)]
               [(parens? (cadr e))
                (let ([name (tok-n (let ([p (car e)])
-                                    (if (parens? p) (car (seq->list (seq-in p))) p)))]
+                                    (if (parens? p)
+                                        (car (seq->list (seq-in p)))
+                                        p)))]
                      [type (let loop ([t (reverse type)])
                              (if (pair? t)
                                  (if (or (memq (tok-n (car t))
@@ -2399,8 +2445,12 @@
 
         ;; e is a struct decl; parse it an remember the results
         (define (register-struct e)
-          (let ([body (seq->list (seq-in (if (braces? (cadr e)) (cadr e) (caddr e))))]
-                [name (if (braces? (cadr e)) (gensym 'Anonymous) (tok-n (cadr e)))])
+          (let ([body (seq->list (seq-in (if (braces? (cadr e))
+                                             (cadr e)
+                                             (caddr e))))]
+                [name (if (braces? (cadr e))
+                          (gensym 'Anonymous)
+                          (tok-n (cadr e)))])
             (let ([l (get-pointer-vars-from-seq body "PTRFIELD" #f)])
               (and (not (null? l))
                    (begin
@@ -2432,7 +2482,9 @@
             [(and (pointer-type? x) (pointer-type-base x))
              (append (map (lambda (x) (make-tok x #f #f)) (pointer-type-base x))
                      (let loop ([n (pointer-type-stars x)])
-                       (if (zero? n) null (cons (make-tok '* #f #f) (loop (sub1 n))))))]
+                       (if (zero? n)
+                           null
+                           (cons (make-tok '* #f #f) (loop (sub1 n))))))]
             [else
              (log-error "[TYPE] ~a in ~a: Can't render type declaration for ~a"
                         (tok-line where-v)
@@ -2456,7 +2508,9 @@
                      "Confused by form of class declaration at line ~a in ~a"
                      (tok-line (car e))
                      (tok-file (car e))))
-            (let* ([super (if (> body-pos 2) (tok-n (list-ref e (sub1 body-pos))) #f)]
+            (let* ([super (if (> body-pos 2)
+                              (tok-n (list-ref e (sub1 body-pos)))
+                              #f)]
                    [cl (make-c++-class super (if (or super (eq? name 'gc)) super 'gc) null null)]
                    [pt (prototyped)]
                    [vs (top-vars)])
@@ -2631,55 +2685,57 @@
         ;; to register locals with the GC. Do a little special work
         ;; for constructors, detected by a '|:| outside the body.
         (define (convert-function e name)
-          (let*-values
-              ([(body-v len) (let* ([len (sub1 (length e))]
-                                    [v (list-ref e len)])
-                               ;; Function may have trailing semicolon:
-                               (if (eq? semi (tok-n v))
-                                   (values (list-ref e (sub1 len)) (sub1 len))
-                                   (values v len)))]
-               [(assert-no-conversion?) (eq? (tok-n (list-ref e (sub1 len)))
-                                             'XFORM_ASSERT_NO_CONVERSION)]
-               [(body-e) (seq->list (seq-in body-v))]
-               [(class-name function-name func-pos)
-                (let loop ([e e]
-                           [p 0])
-                  (cond
-                    [(null? e) (values #f #f #f)]
-                    [(null? (cdr e)) (values #f #f #f)]
-                    [(eq? '|::| (tok-n (cadr e))) (values (tok-n (car e)) (tok-n (caddr e)) (+ p 2))]
-                    [else (loop (cdr e) (add1 p))]))]
-               [(args-e) (seq->list
-                          (seq-in (list-ref e
-                                            (if (and func-pos (eq? class-name function-name))
-                                                (add1 func-pos)
-                                                (if assert-no-conversion? (- len 2) (sub1 len))))))]
-               [(arg-vars all-arg-vars)
-                (let-values ([(arg-pragmas arg-decls)
-                              (body->lines (append args-e (list (make-tok '|,| #f #f))) #t)])
-                  (unless (null? arg-pragmas)
-                    (error 'arg-decls "unexpected pragmas"))
-                  (let loop ([l arg-decls]
-                             [arg-vars null]
-                             [all-arg-vars null])
-                    (if (null? l)
-                        (values arg-vars all-arg-vars)
-                        (let-values ([(ptrs non-ptrs) (get-vars (car l) "PTRARG" #f #t)])
-                          (loop (cdr l)
-                                (append arg-vars ptrs)
-                                (append all-arg-vars ptrs non-ptrs))))))]
-               [(c++-class) (let ([c++-class (find-c++-class class-name #t)])
-                              (and c++-class
-                                   (or (get-c++-class-method function-name c++-class)
-                                       (eq? function-name class-name)
-                                       (eq? function-name '~))
-                                   c++-class))]
-               [(initializers) (let loop ([e e]
-                                          [len len])
-                                 (cond
-                                   [(zero? len) #f]
-                                   [(eq? (tok-n (car e)) '|:|) (cons (cadr e) (caddr e))]
-                                   [else (loop (cdr e) (sub1 len))]))])
+          (let*-values ([(body-v len) (let* ([len (sub1 (length e))]
+                                             [v (list-ref e len)])
+                                        ;; Function may have trailing semicolon:
+                                        (if (eq? semi (tok-n v))
+                                            (values (list-ref e (sub1 len)) (sub1 len))
+                                            (values v len)))]
+                        [(assert-no-conversion?) (eq? (tok-n (list-ref e (sub1 len)))
+                                                      'XFORM_ASSERT_NO_CONVERSION)]
+                        [(body-e) (seq->list (seq-in body-v))]
+                        [(class-name function-name func-pos)
+                         (let loop ([e e]
+                                    [p 0])
+                           (cond
+                             [(null? e) (values #f #f #f)]
+                             [(null? (cdr e)) (values #f #f #f)]
+                             [(eq? '|::| (tok-n (cadr e)))
+                              (values (tok-n (car e)) (tok-n (caddr e)) (+ p 2))]
+                             [else (loop (cdr e) (add1 p))]))]
+                        [(args-e) (seq->list
+                                   (seq-in (list-ref e
+                                                     (if (and func-pos (eq? class-name function-name))
+                                                         (add1 func-pos)
+                                                         (if assert-no-conversion?
+                                                             (- len 2)
+                                                             (sub1 len))))))]
+                        [(arg-vars all-arg-vars)
+                         (let-values ([(arg-pragmas arg-decls)
+                                       (body->lines (append args-e (list (make-tok '|,| #f #f))) #t)])
+                           (unless (null? arg-pragmas)
+                             (error 'arg-decls "unexpected pragmas"))
+                           (let loop ([l arg-decls]
+                                      [arg-vars null]
+                                      [all-arg-vars null])
+                             (if (null? l)
+                                 (values arg-vars all-arg-vars)
+                                 (let-values ([(ptrs non-ptrs) (get-vars (car l) "PTRARG" #f #t)])
+                                   (loop (cdr l)
+                                         (append arg-vars ptrs)
+                                         (append all-arg-vars ptrs non-ptrs))))))]
+                        [(c++-class) (let ([c++-class (find-c++-class class-name #t)])
+                                       (and c++-class
+                                            (or (get-c++-class-method function-name c++-class)
+                                                (eq? function-name class-name)
+                                                (eq? function-name '~))
+                                            c++-class))]
+                        [(initializers) (let loop ([e e]
+                                                   [len len])
+                                          (cond
+                                            [(zero? len) #f]
+                                            [(eq? (tok-n (car e)) '|:|) (cons (cadr e) (caddr e))]
+                                            [else (loop (cdr e) (sub1 len))]))])
             (append
              ;; Build all of the function declaration up to the body:
              (let loop ([e e]
@@ -2931,24 +2987,25 @@
                            (unless (assq (tok-n (cadr e)) (unbox new-vars-box))
                              (set-box! new-vars-box
                                        (cons (cons (tok-n (cadr e)) new-var) (unbox new-vars-box))))
-                           (loop (list*
-                                  (make-creation-parens
-                                   "("
-                                   line
-                                   file
-                                   ")"
-                                   (seqce (make-tok new-var line file)
-                                          (make-tok '= line file)
-                                          (make-tok NEW_OBJ line file)
-                                          (make-parens "(" line file ")" (seqce (cadr e)))
-                                          (make-tok '|,| line file)
-                                          (make-tok new-var line file)
-                                          (make-tok '-> line file)
-                                          (make-gc-init-tok (tok-n (cadr e)))
-                                          (if args? (caddr e) (make-parens "(" line file ")" (seqce)))
-                                          (make-tok '|,| line file)
-                                          (make-tok new-var line file)))
-                                  ((if args? cdddr cddr) e))
+                           (loop (list* (make-creation-parens
+                                         "("
+                                         line
+                                         file
+                                         ")"
+                                         (seqce (make-tok new-var line file)
+                                                (make-tok '= line file)
+                                                (make-tok NEW_OBJ line file)
+                                                (make-parens "(" line file ")" (seqce (cadr e)))
+                                                (make-tok '|,| line file)
+                                                (make-tok new-var line file)
+                                                (make-tok '-> line file)
+                                                (make-gc-init-tok (tok-n (cadr e)))
+                                                (if args?
+                                                    (caddr e)
+                                                    (make-parens "(" line file ")" (seqce)))
+                                                (make-tok '|,| line file)
+                                                (make-tok new-var line file)))
+                                        ((if args? cdddr cddr) e))
                                  #t
                                  paren-arrows?))]
                         [else
@@ -3098,7 +3155,10 @@
                              (let*-values ([(end?) (memq (tok-n (caar body))
                                                          '(END_XFORM_SKIP XFORM_START_SKIP))]
                                            [(rest live-vars) ((if end? loop skip-loop) (cdr body))])
-                               (values (if end? rest (cons (car body) rest)) live-vars)))]
+                               (values (if end?
+                                           rest
+                                           (cons (car body) rest))
+                                       live-vars)))]
                           [(eq? (tok-n (caar body)) XFORM_RESET_VAR_STACK)
                            (let-values ([(rest live-vars) (loop (cdr body))])
                              (values (cons (car body) rest) live-vars))]
@@ -3223,7 +3283,9 @@
                                                         orig-tag
                                                         setup-stack-return-type)))
                              (if setup-stack-return-type
-                                 (if once? (list no-nested-pushable) (list nested-pushable))
+                                 (if once?
+                                     (list no-nested-pushable)
+                                     (list nested-pushable))
                                  null))))
                          ;; Null out local vars:
                          (map
@@ -3401,7 +3463,9 @@
                (let ([seql (seq->list (seq-in v))])
                  (= 3 (length seql))
                  (eq? '-> (tok-n (cadr seql)))
-                 (if (parens? (car seql)) (extract-resolvable-record-var (car seql)) (car seql)))))
+                 (if (parens? (car seql))
+                     (extract-resolvable-record-var (car seql))
+                     (car seql)))))
 
         ;; Found a sequance of argument expressions where function calls
         ;; are not allowed. Lift out the calls, inventing temporary variables
@@ -3424,7 +3488,9 @@
                         ([lift-one?
                           (lambda (e)
                             (let ([e- (let ([e- (reverse e)])
-                                        (if (null? (cdr el)) e- (cdr e-)))]) ; skip comma
+                                        (if (null? (cdr el))
+                                            e-
+                                            (cdr e-)))]) ; skip comma
                               (and (looks-like-call? e- #f)
                                    (cast-or-call
                                     e-
@@ -3496,7 +3562,9 @@
                                         (cons (wrap e) new-args)
                                         setups
                                         new-vars
-                                        (if must-convert? ok-calls (cons call-args ok-calls))
+                                        (if must-convert?
+                                            ok-calls
+                                            (cons call-args ok-calls))
                                         #t
                                         live-vars))))]
                          [lift-in-arithmetic?
@@ -3536,7 +3604,9 @@
                                        (lambda (wrap)
                                          (k (lambda (x) (wrap (list* (car e) (cadr e) x)))))))]
                                ;; look for: <liftable> op n
-                               [(let ([len (if (null? el) (length e) (sub1 (length e)))]) ; skip comma
+                               [(let ([len (if (null? el)
+                                               (length e)
+                                               (sub1 (length e)))]) ; skip comma
                                   (and (>= len 3)
                                        (let ([n (tok-n (list-ref e (sub1 len)))])
                                          (or (number? n) (symbol? n)))
@@ -3553,20 +3623,25 @@
                                                  #cs
                                                  XFORM_TRUST_MINUS))))
                                 (let* ([last? (null? el)]
-                                       [len (if last? (length e) (sub1 (length e)))])
+                                       [len (if last?
+                                                (length e)
+                                                (sub1 (length e)))])
                                   (let ([k (lift-in-arithmetic?
                                             (let loop ([e e])
                                               (if (null? ((if last? cddr cdddr) e))
-                                                  (if last? null (cddr e))
+                                                  (if last?
+                                                      null
+                                                      (cddr e))
                                                   (cons (car e) (loop (cdr e))))))])
                                     (and k
                                          (lambda (wrap)
                                            (k (lambda (x)
-                                                (wrap
-                                                 (append
-                                                  x
-                                                  (list (list-ref e (- len 2)) (list-ref e (- len 1)))
-                                                  (if last? (list (list-ref e len)) null)))))))))]
+                                                (wrap (append x
+                                                              (list (list-ref e (- len 2))
+                                                                    (list-ref e (- len 1)))
+                                                              (if last?
+                                                                  (list (list-ref e len))
+                                                                  null)))))))))]
                                [(lift-one? e)
                                 =>
                                 values]
@@ -3665,20 +3740,22 @@
                        (if (null? l)
                            (cons (make-tok RET_NOTHING (tok-line (car e-)) (tok-file (car e-)))
                                  result)
-                           (let ([has-empty-funccall?
-                                  ;; All calls must be empty calls, otherwise
-                                  ;; the result might not depend on the empty call
-                                  ;; (e.g., f() && empty(f()) )
-                                  (let loop ([l l]
-                                             [one? #f])
-                                    (cond
-                                      [(null? l) one?]
-                                      [(call? (car l))
-                                       (if (null? (call-live (car l))) (loop (cdr l) #t) #f)]
-                                      [(seq? (car l))
-                                       (and (loop (seq->list (seq-in (car l))) one?)
-                                            (loop (cdr l) one?))]
-                                      [else #f]))])
+                           (let (;; All calls must be empty calls, otherwise
+                                 ;; the result might not depend on the empty call
+                                 ;; (e.g., f() && empty(f()) )
+                                 [has-empty-funccall? (let loop ([l l]
+                                                                 [one? #f])
+                                                        (cond
+                                                          [(null? l) one?]
+                                                          [(call? (car l))
+                                                           (if (null? (call-live (car l)))
+                                                               (loop (cdr l) #t)
+                                                               #f)]
+                                                          [(seq? (car l))
+                                                           (and (loop (seq->list (seq-in (car l)))
+                                                                      one?)
+                                                                (loop (cdr l) one?))]
+                                                          [else #f]))])
                              (list*
                               (make-tok (if has-empty-funccall? RET_VALUE_EMPTY_START RET_VALUE_START)
                                         (tok-line (car e-))
@@ -3744,7 +3821,9 @@
                          "[CALL] ~a in ~a: Bad place for function call~a, starting tok is ~s."
                          (tok-line (car func))
                          (tok-file (car func))
-                         (if (list? complain-not-in) "" (format " (in ~a)" complain-not-in))
+                         (if (list? complain-not-in)
+                             ""
+                             (format " (in ~a)" complain-not-in))
                          (tok-n (car func))))
                       ;; Lift out function calls as arguments. (Can re-order code.
                       ;; Racket source code must live with this change to C's semantics.)
@@ -3907,7 +3986,9 @@
                                      (append new-pushed old-pushed))
                                    (+ (if (or non-gcing-call? setjmp-call?) 0 1)
                                       (live-var-info-num-calls live-vars))
-                                   (+ (if (or non-gcing-call? setjmp-call?) 0 (if non-returning? 1 0))
+                                   (+ (if (or non-gcing-call? setjmp-call?)
+                                          0
+                                          (if non-returning? 1 0))
                                       (live-var-info-num-noreturn-calls live-vars))
                                    (+ (if (or non-gcing-call? non-returning? setjmp-call?)
                                           0
@@ -4117,7 +4198,9 @@
                    (loop
                     rest
                     (append
-                     (if extra (list extra) null)
+                     (if extra
+                         (list extra)
+                         null)
                      (list
                       (make-braces (tok-n v) (tok-line v) (tok-file v) (seq-close v) (list->seq e)))
                      result)
@@ -4253,9 +4336,13 @@
                                    [(symbol? (tok-n next)) next]
                                    [(seq? (tok-n next))
                                     (let ([l (seq->list (seq-in next))])
-                                      (if (null? l) #f (loop (car l))))]
+                                      (if (null? l)
+                                          #f
+                                          (loop (car l))))]
                                    [else #f]))])
-                     (if next (cons (tok-n next) (loop (cdr e))) (loop (cdr e)))))]
+                     (if next
+                         (cons (tok-n next) (loop (cdr e)))
+                         (loop (cdr e)))))]
               [(seq? (car e)) (append (find-&-vars (seq->list (seq-in (car e)))) (loop (cdr e)))]
               [else (loop (cdr e))])))
 
@@ -4267,7 +4354,9 @@
           (let ([body-v (let* ([len (sub1 (length e))]
                                [v (list-ref e len)])
                           ;; Function may have trailing semicolon:
-                          (if (eq? semi (tok-n v)) (list-ref e (sub1 len)) v))])
+                          (if (eq? semi (tok-n v))
+                              (list-ref e (sub1 len))
+                              v))])
             (call-graph/body name (seq->list (seq-in body-v)))))
 
         (define (call-graph/body name body-e)
@@ -4410,7 +4499,9 @@
            e
            #f
            (lambda (sube where)
-             (let* ([where (if (pragma? (car sube)) where (or (tok-file (car sube)) where))]
+             (let* ([where (if (pragma? (car sube))
+                               where
+                               (or (tok-file (car sube)) where))]
                     [sube (top-level sube where #t)])
                (let-values ([(l f s?) (print-it sube 0 #t #f line file sysheader? keep-lines?)])
                  (set! line l)

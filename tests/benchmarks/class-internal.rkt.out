@@ -176,9 +176,10 @@
     [(_ elem ...)
      ;; Set taint mode on elem ...
      (with-syntax ([internal-id internal-id]
-                   [(elem ...)
-                    (for/list ([e (in-list (syntax->list #'(elem ...)))])
-                      (if (identifier? e) e (syntax-property e 'taint-mode 'transparent)))])
+                   [(elem ...) (for/list ([e (in-list (syntax->list #'(elem ...)))])
+                                 (if (identifier? e)
+                                     e
+                                     (syntax-property e 'taint-mode 'transparent)))])
        (class-syntax-protect (syntax-property (syntax/loc stx
                                                 (internal-id elem ...))
                                               'taint-mode
@@ -495,7 +496,11 @@
       ;; Put i in ((iid eid) optional-expr) form
       (cond
         [(identifier? i) (list (list i i))]
-        [else (let ([a (stx-car i)]) (if (identifier? a) (cons (list a a) (stx-cdr i)) i))]))
+        [else
+         (let ([a (stx-car i)])
+           (if (identifier? a)
+               (cons (list a a) (stx-cdr i))
+               i))]))
 
     (define ((norm-init/field-iid/def-ctx def-ctx) norm)
       (syntax-local-identifier-as-binding (stx-car (stx-car norm)) def-ctx))
@@ -624,8 +629,9 @@
                 (andmap identifier? (syntax->list (syntax (id ...)))))
            (let* ([letrec? (free-identifier=? (syntax let-) (quote-syntax letrec-values))]
                   [ids (syntax->list (syntax (id ...)))]
-                  [new-ids
-                   (if xform? (map (lambda (id) (datum->syntax #f (gensym (syntax-e id)))) ids) ids)]
+                  [new-ids (if xform?
+                               (map (lambda (id) (datum->syntax #f (gensym (syntax-e id)))) ids)
+                               ids)]
                   [body-locals (append ids locals)]
                   [exprs (map (lambda (expr id) (loop expr #t id (if letrec? body-locals locals)))
                               (syntax->list (syntax (expr ...)))
@@ -738,7 +744,9 @@
                 [class-name (if name-id
                                 (syntax-e name-id)
                                 (let ([s (syntax-local-infer-name stx)])
-                                  (if (syntax? s) (syntax-e s) s)))])
+                                  (if (syntax? s)
+                                      (syntax-e s)
+                                      s)))])
 
             ;; ------ Basic syntax checks -----
             (for-each
@@ -1070,8 +1078,12 @@
                                                                (bound-identifier=? i (car ids)))
                                                              local-public-names)])
                                          (loop (cdr exprs)
-                                               (if public? (cons (cons (car ids) expr) ms) ms)
-                                               (if public? pms (cons (cons (car ids) expr) pms))
+                                               (if public?
+                                                   (cons (cons (car ids) expr) ms)
+                                                   ms)
+                                               (if public?
+                                                   pms
+                                                   (cons (cons (car ids) expr) pms))
                                                es
                                                sd)))
                                      ;; Non-method defn:
@@ -1345,10 +1357,12 @@
                            [(local-field ...) (definify (append field-names private-field-names))]
                            [(local-field-localized ...)
                             (map lookup-localize (append field-names private-field-names))]
-                           [(local-field-pos ...)
-                            (let loop ([pos 0]
-                                       [l (append field-names private-field-names)])
-                              (if (null? l) null (cons pos (loop (add1 pos) (cdr l)))))]
+                           [(local-field-pos ...) (let loop ([pos 0]
+                                                             [l (append field-names
+                                                                        private-field-names)])
+                                                    (if (null? l)
+                                                        null
+                                                        (cons pos (loop (add1 pos) (cdr l)))))]
                            [(local-field-accessor ...)
                             (generate-temporaries (append field-names private-field-names))]
                            [(local-field-mutator ...)
@@ -2188,7 +2202,10 @@ last few projections.
                                   (null? augride-names)
                                   (null? final-names))]
          [no-new-fields? (null? public-field-names)]
-         [xappend (lambda (a b) (if (null? b) a (append a b)))])
+         [xappend (lambda (a b)
+                    (if (null? b)
+                        a
+                        (append a b)))])
 
     ;; -- Check interfaces ---
     (for-each (lambda (intf)
@@ -2210,8 +2227,12 @@ last few projections.
                    #:class-name name)))
 
     ;; -- Match method and field names to indices --
-    (let ([method-ht (if no-new-methods? (class-method-ht super) (hash-copy (class-method-ht super)))]
-          [field-ht (if no-new-fields? (class-field-ht super) (hash-copy (class-field-ht super)))]
+    (let ([method-ht (if no-new-methods?
+                         (class-method-ht super)
+                         (hash-copy (class-method-ht super)))]
+          [field-ht (if no-new-fields?
+                        (class-field-ht super)
+                        (hash-copy (class-field-ht super)))]
           [super-method-ht (class-method-ht super)]
           [super-method-ids (class-method-ids super)]
           [super-field-ids (class-field-ids super)]
@@ -2325,7 +2346,9 @@ last few projections.
                #:class-name name)))
 
           ;; ---- Make the class and its interface ----
-          (let* ([class-make (if name (make-naming-constructor struct:class name "class") make-class)]
+          (let* ([class-make (if name
+                                 (make-naming-constructor struct:class name "class")
+                                 make-class)]
                  [interface-make (if name
                                      (make-naming-constructor struct:interface
                                                               (string->symbol (format "interface:~a"
@@ -2345,21 +2368,30 @@ last few projections.
                                     (make-immutable-hash)
                                     #f
                                     null)]
-                 [methods (if no-method-changes? (class-methods super) (make-vector method-width))]
-                 [super-methods
-                  (if no-method-changes? (class-super-methods super) (make-vector method-width))]
-                 [int-methods
-                  (if no-method-changes? (class-int-methods super) (make-vector method-width))]
-                 [beta-methods
-                  (if no-method-changes? (class-beta-methods super) (make-vector method-width))]
-                 [inner-projs
-                  (if no-method-changes? (class-inner-projs super) (make-vector method-width))]
-                 [dynamic-idxs
-                  (if no-method-changes? (class-dynamic-idxs super) (make-vector method-width))]
-                 [dynamic-projs
-                  (if no-method-changes? (class-dynamic-projs super) (make-vector method-width))]
-                 [meth-flags
-                  (if no-method-changes? (class-meth-flags super) (make-vector method-width))]
+                 [methods (if no-method-changes?
+                              (class-methods super)
+                              (make-vector method-width))]
+                 [super-methods (if no-method-changes?
+                                    (class-super-methods super)
+                                    (make-vector method-width))]
+                 [int-methods (if no-method-changes?
+                                  (class-int-methods super)
+                                  (make-vector method-width))]
+                 [beta-methods (if no-method-changes?
+                                   (class-beta-methods super)
+                                   (make-vector method-width))]
+                 [inner-projs (if no-method-changes?
+                                  (class-inner-projs super)
+                                  (make-vector method-width))]
+                 [dynamic-idxs (if no-method-changes?
+                                   (class-dynamic-idxs super)
+                                   (make-vector method-width))]
+                 [dynamic-projs (if no-method-changes?
+                                    (class-dynamic-projs super)
+                                    (make-vector method-width))]
+                 [meth-flags (if no-method-changes?
+                                 (class-meth-flags super)
+                                 (make-vector method-width))]
                  [c (class-make name
                                 (add1 (class-pos super))
                                 (list->vector (append (vector->list (class-supers super)) (list #f)))
@@ -2402,7 +2434,9 @@ last few projections.
                                 #f ; serializer is set later
                                 (or check-undef? (class-check-undef? super))
                                 (and make-struct:prim #t))]
-                 [obj-name (if name (string->symbol (format "object:~a" name)) 'object)]
+                 [obj-name (if name
+                               (string->symbol (format "object:~a" name))
+                               'object)]
                  ;; Used only for prim classes
                  [preparer (lambda (name)
                              ;; Map symbol to number:
@@ -2431,7 +2465,9 @@ last few projections.
               (if (impersonator-prop:has-wrapped-class-neg-party? super)
                   (let* ([the-info (impersonator-prop:get-wrapped-class-info super)]
                          [oh (wrapped-class-info-neg-acceptors-ht the-info)])
-                    (if no-method-changes? oh (hash-copy oh)))
+                    (if no-method-changes?
+                        oh
+                        (hash-copy oh)))
                   #f))
 
             ;; --- Make the new object struct ---
@@ -2712,7 +2748,10 @@ last few projections.
                                     (define ictc-infos
                                       (get-interface-contract-info (class-self-interface c) id))
                                     (define meth-entry (vector-ref methods index))
-                                    (define meth (if (pair? meth-entry) (car meth-entry) meth-entry))
+                                    (define meth
+                                      (if (pair? meth-entry)
+                                          (car meth-entry)
+                                          meth-entry))
                                     (vector-set! methods
                                                  index
                                                  (list meth
@@ -2919,7 +2958,9 @@ An example
      (cons (list our-ctc our-name #f our-name)
            ;; replace occurrences of #f positive blame with this interface
            (map (λ (info)
-                  (if (not (caddr info)) (list (car info) (cadr info) our-name (cadddr info)) info))
+                  (if (not (caddr info))
+                      (list (car info) (cadr info) our-name (cadddr info))
+                      info))
                 dedup-infos))]))
 
 ;; infos bool blame -> infos
@@ -3165,8 +3206,9 @@ An example
       (for-each (lambda (p v) (let ([g (gensym)]) (hash-set! prop-ht g (vector g p v)))) props vals)
       ;; Check for [conflicting] implementation requirements
       (let ([class (get-implement-requirement supers 'interface #:intf-name name)]
-            [interface-make
-             (if name (make-naming-constructor struct:interface name "interface") make-interface)])
+            [interface-make (if name
+                                (make-naming-constructor struct:interface name "interface")
+                                make-interface)])
         ;; Add supervars to table:
         (for-each (lambda (super)
                     (for-each (lambda (var) (hash-set! ht var #t)) (interface-public-ids super)))
@@ -3255,7 +3297,9 @@ An example
                        (recur elem-a elem-b))))))))
 (define (object-hash-code obj recur)
   (let ([vec (inspectable-struct->vector obj)])
-    (if vec (recur (vector (object-ref obj) vec)) (eq-hash-code obj))))
+    (if vec
+        (recur (vector (object-ref obj) vec))
+        (eq-hash-code obj))))
 
 (define object<%>
   ((make-naming-constructor struct:interface 'interface:object% #f) 'object%
@@ -3383,7 +3427,9 @@ An example
       [(_ do-make-object orig-stx first? (maker-arg ...) args (kw arg) ...)
        (andmap identifier? (syntax->list (syntax (kw ...))))
        (with-syntax ([(kw ...) (map localize (syntax->list (syntax (kw ...))))]
-                     [(blame ...) (if (syntax-e #'first?) #'((current-contract-region)) null)])
+                     [(blame ...) (if (syntax-e #'first?)
+                                      #'((current-contract-region))
+                                      null)])
          (class-syntax-protect
           (syntax/loc stx
             (do-make-object blame ... maker-arg ... args (list (cons `kw arg) ...)))))]
@@ -3433,10 +3479,14 @@ An example
             [ictc-meths (class-method-ictcs cls)]
             [method-width (class-method-width cls)]
             [method-ht (class-method-ht cls)]
-            [meths (if (null? ictc-meths) (class-methods cls) (make-vector method-width))]
+            [meths (if (null? ictc-meths)
+                       (class-methods cls)
+                       (make-vector method-width))]
             [field-pub-width (class-field-pub-width cls)]
             [field-ht (class-field-ht cls)]
-            [class-make (if name (make-naming-constructor struct:class name "class") make-class)]
+            [class-make (if name
+                            (make-naming-constructor struct:class name "class")
+                            make-class)]
             [c (class-make name
                            (class-pos cls)
                            (list->vector (vector->list (class-supers cls)))
@@ -3475,7 +3525,9 @@ An example
                            #f ; serializer is never set
                            (class-check-undef? cls)
                            #f)]
-            [obj-name (if name (string->symbol (format "wrapper-object:~a" name)) 'object)])
+            [obj-name (if name
+                          (string->symbol (format "wrapper-object:~a" name))
+                          'object)])
 
        (vector-set! (class-supers c) (class-pos c) c)
 
@@ -3622,7 +3674,9 @@ An example
                              (do-merge by-pos-args (class-init-args c) c named-args by-pos-args c)
                              ;; Non-merge for by-position initializers
                              by-pos-args)]
-             [leftovers (if (not by-pos-only?) (get-leftovers named-args (class-init-args c)) null)])
+             [leftovers (if (not by-pos-only?)
+                            (get-leftovers named-args (class-init-args c))
+                            null)])
         ;; In 'list mode, make sure no by-name arguments are left over
         (when (eq? 'list (class-init-mode c))
           (unless (or (null? leftovers) (not (ormap car leftovers)))
@@ -3681,7 +3735,9 @@ An example
           ;; All unconsumed named-args must have #f
           ;;  "name"s, otherwise an error is raised in
           ;;  the leftovers checking.
-          (if (null? al) named-args (append (map (lambda (x) (cons #f x)) al) named-args))]
+          (if (null? al)
+              named-args
+              (append (map (lambda (x) (cons #f x)) al) named-args))]
          [else
           (obj-error 'instantiate
                      "too many initialization arguments"
@@ -3711,7 +3767,9 @@ An example
         [else (obj-error 'instantiate "too few initialization arguments")])))
 
 (define (extract-rest-args skip arguments)
-  (if (< skip (length arguments)) (map cdr (list-tail arguments skip)) null))
+  (if (< skip (length arguments))
+      (map cdr (list-tail arguments skip))
+      null))
 
 (define (make-pos-arg-string args)
   (let ([len (length args)]) (apply string-append (map (lambda (a) (format " ~e" a)) args))))
@@ -3757,7 +3815,9 @@ An example
         (define kw-args/var (and kw-args (list (car kw-args) #'kw-arg-tmp)))
         (define arg-list '())
         (define let-bindings '())
-        (for ([x (in-list (if (list? args) args (syntax->list args)))])
+        (for ([x (in-list (if (list? args)
+                              args
+                              (syntax->list args)))])
           (cond
             [(keyword? (syntax-e x)) (set! arg-list (cons x arg-list))]
             [else
@@ -3772,7 +3832,9 @@ An example
                             (let*-values ([(sym) (quasiquote (unsyntax (localize name)))]
                                           [(receiver) (unsyntax obj)]
                                           [(method) (find-method/who '(unsyntax form) receiver sym)])
-                              (let (#,@(if kw-args (list #`[kw-arg-tmp #,(cadr kw-args)]) (list))
+                              (let (#,@(if kw-args
+                                           (list #`[kw-arg-tmp #,(cadr kw-args)])
+                                           (list))
                                     #,@let-bindings)
                                 (unsyntax (make-method-call-to-possibly-wrapped-object
                                            stx
@@ -3798,7 +3860,9 @@ An example
                           #'form
                           #'obj
                           #'name
-                          (if kws? (cddr (syntax->list #'args)) #'args)
+                          (if kws?
+                              (cddr (syntax->list #'args))
+                              #'args)
                           apply?
                           (and kws? (let ([l (syntax->list #'args)]) (list (car l) (cadr l)))))
                (if apply?
@@ -3888,7 +3952,9 @@ An example
      =>
      (lambda (cls)
        (define mth-idx (hash-ref (class-method-ht cls) name #f))
-       (if mth-idx (vector-ref (class-methods cls) mth-idx) (no-such-method who name cls)))]
+       (if mth-idx
+           (vector-ref (class-methods cls) mth-idx)
+           (no-such-method who name cls)))]
     [(wrapped-object? in-object)
      (define cls
        (let loop ([obj in-object])
@@ -4029,7 +4095,9 @@ An example
     [(_ object generic . args)
      (let* ([args-stx (syntax args)]
             [proper? (stx-list? args-stx)]
-            [flat-stx (if proper? args-stx (flatten-args args-stx))])
+            [flat-stx (if proper?
+                          args-stx
+                          (flatten-args args-stx))])
        (with-syntax ([(gen obj) (generate-temporaries (syntax (generic object)))])
          (class-syntax-protect (quasisyntax/loc stx
                                  (let* ([obj object]
@@ -4314,7 +4382,9 @@ An example
 (define (object-info o)
   (unless (object? o)
     (raise-argument-error 'object-info "object?" o))
-  (let ([o* (if (has-original-object? o) (original-object o) o)])
+  (let ([o* (if (has-original-object? o)
+                (original-object o)
+                o)])
     (let loop ([c (object-ref/unwrap o*)]
                [skipped? #f])
       (if (struct? ((class-insp-mk c)))
@@ -4325,7 +4395,9 @@ An example
               (loop (vector-ref (class-supers c) (sub1 (class-pos c))) #t))))))
 
 (define (to-sym s)
-  (if (string? s) (string->symbol s) s))
+  (if (string? s)
+      (string->symbol s)
+      s))
 
 (define (class-info c)
   (unless (class? c)
@@ -4353,21 +4425,29 @@ An example
       (raise-argument-error 'object->vector "object?" in-o))
     (let ([o in-o])
       (list->vector
-       (cons
-        (string->symbol (format "object:~a" (class-name (object-ref/unwrap o))))
-        (reverse
-         (let-values ([(c skipped?) (object-info o)])
-           (let loop ([c c]
-                      [skipped? skipped?])
-             (cond
-               [(not c) (if skipped? (list opaque-v) null)]
-               [else
-                (let-values ([(name num-fields field-ids field-ref field-set next next-skipped?)
-                              (class-info c)])
-                  (let ([rest (loop next next-skipped?)]
-                        [here (let loop ([n num-fields])
-                                (if (zero? n) null (cons (field-ref o (sub1 n)) (loop (sub1 n)))))])
-                    (append (if skipped? (list opaque-v) null) here rest)))])))))))))
+       (cons (string->symbol (format "object:~a" (class-name (object-ref/unwrap o))))
+             (reverse
+              (let-values ([(c skipped?) (object-info o)])
+                (let loop ([c c]
+                           [skipped? skipped?])
+                  (cond
+                    [(not c)
+                     (if skipped?
+                         (list opaque-v)
+                         null)]
+                    [else
+                     (let-values ([(name num-fields field-ids field-ref field-set next next-skipped?)
+                                   (class-info c)])
+                       (let ([rest (loop next next-skipped?)]
+                             [here (let loop ([n num-fields])
+                                     (if (zero? n)
+                                         null
+                                         (cons (field-ref o (sub1 n)) (loop (sub1 n)))))])
+                         (append (if skipped?
+                                     (list opaque-v)
+                                     null)
+                                 here
+                                 rest)))])))))))))
 
 (define (object=? o1 o2)
   (cond
@@ -4387,8 +4467,14 @@ An example
   (eq? (object=-original-object o1) (object=-original-object o2)))
 
 (define (object=-original-object o)
-  (define orig-o (if (has-original-object? o) (original-object o) o))
-  (define orig-orig-o (if (wrapped-object? orig-o) (wrapped-object-object orig-o) orig-o))
+  (define orig-o
+    (if (has-original-object? o)
+        (original-object o)
+        o))
+  (define orig-orig-o
+    (if (wrapped-object? orig-o)
+        (wrapped-object-object orig-o)
+        orig-o))
   orig-orig-o)
 
 (define (object=-hash-code o)
@@ -4458,7 +4544,12 @@ An example
    ; #f => init args by position only
    ; sym => required arg
    ; sym--value list => optional arg
-   (and init-arg-names (map (lambda (s) (if (symbol? s) s (car s))) init-arg-names))
+   (and init-arg-names
+        (map (lambda (s)
+               (if (symbol? s)
+                   s
+                   (car s)))
+             init-arg-names))
    'stop
    (lambda ignored
      (values
@@ -4466,10 +4557,11 @@ An example
       override-methods
       null ; no augride-methods
       (lambda (this super-go/ignored si_c/ignored si_inited?/ignored si_leftovers/ignored init-args)
-        (apply
-         prim-init
-         this
-         (if init-arg-names (extract-primitive-args this name init-arg-names init-args) init-args)))))
+        (apply prim-init
+               this
+               (if init-arg-names
+                   (extract-primitive-args this name init-arg-names init-args)
+                   init-args)))))
    #f
    make-struct:prim))
 
@@ -4483,7 +4575,9 @@ An example
        null]
       [else
        (let* ([name (car names)]
-              [id (if (symbol? name) name (car name))])
+              [id (if (symbol? name)
+                      name
+                      (car name))])
          (let ([arg (assq id args)])
            (cond
              [arg (cons (cdr arg) (loop (cdr names) (remq arg args)))]
@@ -4566,8 +4660,12 @@ An example
                    . fields)
   (define all-fields
     (append fields
-            (if class-name (list (string-append which-class "class name") (as-write class-name)) null)
-            (if intf-name (list "interface name" (as-write intf-name)) null)))
+            (if class-name
+                (list (string-append which-class "class name") (as-write class-name))
+                null)
+            (if intf-name
+                (list "interface name" (as-write intf-name))
+                null)))
   (raise
    (make-exn:fail:object
     (format "~a: ~a~a"
@@ -4597,11 +4695,17 @@ An example
     (current-continuation-marks))))
 
 (define (for-class name)
-  (if name (format " for class: ~a" name) ""))
+  (if name
+      (format " for class: ~a" name)
+      ""))
 (define (for-class/which which name)
-  (if name (format " for ~a class: ~a" which name) ""))
+  (if name
+      (format " for ~a class: ~a" which name)
+      ""))
 (define (for-intf name)
-  (if name (format " for interface: ~a" name) ""))
+  (if name
+      (format " for interface: ~a" name)
+      ""))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;
@@ -4768,7 +4872,9 @@ An example
   (interface* ()
               ([prop:custom-write
                 (lambda (obj port mode)
-                  (if mode (send obj custom-write port) (send obj custom-display port)))])
+                  (if mode
+                      (send obj custom-write port)
+                      (send obj custom-display port)))])
     custom-write
     custom-display))
 
