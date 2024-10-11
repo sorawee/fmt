@@ -40,3 +40,8 @@
       (* 4 10)
       ; false branch
       (+ 2 4)))
+
+(define if10
+  (if (< 10 20) ; check if ten is less than twenty
+      (* 4 10) ; true branch
+      (+ 2 4))) ; false branch
