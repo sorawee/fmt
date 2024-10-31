@@ -192,6 +192,7 @@
                                            #:arg-formatter [format-arg #f]
                                            #:body-formatter [format-body #f]
                                            #:require-body? [require-body? #t]
+                                           #:leading-spaces [leading-spaces space]
                                            #:kw-map [kw-map default-kw-map])
   #:type node?
   #:default [format-arg pretty]
@@ -217,10 +218,10 @@
           first-line]
          [_
           (<$> first-line
-               (<+> space ((format-vertical/helper
-                            #:body-formatter format-body
-                            #:kw-map kw-map)
-                           tail)))])))]))
+               (<+> leading-spaces ((format-vertical/helper
+                                     #:body-formatter format-body
+                                     #:kw-map kw-map)
+                                    tail)))])))]))
 
 (define-pretty (format-clause-2/indirect #:kw-map [kw-map default-kw-map] #:flat? [flat? #t])
   #:type values
@@ -395,7 +396,7 @@
     [#:else (format-let* doc)]))
 
 ;; always in the form
-#;(provide a
+#;(require a
            b
            c)
 (define-pretty format-require
@@ -407,6 +408,36 @@
                         (try-indent #:n 0
                                     #:because-of (cons -first-arg tail)
                                     ((format-vertical/helper) (cons -first-arg tail)))))]
+    [#:else (format-#%app doc)]))
+
+;; mostly in the form
+#;(provide a
+           b
+           c)
+;; except when we have contract-out, where we prefer this form
+#;(provide
+   a
+   (contract-out
+    [foo ...]
+    [bar ...]))
+(define-pretty format-provide
+  #:type node?
+  (define has-contract-out?
+    (for/or ([item (node-content doc)])
+      (and (node? item)
+           (match/extract (node-content item) #:as _u _t
+             [([(atom _ "contract-out" 'symbol) #t]) #t]
+             [#:else #f]))))
+  (define combinator
+    (if has-contract-out? <$> <+s>))
+  (match/extract (node-content doc) #:as unfits tail
+    [([-provide #t] [-first-arg #f])
+     (pretty-node #:unfits unfits
+                  (combinator (flatten (pretty -provide))
+                              (try-indent #:n 0
+                                          #:because-of (cons -first-arg tail)
+                                          ((format-vertical/helper)
+                                           (cons -first-arg tail)))))]
     [#:else (format-#%app doc)]))
 
 ;; support optional super id: either
@@ -465,8 +496,7 @@
 
 (define/record standard-formatter-map #:record all-kws
   [("if") format-if]
-  [("provide"
-    "require"
+  [("require"
     "import"
     "export"
     "link"
@@ -475,6 +505,14 @@
     "for-template"
     "for-label")
    format-require]
+
+  [("provide") format-provide]
+  [("contract-out")
+   (format-uniform-body/helper 0
+                               #:body-formatter (format-clause-2/indirect)
+                               #:require-body? #f
+                               #:leading-spaces empty-doc)]
+
   [("public" "private" "override" "augment" "inherit" "field" "init") format-require]
   [("pubment" "public-final" "overment" "override-final" "augride" "augment-final") format-require]
 
