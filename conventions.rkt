@@ -515,6 +515,7 @@
   [("test-begin") (format-uniform-body/helper 0 #:require-body? #f)]
   [("begin0") (format-uniform-body/helper 1)]
   [("module+") (format-uniform-body/helper 1)]
+  [("let/ec" "let/cc") (format-uniform-body/helper 1)]
   [("test-case" "test-suite") (format-uniform-body/helper 1)]
   [("define-syntax-class" "define-match-expander") (format-uniform-body/helper 1)]
   [("class" "interface") (format-uniform-body/helper 1 #:require-body? #f)]
