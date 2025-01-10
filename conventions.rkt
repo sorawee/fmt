@@ -513,6 +513,11 @@
 
   [("begin" "begin-for-syntax") (format-uniform-body/helper 0 #:require-body? #f)]
   [("test-begin") (format-uniform-body/helper 0 #:require-body? #f)]
+
+  [("delay" "lazy") (format-uniform-body/helper 0)]
+  [("delay/name" "delay/strict" "delay/sync" "delay/thread" "delay/idle")
+   (format-uniform-body/helper 0)]
+
   [("begin0") (format-uniform-body/helper 1)]
   [("module+") (format-uniform-body/helper 1)]
   [("let/ec" "let/cc") (format-uniform-body/helper 1)]
