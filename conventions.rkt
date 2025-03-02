@@ -273,6 +273,38 @@
     [_ (pretty doc)]))
 
 
+;; condition: obj and name is flat
+#;(send obj name
+        arg1
+        arg2)
+;; general case
+#;(send (make-obj arg1
+                  arg2
+                  arg3)
+        name
+        arg1
+        arg2)
+#;(send obj name arg1 arg2)
+(define-pretty format-send
+  #:type node?
+  (match/extract (node-content doc) #:as unfits tail
+    [([-send #t] [-obj #t] [-meth #f])
+     (define first-line (flatten (<+s> (pretty -obj) (pretty -meth))))
+     (define main-doc
+       (match tail
+         ['() first-line]
+         [_ (<$> first-line
+                 (try-indent #:n 0
+                             #:because-of tail
+                             ((format-vertical/helper) tail)))]))
+
+     (alt (format-#%app doc)
+          (pretty-node #:unfits unfits
+                       #:adjust '("(" ")")
+                       (<+s> (pretty -send) main-doc)))]
+    [#:else (format-#%app doc)]))
+
+
 (define-pretty format-if
   #:type node?
   (match/extract (node-content doc) #:as unfits tail
@@ -598,6 +630,8 @@
   [("for/list/concurrent" "for*/list/concurrent") (format-for-like 1)]
 
   [("let") format-let]
+
+  [("send") format-send]
 
   [("struct") format-struct]
   [("define-struct") (format-uniform-body/helper 2 #:require-body? #f)]

@@ -1,0 +1,78 @@
+#lang racket
+
+(send
+ obj
+ meth
+ 1
+ 2
+ 3
+ 4)
+
+
+(let ()
+  (let ()
+    (let ()
+      (let ()
+        (let ()
+          (send a-very-long-obj a-very-long-meth-name 123456789 123456789 123456789 123456789 123456789))))))
+
+(let ()
+  (let ()
+    (let ()
+      (let ()
+        (let ()
+          (let ()
+            (let ()
+              (let ()
+                (let ()
+                  (let ()
+                    (let ()
+                      (let ()
+                        (let ()
+                          (let ()
+                            (let ()
+                              (let ()
+                                (send a-very-longggggggggggggggggggggggg-obj a-very-longgggggggggggggggggggg-meth-name 123456789 123456789 123456789 123456789 123456789)))))))))))))))))
+
+(send (let ()
+        (define x 1)
+        (make-obj2 x))
+      meth
+      1
+      2)
+
+
+(let ()
+  (let ()
+    (let ()
+      (let ()
+        (let ()
+          (send a-very-long-obj a-very-long-meth-name 123456789 123456789 123456789 123456789 123456789 ;; test
+   ))))))
+
+(let ()
+  (let ()
+    (let ()
+      (let ()
+        (let ()
+          (send a-very-long-obj a-very-long-meth-name 123456789 123456789 123456789 123456789 123456789
+          ;; test
+   ))))))
+
+
+(let ()
+  (let ()
+    (let ()
+      (let ()
+        (let ()
+          (let ([b (send dc get-brush)])
+              (send dc set-brush
+                    (if solid?
+                        (send the-brush-list
+                              find-or-create-brush
+                              (send (send dc get-pen) get-color))))))))))
+
+
+(let ()
+  (let ()
+(send open-button enable (and clicked-srcloc-pr (path? (srcloc-source (cdr clicked-srcloc-pr)))))))
