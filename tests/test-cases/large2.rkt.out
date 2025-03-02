@@ -374,8 +374,7 @@
                                       (string-constant drscheme)
                                       #f
                                       frame))
-        (send (drracket:language-configuration:language-settings-language settings)
-              create-executable
+        (send (drracket:language-configuration:language-settings-language settings) create-executable
               (drracket:language-configuration:language-settings-settings settings)
               frame
               program-filename))]))
@@ -608,8 +607,7 @@
              (super set-filename fn tmp?)
              (let ([f (get-top-level-window)])
                (when (and f (is-a? f drracket:unit:frame<%>))
-                 (send (send f get-interactions-text)
-                       set-port-unsaved-name
+                 (send (send f get-interactions-text) set-port-unsaved-name
                        (if fn
                            "interactions from an unsaved editor"
                            (format "interactions from ~a" fn)))
@@ -675,11 +673,9 @@
           (and (equal? (send execute-lang get-language-position)
                        (send next-lang get-language-position))
                (equal?
-                (send execute-lang
-                      marshall-settings
+                (send execute-lang marshall-settings
                       (drracket:language-configuration:language-settings-settings execute-settings))
-                (send execute-lang
-                      marshall-settings
+                (send execute-lang marshall-settings
                       (drracket:language-configuration:language-settings-settings next-settings)))))
 
         (define/pubment (set-needs-execution-message msg) (set-needs-execution-state! msg))
@@ -807,8 +803,7 @@
             (and (not really-modified?)
                  (not (get-filename))
                  (is-a? lang drracket:module-language:module-language<%>)
-                 (send lang
-                       get-auto-text
+                 (send lang get-auto-text
                        (drracket:language-configuration:language-settings-settings next-settings))))
           (when auto-text
             (set! ignore-edits? #t)
@@ -895,8 +890,8 @@
             (let* ([language-settings (send (send frame get-definitions-text) get-next-settings)]
                    [new-language (drracket:language-configuration:language-settings-language
                                   language-settings)]
-                   [capability-info (get-define-popup-info
-                                     (send new-language capability-value 'drscheme:define-popup))])
+                   [capability-info (get-define-popup-info (send new-language capability-value
+                                                                 'drscheme:define-popup))])
               (when capability-info
                 (let* ([current-pos (get-pos editor event)]
                        [current-word (and current-pos (get-current-word editor current-pos))]
@@ -1157,8 +1152,7 @@
        (send defs already-warned))
      (define/public (update-execute-warning-gui)
        (when (is-current-tab?)
-         (send frame
-               show/hide-warning-message
+         (send frame show/hide-warning-message
                (get-current-execute-warning)
                (λ ()
                  ;; this callback might be run with a different tab ...
@@ -1253,8 +1247,7 @@
        (set! current-planet-status #f)
        (update-planet-status))
      (define/public-final (update-planet-status)
-       (send frame
-             show-planet-status
+       (send frame show-planet-status
              (and current-planet-status (car current-planet-status))
              (and current-planet-status (cdr current-planet-status))))
 
@@ -1319,13 +1312,11 @@
                     [parent execute-warning-panel]
                     [bg-color "yellow"]
                     [callback (λ () (hide-canvas))])])
-            (send execute-warning-parent-panel
-                  change-children
+            (send execute-warning-parent-panel change-children
                   (λ (l) (append (remq execute-warning-panel l) (list execute-warning-panel))))]
            [else
             (when execute-warning-canvas
-              (send execute-warning-parent-panel
-                    change-children
+              (send execute-warning-parent-panel change-children
                     (λ (l) (remq execute-warning-panel l)))
               (send execute-warning-canvas set-message #f))])))
 
@@ -1335,8 +1326,7 @@
      (define show-line-numbers-pref-fn
        (let ([fn (lambda (pref value)
                    (when show-line-numbers-menu-item
-                     (send show-line-numbers-menu-item
-                           set-label
+                     (send show-line-numbers-menu-item set-label
                            (if value
                                (string-constant hide-line-numbers/menu)
                                (string-constant show-line-numbers/menu))))
@@ -1391,8 +1381,7 @@
          (begin-container-sequence)
          (cond
            [logger-gui-content-panel
-            (send logger-parent-panel
-                  change-children
+            (send logger-parent-panel change-children
                   (λ (l)
                     (cond
                       [(or (and show? (member logger-panel l))
@@ -1461,8 +1450,7 @@
                                (define str (send (send tf get-editor) get-text))
                                (define args (parse-logger-args str))
                                (preferences:set 'drracket:logger-receiver-string str)
-                               (send (get-interactions-text)
-                                     set-user-log-receiver-args
+                               (send (get-interactions-text) set-user-log-receiver-args
                                      str
                                      (if (null? args) #f args))
                                (set-logger-text-field-bg-color args))]))))
@@ -1494,8 +1482,7 @@
          (set-logger-text-field-bg-color (parse-logger-args str))))
 
      (define/private (set-logger-text-field-bg-color good?)
-       (send logger-text-field
-             set-field-background
+       (send logger-text-field set-field-background
              (color-prefs:lookup-in-color-scheme (if good?
                                                      'framework:basic-canvas-background
                                                      'framework:failed-search-background-color))))
@@ -1536,28 +1523,23 @@
               (case (car command)
                 [(add-line) (void)]
                 [(clear-last-and-add-line)
-                 (send logger-gui-text
-                       delete
+                 (send logger-gui-text delete
                        0
                        (send logger-gui-text paragraph-start-position 1)
                        #f)])
-              (send logger-gui-text
-                    insert
+              (send logger-gui-text insert
                     "\n"
                     (send logger-gui-text last-position)
                     (send logger-gui-text last-position)
                     #f)
-              (send logger-gui-text
-                    insert
+              (send logger-gui-text insert
                     msg
                     (send logger-gui-text last-position)
                     (send logger-gui-text last-position)
                     #f)
               (when scroll?
-                (send logger-gui-text
-                      scroll-to-position
-                      (send logger-gui-text
-                            paragraph-start-position
+                (send logger-gui-text scroll-to-position
+                      (send logger-gui-text paragraph-start-position
                             (send logger-gui-text last-paragraph))))
               (adjust-color start)
               (send logger-gui-text end-edit-sequence)
@@ -1618,20 +1600,17 @@
                    [parent planet-status-panel]
                    [callback
                     (λ ()
-                      (send planet-status-parent-panel
-                            change-children
+                      (send planet-status-parent-panel change-children
                             (λ (l) (remq planet-status-panel l)))
                       (send current-tab clear-planet-status))]))
-            (send planet-message
-                  set-label
+            (send planet-message set-label
                   (case tag
                     [(download) (format (string-constant planet-downloading) package)]
                     [(install) (format (string-constant planet-installing) package)]
                     [(docs-build) (format (string-constant planet-docs-building) package)]
                     [(finish) (format (string-constant planet-finished) package)]
                     [else (string-constant planet-no-status)]))
-            (send planet-status-parent-panel
-                  change-children
+            (send planet-status-parent-panel change-children
                   (λ (l)
                     (if (memq planet-status-panel l)
                         l
@@ -1639,8 +1618,7 @@
 
      (define/private (update-logger-button-label)
        (when planet-logger-button
-         (send planet-logger-button
-               set-label
+         (send planet-logger-button set-label
                (if (and logger-gui-text (member logger-panel (send logger-parent-panel get-children)))
                    (string-constant hide-log)
                    (string-constant show-log)))))
@@ -1662,8 +1640,7 @@
      (define/private (record-definitions)
        (when transcript
          (set! definitions-transcript-counter (+ definitions-transcript-counter 1))
-         (send definitions-text
-               save-file
+         (send definitions-text save-file
                (build-path transcript
                            (format "~a-definitions" (pad-two definitions-transcript-counter)))
                'copy)))
@@ -1672,8 +1649,7 @@
      (define/private (record-interactions)
        (when transcript
          (set! interactions-transcript-counter (+ interactions-transcript-counter 1))
-         (send interactions-text
-               save-file
+         (send interactions-text save-file
                (build-path transcript
                            (format "~a-interactions" (pad-two interactions-transcript-counter)))
                'copy)))
@@ -1878,8 +1854,7 @@
          (send top-outer-panel stretchable-width (not vertical?))
          (send top-panel set-orientation (not vertical?))
          (send toolbar/rest-panel set-orientation vertical?)
-         (send toolbar/rest-panel
-               change-children
+         (send toolbar/rest-panel change-children
                (λ (l)
                  (if bar-at-beginning?
                      (cons top-outer-panel (remq top-outer-panel l))
@@ -1889,9 +1864,9 @@
 
          (let* ([settings (send definitions-text get-next-settings)]
                 [language (drracket:language-configuration:language-settings-language settings)]
-                [name (get-define-popup-name
-                       (get-define-popup-info (send language capability-value 'drscheme:define-popup))
-                       vertical?)])
+                [name (get-define-popup-name (get-define-popup-info (send language capability-value
+                                                                          'drscheme:define-popup))
+                                             vertical?)])
            (when name
              (send func-defs-canvas set-message #f name)))
          (send name-message set-short-title vertical?)
@@ -1957,8 +1932,7 @@
        (when (is-a? bp panel%)
          (let sort-loop ([panel bp])
            (define min #f)
-           (send panel
-                 change-children
+           (send panel change-children
                  (λ (l)
                    (define sub-panel-nums (make-hash))
                    (for ([x (in-list l)])
@@ -2008,8 +1982,7 @@
            (cond
              [(null? cs) (void)]
              [(null? (cdr cs))
-              (send (car cs)
-                    set-resize-corner
+              (send (car cs) set-resize-corner
                     (and (not bottom-material?) (not interactions-shown?)))]
              [else
               (send (car cs) set-resize-corner #f)
@@ -2077,13 +2050,11 @@
        (define settings (send definitions-text get-next-settings))
        (define language (drracket:language-configuration:language-settings-language settings))
        (send func-defs-canvas language-changed language (or (toolbar-is-left?) (toolbar-is-right?)))
-       (send language-message
-             set-yellow/lang
+       (send language-message set-yellow/lang
              (not (send definitions-text this-and-next-language-the-same?))
              (string-append
               (send language get-language-name)
-              (if (send language
-                        default-settings?
+              (if (send language default-settings?
                         (drracket:language-configuration:language-settings-settings settings))
                   ""
                   (string-append " " (string-constant custom)))
@@ -2103,8 +2074,7 @@
      (define/public (update-save-message)
        (when name-message
          (let ([filename (send definitions-text get-filename)])
-           (send name-message
-                 set-message
+           (send name-message set-message
                  (if filename #t #f)
                  (send definitions-text get-filename/untitled-name))))
        (update-tabs-labels))
@@ -2112,8 +2082,7 @@
      (define/private (update-tabs-labels)
        (for-each (λ (tab) (update-tab-label tab)) tabs)
        (send tabs-panel set-selection (send current-tab get-i))
-       (send (send tabs-panel get-parent)
-             change-children
+       (send (send tabs-panel get-parent) change-children
              (λ (l)
                (cond
                  [(= (send tabs-panel get-number) 1) (remq tabs-panel l)]
@@ -2236,8 +2205,7 @@
                     (let loop ([n 0])
                       (cond
                         [(n . <= . (send interactions-text last-paragraph))
-                         (if (string=? (send interactions-text
-                                             get-text
+                         (if (string=? (send interactions-text get-text
                                              (send interactions-text paragraph-start-position n)
                                              (+ (send interactions-text paragraph-start-position n)
                                                 (string-length prompt)))
@@ -2247,8 +2215,7 @@
                         [else #f]))])
               (and first-prompt-para
                    (= first-prompt-para (send interactions-text last-paragraph))
-                   (equal? (send interactions-text
-                                 get-text
+                   (equal? (send interactions-text get-text
                                  (send interactions-text paragraph-start-position first-prompt-para)
                                  (send interactions-text paragraph-end-position first-prompt-para))
                            (send interactions-text get-prompt))))))
@@ -2358,23 +2325,23 @@
            ;; with-handlers prevents bad calls to set-percentages
            ;; might still leave GUI in bad state, however.
            (with-handlers ([exn:fail? (λ (x) (void))])
-             (send
-              resizable-panel
-              set-percentages
-              (let loop ([canvases orig-canvases]
-                         [percentages orig-percentages])
-                (cond
-                  [(null? canvases) (error 'split "couldn't split; didn't find canvas")]
-                  [(null? percentages)
-                   (error 'split
-                          "wrong number of percentages: ~s ~s"
-                          orig-percentages
-                          (send resizable-panel get-children))]
-                  [else
-                   (let ([canvas (car canvases)])
-                     (if (eq? canvas-to-be-split canvas)
-                         (list* (/ (car percentages) 2) (/ (car percentages) 2) (cdr percentages))
-                         (cons (car percentages) (loop (cdr canvases) (cdr percentages)))))]))))
+             (send resizable-panel set-percentages
+                   (let loop ([canvases orig-canvases]
+                              [percentages orig-percentages])
+                     (cond
+                       [(null? canvases) (error 'split "couldn't split; didn't find canvas")]
+                       [(null? percentages)
+                        (error 'split
+                               "wrong number of percentages: ~s ~s"
+                               orig-percentages
+                               (send resizable-panel get-children))]
+                       [else
+                        (let ([canvas (car canvases)])
+                          (if (eq? canvas-to-be-split canvas)
+                              (list* (/ (car percentages) 2)
+                                     (/ (car percentages) 2)
+                                     (cdr percentages))
+                              (cons (car percentages) (loop (cdr canvases) (cdr percentages)))))]))))
 
            (set-visible-region new-canvas ox oy ow oh cursor-y)
            (set-visible-region canvas-to-be-split ox oy ow oh cursor-y)
@@ -2385,8 +2352,7 @@
      ;; enables the menu-item if splitting is allowed, disables otherwise
      (define/private (split-demand item)
        (let ([canvas-to-be-split (get-edit-target-window)])
-         (send item
-               enable
+         (send item enable
                (or (memq canvas-to-be-split definitions-canvases)
                    (memq canvas-to-be-split interactions-canvases)))))
 
@@ -2407,8 +2373,7 @@
      ;; also, the last two booleans indiciate if the beginning and the end
      ;; of the selection was visible before the split, respectively.
      (define/private (get-visible-region canvas)
-       (send canvas
-             call-as-primary-owner
+       (send canvas call-as-primary-owner
              (λ ()
                (let* ([text (send canvas get-editor)]
                       [admin (send text get-admin)]
@@ -2426,8 +2391,7 @@
      ;; is done to try to keep the start and end visible, with precendence
      ;; given to start if both are #t.
      (define/private (set-visible-region canvas x y w h cursor-y)
-       (send canvas
-             call-as-primary-owner
+       (send canvas call-as-primary-owner
              (λ ()
                (let* ([text (send canvas get-editor)]
                       [admin (send text get-admin)]
@@ -2506,8 +2470,7 @@
           (define target-admin
             (send target call-as-primary-owner (λ () (send (send target get-editor) get-admin))))
           (define to-be-bigger-admin
-            (send soon-to-be-bigger-canvas
-                  call-as-primary-owner
+            (send soon-to-be-bigger-canvas call-as-primary-owner
                   (λ () (send (send soon-to-be-bigger-canvas get-editor) get-admin))))
           (define-values (bx by bw bh) (get-visible-area to-be-bigger-admin))
 
@@ -2570,21 +2533,18 @@
              [old-children (send resizable-panel get-children)]
              [p (preferences:get 'drracket:unit-window-size-percentage)])
          (update-defs/ints-resize-corner)
-         (send definitions-item
-               set-label
+         (send definitions-item set-label
                (if definitions-shown?
                    (string-constant hide-definitions-menu-item-label)
                    (string-constant show-definitions-menu-item-label)))
-         (send interactions-item
-               set-label
+         (send interactions-item set-label
                (if interactions-shown?
                    (string-constant hide-interactions-menu-item-label)
                    (string-constant show-interactions-menu-item-label)))
          (send resizable-panel begin-container-sequence)
 
          ;; this might change the unit-window-size-percentage, so save/restore it
-         (send resizable-panel
-               change-children
+         (send resizable-panel change-children
                (λ (old) (immediate-children resizable-panel new-children)))
 
          (preferences:set 'drracket:unit-window-size-percentage p)
@@ -2614,8 +2574,7 @@
                (when (eq? old-focus new-focus)
                  (let ([ed (send old-focus get-editor)])
                    (when ed
-                     (send ed
-                           scroll-to-position
+                     (send ed scroll-to-position
                            (send ed get-start-position)
                            #f
                            (send ed get-end-position))))))
@@ -2673,8 +2632,7 @@
                  (define-values (module-language module-language-settings)
                    (get-module-language/settings))
                  (when (and module-language module-language-settings)
-                   (send definitions-text
-                         set-next-settings
+                   (send definitions-text set-next-settings
                          (drracket:language-configuration:language-settings
                           module-language
                           module-language-settings))))))
@@ -2698,8 +2656,7 @@
            (send definitions-text copy-self-to defs-copy)
            (define text-port (open-input-text-editor defs-copy 0 'end values name #t))
            (port-count-lines! text-port)
-           (send interactions-text
-                 evaluate-from-port
+           (send interactions-text evaluate-from-port
                  text-port
                  #t
                  (λ ()
@@ -2852,8 +2809,7 @@
                 [ints (make-object (drracket:get/extend:get-interactions-text) new-tab)])
            (send new-tab set-ints ints)
            (set! tabs (append tabs (list new-tab)))
-           (send tabs-panel
-                 append
+           (send tabs-panel append
                  (gui-utils:trim-string (if filename
                                             (get-tab-label-from-filename filename)
                                             (get-defs-tab-label defs #f))
@@ -2902,8 +2858,7 @@
            (send tab update-planet-status)
            (send tab update-execute-warning-gui)
 
-           (send old-tab
-                 set-panel-percentages-and-orientation
+           (send old-tab set-panel-percentages-and-orientation
                  (send resizable-panel get-percentages)
                  (not (send resizable-panel get-vertical?)))
            (restore-visible-tab-regions)
@@ -3026,16 +2981,13 @@
        (change-to-tab (list-ref tabs n)))
 
      (define/private (save-visible-tab-regions)
-       (send current-tab
-             set-visible-ints
+       (send current-tab set-visible-ints
              (get-tab-visible-regions interactions-text)
              interactions-shown?)
-       (send current-tab
-             set-visible-defs
+       (send current-tab set-visible-defs
              (get-tab-visible-regions definitions-text)
              definitions-shown?)
-       (send current-tab
-             set-focus-d/i
+       (send current-tab set-focus-d/i
              (if (ormap (λ (x) (send x has-focus?)) interactions-canvases) 'ints 'defs)))
 
      (define/private (get-tab-visible-regions txt)
@@ -3152,8 +3104,7 @@
 
      (define/private (update-close-tab-menu-item-shortcut item)
        (define just-one? (and (pair? tabs) (null? (cdr tabs))))
-       (send item
-             set-label
+       (send item set-label
              (if just-one?
                  (string-constant close-tab)
                  (string-constant close-tab-amp)))
@@ -3165,14 +3116,12 @@
          [(equal? (system-type) 'unix) (send item set-label (string-constant close-menu-item))]
          [else
           (define just-one? (and (pair? tabs) (null? (cdr tabs))))
-          (send item
-                set-label
+          (send item set-label
                 (if just-one?
                     (string-constant close-window-menu-item)
                     (string-constant close-window)))
           (when (preferences:get 'framework:menu-bindings)
-            (send item
-                  set-shortcut-prefix
+            (send item set-shortcut-prefix
                   (if just-one?
                       (get-default-shortcut-prefix)
                       (cons 'shift (get-default-shortcut-prefix)))))]))
@@ -3250,8 +3199,7 @@
                                     (update-shown)))]
                                [demand-callback
                                 (λ (mi)
-                                  (send mi
-                                        set-label
+                                  (send mi set-label
                                         (if (send resizable-panel get-vertical?)
                                             (string-constant use-horizontal-layout)
                                             (string-constant use-vertical-layout))))]
@@ -3274,8 +3222,7 @@
                 (parent (get-show-menu))
                 [demand-callback
                  (λ (mi)
-                   (send mi
-                         set-label
+                   (send mi set-label
                          (if (overview-shown?)
                              (string-constant hide-overview)
                              (string-constant show-overview))))]
@@ -3363,8 +3310,7 @@
               [demand-callback
                (λ (itm)
                  (define pv (preferences:get 'framework:column-guide-width))
-                 (send itm
-                       set-label
+                 (send itm set-label
                        (format (if (car pv)
                                    (string-constant hide-column-width-guide)
                                    (string-constant show-column-width-guide))
@@ -3546,8 +3492,7 @@
                     (stretchable-width #t))))
 
        (let ([p (preferences:get 'drracket:module-browser-size-percentage)])
-         (send module-browser-parent-panel
-               change-children
+         (send module-browser-parent-panel change-children
                (λ (l) (cons module-browser-panel (remq module-browser-panel l))))
          (with-handlers ([exn:fail? void])
            (send module-browser-parent-panel set-percentages (list p (- 1 p))))
@@ -3555,8 +3500,7 @@
          (calculate-module-browser)))
 
      (define/private (update-module-browser-name-length i)
-       (send module-browser-pb
-             set-name-length
+       (send module-browser-pb set-name-length
              (case i
                [(0) 'short]
                [(1) 'medium]
@@ -3884,8 +3828,7 @@
                  (λ (item)
                    (define ed (get-edit-target-object))
                    (send item enable (and ed (is-a? ed color:text<%>)))
-                   (send item
-                         check
+                   (send item check
                          (and ed
                               (is-a? ed color:text<%>)
                               (equal? dict (send ed get-spell-current-dict)))))]))
@@ -3899,8 +3842,7 @@
             [parent edit-menu]
             [demand-callback
              (λ (mi)
-               (send mi
-                     enable
+               (send mi enable
                      (let ([ed (get-edit-target-object)]) (and ed (is-a? ed text:autocomplete<%>)))))]
             [callback (λ (x y) (send (get-edit-target-object) auto-complete))])
        (add-modes-submenu edit-menu))
@@ -3930,8 +3872,7 @@
             [demand-callback
              (λ (item)
                (define editor (get-edit-target-object))
-               (send item
-                     enable
+               (send item enable
                      (and editor
                           (is-a? editor racket:text<%>)
                           (send editor can-do-edit-operation? 'paste))))]
@@ -4032,8 +3973,7 @@
                    [tp-names ((teachpack-callbacks-get-names tp-callbacks) settings)]
                    [update-settings
                     (λ (settings)
-                      (send (get-definitions-text)
-                            set-next-settings
+                      (send (get-definitions-text) set-next-settings
                             (drracket:language-configuration:language-settings language settings))
                       (send (get-definitions-text) teachpack-changed)
                       (update-teachpack-menu))])
@@ -4082,8 +4022,7 @@
                                           (filter
                                            values
                                            (map (λ (l)
-                                                  (and (send l
-                                                             capability-value
+                                                  (and (send l capability-value
                                                              'drscheme:teachpack-menu-items)
                                                        (format "\n  ~a" (send l get-language-name))))
                                                 (drracket:language-configuration:get-languages))))))
@@ -4167,8 +4106,7 @@
             (demand-callback (λ (item)
                                (let* ([tab (get-current-tab)]
                                       [ints (send tab get-ints)])
-                                 (send item
-                                       enable
+                                 (send item enable
                                        (or (send ints get-error-ranges)
                                            (send tab get-test-coverage-info-visible?)))))))
 
@@ -4556,8 +4494,7 @@
      (define/public (update-kill-button-label)
        (unless (equal? showing-break? (not (send (get-current-tab) does-break-kill?)))
          (set! showing-break? (not (send (get-current-tab) does-break-kill?)))
-         (send break-button
-               set-label
+         (send break-button set-label
                (if showing-break?
                    (string-constant break-button-label)
                    (string-constant break-button-kill-label)))))
@@ -4657,8 +4594,7 @@
      (update-shown)
 
      (when (= 2 (length (send resizable-panel get-children)))
-       (send resizable-panel
-             set-percentages
+       (send resizable-panel set-percentages
              (let ([p (preferences:get 'drracket:unit-window-size-percentage)]) (list p (- 1 p)))))
 
      (set-label-prefix (string-constant drscheme))
@@ -4704,26 +4640,21 @@
              (let* ([base normal-control-font]
                     [face (send base get-face)])
                (if face
-                   (send dc
-                         set-font
-                         (send the-font-list
-                               find-or-create-font
+                   (send dc set-font
+                         (send the-font-list find-or-create-font
                                (send base get-point-size)
                                face
                                (send base get-family)
                                (send base get-style)
                                'bold))
-                   (send dc
-                         set-font
-                         (send the-font-list
-                               find-or-create-font
+                   (send dc set-font
+                         (send the-font-list find-or-create-font
                                (send base get-point-size)
                                (send base get-family)
                                (send base get-style)
                                'bold))))
              (let-values ([(tw th _1 _2) (send dc get-text-extent message)])
-               (send dc
-                     draw-text
+               (send dc draw-text
                      message
                      (floor (- (/ w 2) (/ tw 2)))
                      (floor (- (/ h 2) (/ th 2)))))))))
@@ -4785,8 +4716,7 @@
             bm]
            [else standing-frame]))
        (define-values (w h) (get-client-size))
-       (send dc
-             draw-bitmap
+       (send dc draw-bitmap
              bm
              (- (/ w 2) (/ (send bm get-width) 2))
              (- (/ h 2) (/ (send bm get-height) 2))))
@@ -5012,8 +4942,7 @@
                          [label (send lang get-language-name)]
                          [callback
                           (λ (x y)
-                            (send (send frame get-definitions-text)
-                                  set-next-settings
+                            (send (send frame get-definitions-text) set-next-settings
                                   (drracket:language-configuration:language-settings
                                    lang
                                    settings)))]))))))
@@ -5104,58 +5033,58 @@
  (define (refresh-saved-bug-reports-window pref)
    (send saved-bug-reports-window begin-container-sequence)
    (send saved-bug-reports-panel change-children (λ (l) '()))
-   (for-each
-    (λ (item)
-      (let ()
-        (define (lookup k [default ""])
-          (let loop ([item item])
-            (cond
-              [(null? item) default]
-              [else
-               (let ([rib (car item)])
-                 (if (eq? (car rib) k)
-                     (cdr rib)
-                     (loop (cdr item))))])))
-        (define vp
-          (new-vertical-panel% [style '(border)]
-                               [parent saved-bug-reports-panel]
-                               [stretchable-height #f]))
-        (define hp (new-horizontal-panel% [parent vp] [stretchable-height #f]))
-        (define first-line-msg
-          (let ([desc (lookup 'description #f)])
-            (and desc
-                 (new message%
-                      [label (read-line (open-input-string desc))]
-                      [parent vp]
-                      [stretchable-width #t]
-                      [font
-                       (send (send (editor:get-standard-style-list) find-named-style "Standard")
-                             get-font)]))))
-        (define msg
-          (new message%
-               [stretchable-width #t]
-               [label
-                (string-append (lookup 'component "<<unknown component>>")
-                               (let ([v (lookup 'version #f)])
-                                 (if v
-                                     (string-append " " v)
-                                     "")))]
-               [parent hp]))
-        (define forget
-          (new button%
-               [parent hp]
-               [callback (λ (x y) (forget-saved-bug-report item))]
-               [label (string-constant bug-track-forget)]))
-        (define report
-          (new button%
-               [parent hp]
-               [callback
-                (λ (x y)
-                  (forget-saved-bug-report item)
-                  (send-url (url->string (drracket:debug:bug-info->ticket-url item))))]
-               [label (string-constant bug-track-report)]))
-        (void)))
-    pref) ;; reverse list so first elements end up on top of list
+   (for-each (λ (item)
+               (let ()
+                 (define (lookup k [default ""])
+                   (let loop ([item item])
+                     (cond
+                       [(null? item) default]
+                       [else
+                        (let ([rib (car item)])
+                          (if (eq? (car rib) k)
+                              (cdr rib)
+                              (loop (cdr item))))])))
+                 (define vp
+                   (new-vertical-panel% [style '(border)]
+                                        [parent saved-bug-reports-panel]
+                                        [stretchable-height #f]))
+                 (define hp (new-horizontal-panel% [parent vp] [stretchable-height #f]))
+                 (define first-line-msg
+                   (let ([desc (lookup 'description #f)])
+                     (and desc
+                          (new message%
+                               [label (read-line (open-input-string desc))]
+                               [parent vp]
+                               [stretchable-width #t]
+                               [font
+                                (send (send (editor:get-standard-style-list) find-named-style
+                                            "Standard")
+                                      get-font)]))))
+                 (define msg
+                   (new message%
+                        [stretchable-width #t]
+                        [label
+                         (string-append (lookup 'component "<<unknown component>>")
+                                        (let ([v (lookup 'version #f)])
+                                          (if v
+                                              (string-append " " v)
+                                              "")))]
+                        [parent hp]))
+                 (define forget
+                   (new button%
+                        [parent hp]
+                        [callback (λ (x y) (forget-saved-bug-report item))]
+                        [label (string-constant bug-track-forget)]))
+                 (define report
+                   (new button%
+                        [parent hp]
+                        [callback
+                         (λ (x y)
+                           (forget-saved-bug-report item)
+                           (send-url (url->string (drracket:debug:bug-info->ticket-url item))))]
+                        [label (string-constant bug-track-report)]))
+                 (void)))
+             pref) ;; reverse list so first elements end up on top of list
    (send saved-bug-reports-window reflow-container)
    (send saved-bug-reports-window end-container-sequence))
  (define (forget-saved-bug-report item)
