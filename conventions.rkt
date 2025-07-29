@@ -511,6 +511,7 @@
   [("pubment" "public-final" "overment" "override-final" "augride" "augment-final") format-require]
 
   [("define") (format-define)]
+  [("define-check") (format-define-like #:force-linebreak? #true)]
   [("define-for-syntax") (format-define-like)]
   [("define-syntax-rule") (format-define-like #:force-linebreak? #true)]
   [("define-syntax") (format-define-like)]
