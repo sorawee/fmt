@@ -6,15 +6,14 @@ jobs:
     runs-on: ubuntu-latest
     strategy:
       matrix:
-        racket-version: ["8.0", "stable"]
-        racket-variant: ["BC", "CS"]
+        racket-version: ["stable", "current"]
     steps:
       - uses: actions/checkout@v3
-      - uses: Bogdanp/setup-racket@v1.10
+      - uses: Bogdanp/setup-racket@v1.15
         with:
           architecture: x64
           distribution: full
-          variant: ${{ matrix.racket-variant }}
+          variant: CS
           version: ${{ matrix.racket-version }}
       - name: Installing fmt and its dependencies
         run: raco pkg install --no-docs --auto --name fmt
