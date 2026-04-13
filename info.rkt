@@ -1,6 +1,6 @@
 #lang info
 (define collection "fmt")
-(define deps '(["pretty-expressive" #:version "1.1"]
+(define deps '(["pretty-expressive" #:version "1.2"]
                "syntax-color-lib"
                "base"))
 (define build-deps '("scribble-lib" "racket-doc" "rackunit-lib"))
