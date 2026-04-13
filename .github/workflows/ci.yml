@@ -2,13 +2,13 @@ on: [push, pull_request]
 name: CI
 jobs:
   build:
-    name: "Build on Racket '${{ matrix.racket-version }}' (${{ matrix.racket-variant }})"
+    name: "Build on Racket '${{ matrix.racket-version }}'"
     runs-on: ubuntu-latest
     strategy:
       matrix:
         racket-version: ["stable", "current"]
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v6
       - uses: Bogdanp/setup-racket@v1.15
         with:
           architecture: x64
